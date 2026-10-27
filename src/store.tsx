@@ -145,9 +145,9 @@ function reducer(state: AppState, action: Action): AppState {
 function loadState(): AppState {
   try {
     const saved = localStorage.getItem('dukaandost_pre_auth_state');
-    // Remove the prototype's old unencrypted global store. Private data is never
-    // automatically migrated into a new account's vault.
-    localStorage.removeItem('dukaandost_state');
+    // The prototype's old global state is deliberately not imported because it
+    // has no verified owner. Keep it untouched until a safe, explicit migration
+    // or deletion is chosen by the device owner.
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
@@ -174,7 +174,6 @@ function savePreAuthState(state: AppState) {
       onboardingComplete: false,
     };
     localStorage.setItem('dukaandost_pre_auth_state', JSON.stringify(safeState));
-    localStorage.removeItem('dukaandost_state');
   } catch (e) {
     console.error('Failed to save safe setup preferences:', e);
   }
