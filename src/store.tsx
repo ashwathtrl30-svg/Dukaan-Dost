@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { AppState, Language, Theme, ShopProfile, SaleEntry, ExpenseEntry, UdhaarEntry, ChatMessage, Insight } from './types';
+import { supabase } from './supabaseClient';
+import { createVaultSalt, decryptVaultState, encryptVaultState, EncryptedVaultEnvelope } from './secureVault';
 
 const initialState: AppState = {
   language: null,
@@ -41,6 +43,7 @@ const initialState: AppState = {
 };
 
 type Action =
+  | { type: 'LOAD_STATE'; payload: AppState }
   | { type: 'SET_LANGUAGE'; payload: Language }
   | { type: 'SET_THEME'; payload: Theme }
   | { type: 'SET_ONBOARDING_STEP'; payload: number }
@@ -68,6 +71,8 @@ type Action =
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
+    case 'LOAD_STATE':
+      return action.payload;
     case 'SET_LANGUAGE':
       return { ...state, language: action.payload };
     case 'SET_THEME':
@@ -135,41 +140,256 @@ function reducer(state: AppState, action: Action): AppState {
   }
 }
 
-// Load from localStorage
+// Before authentication, persist only non-sensitive setup preferences.
+// Never reuse the legacy, unencrypted global state for a different account.
 function loadState(): AppState {
   try {
-    const saved = localStorage.getItem('dukaandost_state');
+    const saved = localStorage.getItem('dukaandost_pre_auth_state');
+    // Remove the prototype's old unencrypted global store. Private data is never
+    // automatically migrated into a new account's vault.
+    localStorage.removeItem('dukaandost_state');
     if (saved) {
-      return { ...initialState, ...JSON.parse(saved) };
+      const parsed = JSON.parse(saved);
+      return {
+        ...initialState,
+        language: parsed.language === 'en' || parsed.language === 'hi' ? parsed.language : null,
+        theme: parsed.theme === 'dark' ? 'dark' : 'light',
+        onboardingStep: Math.max(0, Math.min(2, Number(parsed.onboardingStep) || 0)),
+        onboardingComplete: false,
+      };
     }
   } catch (e) {
-    console.error('Failed to load state:', e);
+    console.error('Failed to load safe setup preferences:', e);
   }
   return initialState;
 }
 
-// Save to localStorage
-function saveState(state: AppState) {
+function savePreAuthState(state: AppState) {
   try {
-    localStorage.setItem('dukaandost_state', JSON.stringify(state));
+    const safeState: AppState = {
+      ...initialState,
+      language: state.language,
+      theme: state.theme,
+      onboardingStep: Math.max(0, Math.min(2, state.onboardingStep)),
+      onboardingComplete: false,
+    };
+    localStorage.setItem('dukaandost_pre_auth_state', JSON.stringify(safeState));
+    localStorage.removeItem('dukaandost_state');
   } catch (e) {
-    console.error('Failed to save state:', e);
+    console.error('Failed to save safe setup preferences:', e);
   }
 }
+
+type VaultStatus = 'signed_out' | 'checking' | 'new' | 'existing' | 'error';
 
 interface StoreContextType {
   state: AppState;
   dispatch: React.Dispatch<Action>;
+  authReady: boolean;
+  authUserId: string | null;
+  vaultUnlocked: boolean;
+  vaultStatus: VaultStatus;
+  unlockVault: (passphrase: string) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, null, loadState);
+  const [authReady, setAuthReady] = React.useState(false);
+  const [authUserId, setAuthUserId] = React.useState<string | null>(null);
+  const [vaultUnlocked, setVaultUnlocked] = React.useState(false);
+  const [vaultStatus, setVaultStatus] = React.useState<VaultStatus>('checking');
+  const passphraseRef = React.useRef<string | null>(null);
+  const saltRef = React.useRef<string | null>(null);
+  const currentUserRef = React.useRef<string | null>(null);
 
   useEffect(() => {
-    saveState(state);
-  }, [state]);
+    if (!supabase) {
+      setAuthUserId(null);
+      setVaultStatus('signed_out');
+      setAuthReady(true);
+      return;
+    }
+
+    let active = true;
+    const acceptSession = (userId: string | null) => {
+      if (userId !== currentUserRef.current) {
+        currentUserRef.current = userId;
+        passphraseRef.current = null;
+        saltRef.current = null;
+        setVaultUnlocked(false);
+        setVaultStatus(userId ? 'checking' : 'signed_out');
+      }
+      setAuthUserId(userId);
+    };
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!active) return;
+      if (error) console.error('Could not restore the Supabase session:', error.message);
+      acceptSession(data.session?.user.id ?? null);
+      setAuthReady(true);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+      acceptSession(session?.user.id ?? null);
+      setAuthReady(true);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authReady || !authUserId || !supabase) {
+      if (authReady && !authUserId) setVaultStatus('signed_out');
+      return;
+    }
+
+    let active = true;
+    setVaultStatus('checking');
+    supabase
+      .from('shop_vaults')
+      .select('user_id')
+      .eq('user_id', authUserId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) {
+          console.error('Could not check the private vault:', error.message);
+          setVaultStatus('error');
+        } else {
+          setVaultStatus(data ? 'existing' : 'new');
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authReady, authUserId]);
+
+  const unlockVault = async (passphrase: string) => {
+    if (!supabase || !authUserId) {
+      throw new Error('Sign in with your phone number before opening your private vault.');
+    }
+    if (passphrase.length < 12) {
+      throw new Error('Use a private vault passphrase with at least 12 characters.');
+    }
+
+    const { data: userResult, error: userError } = await supabase.auth.getUser();
+    if (userError || !userResult.user || userResult.user.id !== authUserId) {
+      throw new Error('Your sign-in session could not be verified. Sign in again.');
+    }
+
+    const { data: row, error } = await supabase
+      .from('shop_vaults')
+      .select('ciphertext,iv,kdf_salt,crypto_version')
+      .eq('user_id', authUserId)
+      .maybeSingle();
+
+    if (error) throw new Error('Could not load the encrypted vault: ' + error.message);
+
+    let salt: string;
+    let nextState: AppState;
+
+    if (row) {
+      salt = row.kdf_salt;
+      try {
+        nextState = await decryptVaultState<AppState>(row as EncryptedVaultEnvelope, passphrase);
+      } catch {
+        throw new Error('That vault passphrase did not unlock this data. We cannot reset or recover it for you.');
+      }
+      if (!nextState || !Array.isArray(nextState.sales) || !Array.isArray(nextState.expenses) || !Array.isArray(nextState.udhaar)) {
+        throw new Error('The encrypted vault does not contain a valid Dukaan Dost data record.');
+      }
+    } else {
+      // Start with a clean, account-specific state. Never copy another browser
+      // user's old sales, expenses, or customer-credit entries into this vault.
+      salt = createVaultSalt();
+      nextState = {
+        ...initialState,
+        language: state.language,
+        theme: state.theme,
+        onboardingStep: 3,
+        onboardingComplete: false,
+        phoneNumber: state.phoneNumber,
+      };
+    }
+
+    const envelope = await encryptVaultState(nextState, passphrase, salt);
+    const { error: saveError } = await supabase
+      .from('shop_vaults')
+      .upsert({
+        user_id: authUserId,
+        ...envelope,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+
+    if (saveError) throw new Error('Could not save the encrypted vault: ' + saveError.message);
+
+    // The local backup, like the server copy, contains ciphertext only.
+    localStorage.setItem(`dukaandost_encrypted_vault_${authUserId}`, JSON.stringify(envelope));
+    passphraseRef.current = passphrase;
+    saltRef.current = salt;
+    dispatch({ type: 'LOAD_STATE', payload: nextState });
+    setVaultStatus('existing');
+    setVaultUnlocked(true);
+  };
+
+  const signOut = async () => {
+    if (supabase) {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    }
+    passphraseRef.current = null;
+    saltRef.current = null;
+    setVaultUnlocked(false);
+    dispatch({
+      type: 'LOAD_STATE',
+      payload: {
+        ...initialState,
+        language: state.language,
+        theme: state.theme,
+        onboardingStep: 2,
+      },
+    });
+  };
+
+  useEffect(() => {
+    if (!authReady || !authUserId || !vaultUnlocked || !supabase || !passphraseRef.current || !saltRef.current) {
+      savePreAuthState(state);
+      return;
+    }
+
+    const userId = authUserId;
+    const passphrase = passphraseRef.current;
+    const salt = saltRef.current;
+    const snapshot = state;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const envelope = await encryptVaultState(snapshot, passphrase, salt);
+          localStorage.setItem(`dukaandost_encrypted_vault_${userId}`, JSON.stringify(envelope));
+          const { error } = await supabase
+            .from('shop_vaults')
+            .upsert({
+              user_id: userId,
+              ...envelope,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id' });
+          if (error) console.error('Could not sync the encrypted shop vault:', error.message);
+        } catch (error) {
+          console.error('Could not encrypt/sync the shop vault:', error);
+        }
+      })();
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [state, authReady, authUserId, vaultUnlocked]);
 
   useEffect(() => {
     if (state.theme === 'dark') {
@@ -180,7 +400,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [state.theme]);
 
   return (
-    <StoreContext.Provider value={{ state, dispatch }}>
+    <StoreContext.Provider value={{
+      state,
+      dispatch,
+      authReady,
+      authUserId,
+      vaultUnlocked,
+      vaultStatus,
+      unlockVault,
+      signOut,
+    }}>
       {children}
     </StoreContext.Provider>
   );
