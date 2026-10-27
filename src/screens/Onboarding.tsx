@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
+import { supabase } from '../supabaseClient';
 import { t } from '../i18n';
 import { ShopType, Duration, Ownership, MonthlySales, UdhaarLevel, AccountingMethod, Worry } from '../types';
 import { ArrowLeft, Check, MapPin, SkipForward } from 'lucide-react';
@@ -110,80 +111,108 @@ export function PhoneScreen() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  
-  const handleSendOtp = () => {
-    if (phone.length >= 10) {
-      dispatch({ type: 'SET_PHONE', payload: phone });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const fullPhone = `+91${phone}`;
+
+  const handleSendOtp = async () => {
+    setError('');
+    if (phone.length !== 10) {
+      setError('Enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+    if (!supabase) {
+      setError('Secure sign-in is not configured. Please try again after the app settings are updated.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const { error: authError } = await supabase.auth.signInWithOtp({ phone: fullPhone });
+      if (authError) throw authError;
+      dispatch({ type: 'SET_PHONE', payload: fullPhone });
       setStep('otp');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send the verification code.');
+    } finally {
+      setBusy(false);
     }
   };
-  
-  const handleVerify = () => {
-    if (otp.length === 6) {
+
+  const handleVerify = async () => {
+    setError('');
+    if (otp.length !== 6 || !supabase) return;
+    setBusy(true);
+    try {
+      const { data, error: authError } = await supabase.auth.verifyOtp({
+        phone: fullPhone,
+        token: otp,
+        type: 'sms',
+      });
+      if (authError) throw authError;
+      if (!data.session || !data.user) {
+        throw new Error('The code was not accepted. Please request a new one and try again.');
+      }
+      dispatch({ type: 'SET_PHONE', payload: fullPhone });
       dispatch({ type: 'SET_ONBOARDING_STEP', payload: 3 });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not verify the code.');
+    } finally {
+      setBusy(false);
     }
   };
-  
+
   return (
     <div className="h-full flex flex-col px-5 pt-4 bg-bg animate-fade-in">
       <button
-        onClick={() => dispatch({ type: 'SET_ONBOARDING_STEP', payload: 1 })}
+        onClick={() => { setError(''); setStep('phone'); dispatch({ type: 'SET_ONBOARDING_STEP', payload: 1 }); }}
         className="flex items-center gap-2 text-primary mb-6 h-12"
       >
         <ArrowLeft size={24} /> <span className="text-body">{t('back', lang)}</span>
       </button>
-      
+
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
         <div className="text-5xl mb-4 text-center">📱</div>
-        
+
         {step === 'phone' ? (
           <>
-            <h2 className="text-section-title text-text mb-2">
-              {t('phoneTitle', lang)}
-            </h2>
-            <p className="text-body text-text-secondary mb-4">
-              {t('phoneDesc', lang)}
-            </p>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-              placeholder="+91 XXXXX XXXXX"
-              className="input-field text-body text-center tracking-wider mb-4"
-              autoFocus
-            />
-            <button
-              onClick={handleSendOtp}
-              disabled={phone.length < 10}
-              className="btn-primary"
-            >
-              {t('sendOtp', lang)}
+            <h2 className="text-section-title text-text mb-2">{t('phoneTitle', lang)}</h2>
+            <p className="text-body text-text-secondary mb-4">{t('phoneDesc', lang)}</p>
+            <div className="flex items-center gap-2 mb-4">
+              <span className="card font-semibold">+91</span>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                placeholder="XXXXX XXXXX"
+                className="input-field text-body text-center tracking-wider"
+                autoComplete="tel-national"
+                autoFocus
+              />
+            </div>
+            {error && <p role="alert" className="text-small text-problem mb-3">{error}</p>}
+            <button onClick={() => { void handleSendOtp(); }} disabled={busy || phone.length !== 10} className="btn-primary">
+              {busy ? 'Sending code…' : t('sendOtp', lang)}
             </button>
           </>
         ) : (
           <>
-            <h2 className="text-section-title text-text mb-2">
-              {t('enterOtp', lang)}
-            </h2>
-            <p className="text-body text-text-secondary mb-4">
-              {t('otpSent', lang)} +91 {phone}
-            </p>
+            <h2 className="text-section-title text-text mb-2">{t('enterOtp', lang)}</h2>
+            <p className="text-body text-text-secondary mb-4">{t('otpSent', lang)} +91 {phone}</p>
             <input
               type="tel"
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="______"
               className="input-field text-body text-center tracking-[0.5em] mb-4"
+              autoComplete="one-time-code"
               autoFocus
             />
-            <button
-              onClick={handleVerify}
-              disabled={otp.length !== 6}
-              className="btn-primary mb-3"
-            >
-              {t('verify', lang)}
+            {error && <p role="alert" className="text-small text-problem mb-3">{error}</p>}
+            <button onClick={() => { void handleVerify(); }} disabled={busy || otp.length !== 6} className="btn-primary mb-3">
+              {busy ? 'Verifying…' : t('verify', lang)}
             </button>
-            <button className="btn-text mx-auto">
+            <button onClick={() => { void handleSendOtp(); }} disabled={busy} className="btn-text mx-auto">
               {t('resend', lang)}
             </button>
           </>
