@@ -1,0 +1,352 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0B7A4B;
+  --color-primary-light: #0d9960;
+  --color-primary-dark: #096340;
+  --color-accent: #F59E0B;
+  --color-accent-light: #FBBF24;
+  --color-bg: #FAF7F2;
+  --color-bg-dark: #1a1a2e;
+  --color-card: #FFFFFF;
+  --color-card-dark: #252540;
+  --color-text: #1F2933;
+  --color-text-dark: #E8E8EC;
+  --color-text-secondary: #52606D;
+  --color-text-secondary-dark: #9CA3AF;
+  --color-positive: #16A34A;
+  --color-warning: #D97706;
+  --color-problem: #DC2626;
+  --color-border: #E5E7EB;
+  --color-border-dark: #374151;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Noto Sans', 'Noto Sans Devanagari', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html.dark {
+  color: var(--color-text-dark);
+  background-color: var(--color-bg-dark);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100dvh;
+  width: 100vw;
+}
+
+#root {
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* ===== SPACING SYSTEM (8-point scale: 4, 8, 12, 16, 24, 32, 48) ===== */
+
+/* Screen side margins: 20px */
+.screen-px { padding-left: 20px; padding-right: 20px; }
+
+/* Scrollable content areas */
+.scroll-area {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.scroll-area::-webkit-scrollbar { display: none; }
+
+/* ===== BUTTON HIERARCHY ===== */
+
+/* Primary button: height 52, full width, bold, 16px radius */
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  border-radius: 16px;
+  background-color: var(--color-primary);
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 8px rgba(11, 122, 75, 0.25);
+  min-width: 48px;
+}
+.btn-primary:active {
+  transform: scale(0.98);
+  box-shadow: 0 1px 4px rgba(11, 122, 75, 0.15);
+}
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Secondary button: height 44, outlined, 16px radius */
+.btn-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 16px;
+  background-color: transparent;
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 16px;
+  border: 1.5px solid var(--color-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 48px;
+}
+.btn-secondary:active {
+  transform: scale(0.98);
+  background-color: rgba(11, 122, 75, 0.05);
+}
+
+/* Text button / link: height 40 with 48px tappable area */
+.btn-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 48px;
+  padding: 4px 12px;
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* ===== CARDS ===== */
+/* Card: 16px inner padding, 16px radius */
+.card {
+  background: var(--color-card);
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+html.dark .card {
+  background: var(--color-card-dark);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== INPUTS ===== */
+.input-field {
+  width: 100%;
+  height: 48px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-card);
+  font-size: 16px;
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.input-field:focus {
+  border-color: var(--color-primary);
+}
+html.dark .input-field {
+  background: var(--color-card-dark);
+  border-color: var(--color-border-dark);
+  color: var(--color-text-dark);
+}
+
+/* ===== TYPOGRAPHY SCALE ===== */
+/* Hero numbers: 32px, used for 1-3 key numbers per screen */
+.text-hero {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+/* Screen title: 24px */
+.text-screen-title {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* Section title: 20px */
+.text-section-title {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+/* Body: 16px */
+.text-body {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Body large: 18px */
+.text-body-lg {
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+/* Secondary text: 14px */
+.text-secondary {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Small text: 14px minimum */
+.text-small {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Legacy aliases */
+.number-big {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+.number-medium {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* ===== CHIPS ===== */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 100px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-card);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.chip:active { transform: scale(0.96); }
+.chip-active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-soft {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+.animate-fade-in { animation: fadeIn 0.25s ease-out; }
+.animate-slide-up { animation: slideUp 0.3s ease-out; }
+.animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+
+/* ===== BOTTOM NAV ===== */
+/* 64px tall plus device safe area */
+.bottom-nav {
+  height: 64px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ===== SAFE AREAS ===== */
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 0px);
+}
+
+/* ===== PROGRESS BAR ===== */
+.progress-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--color-primary);
+  transition: width 0.3s ease;
+}
+
+/* ===== DARK MODE OVERRIDES ===== */
+html.dark {
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-dark);
+}
+html.dark .bg-bg { background-color: var(--color-bg-dark); }
+html.dark .bg-card { background-color: var(--color-card-dark); }
+html.dark .text-text { color: var(--color-text-dark); }
+html.dark .text-text-secondary { color: var(--color-text-secondary-dark); }
+html.dark .border-border { border-color: var(--color-border-dark); }
+html.dark .bg-green-50 { background-color: rgba(22, 163, 74, 0.1); }
+html.dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.1); }
+html.dark .bg-red-50 { background-color: rgba(220, 38, 38, 0.1); }
+html.dark .border-green-200 { border-color: rgba(22, 163, 74, 0.3); }
+html.dark .border-amber-200 { border-color: rgba(245, 158, 11, 0.3); }
+html.dark .border-red-200 { border-color: rgba(220, 38, 38, 0.3); }
+html.dark nav, html.dark .bottom-nav { background-color: var(--color-card-dark); border-color: var(--color-border-dark); }
+
+/* ===== RESPONSIVE ===== */
+/* Cap content width on large screens */
+@media (min-width: 430px) {
+  .content-cap {
+    max-width: 430px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* Prevent iOS zoom on input focus */
+@supports (-webkit-touch-callout: none) {
+  .input-field { font-size: 16px !important; }
+}
+
+/* Touch target enforcement */
+button, [role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Ensure text wraps, never truncates important content */
+.no-truncate {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  white-space: normal;
+}
