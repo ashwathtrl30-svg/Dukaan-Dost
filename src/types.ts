@@ -64,6 +64,13 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+export interface ChatSession {
+  id: string;
+  title: string;
+  createdAt: number;
+  messages: ChatMessage[];
+}
+
 export interface Insight {
   id: string;
   type: 'profit' | 'cost' | 'udhaar' | 'stock' | 'season' | 'pricing' | 'cash' | 'win';
@@ -93,7 +100,8 @@ export interface AppState {
   sales: SaleEntry[];
   expenses: ExpenseEntry[];
   udhaar: UdhaarEntry[];
-  chatHistory: ChatMessage[];
+  chatSessions: ChatSession[];
+  activeSessionId: string | null;
   insights: Insight[];
   phoneNumber: string;
   userName: string;
