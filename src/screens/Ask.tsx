@@ -122,7 +122,7 @@ function buildAIShopContext(state: any): string {
     details.push(`Workers: ${profile.workers}`);
   }
 
-  return details.length ? details.join("\\n") : "Shop type not provided.";
+  return details.length ? details.join("\n") : "Shop type not provided.";
 }
 
 // Get current season/festival context
