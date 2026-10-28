@@ -124,8 +124,12 @@ ${question}`,
             }],
           }],
           generationConfig: {
-            temperature: 0.55,
-            maxOutputTokens: 500,
+            // Gemini 3.6 includes internal thinking tokens in maxOutputTokens.
+            // Low thinking keeps a short business-advice answer from being cut off.
+            thinkingConfig: {
+              thinkingLevel: "low",
+            },
+            maxOutputTokens: 900,
           },
         }),
       }
@@ -148,16 +152,39 @@ ${question}`,
       });
     }
 
-    const answer = Array.isArray(result?.candidates?.[0]?.content?.parts)
-      ? result.candidates[0].content.parts
+    const candidate = result?.candidates?.[0];
+    const answer = Array.isArray(candidate?.content?.parts)
+      ? candidate.content.parts
           .map((part: any) => typeof part?.text === "string" ? part.text : "")
           .join("")
           .trim()
       : "";
 
     if (!answer) {
+      // Log response metadata only; never log the shopkeeper's question or API key.
+      const blockReason = result?.promptFeedback?.blockReason;
+      const finishReason = candidate?.finishReason;
+      console.warn("Gemini returned no text", {
+        model,
+        blockReason: typeof blockReason === "string" ? blockReason : undefined,
+        finishReason: typeof finishReason === "string" ? finishReason : undefined,
+        hasCandidates: Array.isArray(result?.candidates) && result.candidates.length > 0,
+      });
+
+      if (blockReason) {
+        return res.status(502).json({
+          error: "Gemini could not answer this request due to a safety filter. Please rephrase the question."
+        });
+      }
+
+      if (finishReason === "MAX_TOKENS") {
+        return res.status(502).json({
+          error: "Gemini stopped before finishing the answer. Please try again."
+        });
+      }
+
       return res.status(502).json({
-        error: "The AI returned an empty answer. Please try again."
+        error: "Gemini did not return any text. Please try again; if it repeats, check the Vercel function logs."
       });
     }
 
