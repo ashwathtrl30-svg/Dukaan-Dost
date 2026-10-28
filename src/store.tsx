@@ -188,7 +188,32 @@ function loadState(): AppState {
   try {
     const saved = localStorage.getItem('dukaandost_state');
     if (saved) {
-      return { ...initialState, ...JSON.parse(saved) };
+      const parsed = JSON.parse(saved);
+      
+      // Migration: Convert old chatHistory to new chatSessions structure
+      if (parsed.chatHistory && !parsed.chatSessions) {
+        const oldMessages: ChatMessage[] = parsed.chatHistory;
+        if (oldMessages.length > 0) {
+          const migratedSession: ChatSession = {
+            id: 'migrated-' + Date.now(),
+            title: oldMessages[0].content.slice(0, 30) + (oldMessages[0].content.length > 30 ? '...' : ''),
+            createdAt: oldMessages[0].timestamp,
+            messages: oldMessages,
+          };
+          parsed.chatSessions = [migratedSession];
+          parsed.activeSessionId = migratedSession.id;
+        } else {
+          parsed.chatSessions = [];
+          parsed.activeSessionId = null;
+        }
+        delete parsed.chatHistory; // Remove old property
+      }
+      
+      // Ensure new properties exist
+      if (!parsed.chatSessions) parsed.chatSessions = [];
+      if (parsed.activeSessionId === undefined) parsed.activeSessionId = null;
+      
+      return { ...initialState, ...parsed };
     }
   } catch (e) {
     console.error('Failed to load state:', e);
