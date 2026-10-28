@@ -108,6 +108,7 @@ export function WelcomeScreen() {
 export function PhoneScreen() {
   const { state, dispatch } = useStore();
   const lang = state.language!;
+  const demoLoginEnabled = import.meta.env.VITE_DEMO_LOGIN === 'true';
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
@@ -121,6 +122,13 @@ export function PhoneScreen() {
       setError('Enter a valid 10-digit Indian mobile number.');
       return;
     }
+    if (demoLoginEnabled) {
+      // Preview mode sends no SMS and accepts any six-digit code.
+      dispatch({ type: 'SET_PHONE', payload: fullPhone });
+      setStep('otp');
+      return;
+    }
+
     if (!supabase) {
       setError('Secure sign-in is not configured. Please try again after the app settings are updated.');
       return;
@@ -141,7 +149,15 @@ export function PhoneScreen() {
 
   const handleVerify = async () => {
     setError('');
-    if (otp.length !== 6 || !supabase) return;
+    if (otp.length !== 6) return;
+
+    if (demoLoginEnabled) {
+      localStorage.setItem('dukaandost_demo_phone', fullPhone);
+      dispatch({ type: 'DEMO_LOGIN', payload: fullPhone });
+      return;
+    }
+
+    if (!supabase) return;
     setBusy(true);
     try {
       const { data, error: authError } = await supabase.auth.verifyOtp({
@@ -198,7 +214,9 @@ export function PhoneScreen() {
         ) : (
           <>
             <h2 className="text-section-title text-text mb-2">{t('enterOtp', lang)}</h2>
-            <p className="text-body text-text-secondary mb-4">{t('otpSent', lang)} +91 {phone}</p>
+            <p className="text-body text-text-secondary mb-4">{demoLoginEnabled
+              ? (lang === 'hi' ? 'डेमो मोड: कोई भी 6 अंकों का कोड डालें। SMS नहीं भेजा जाएगा।' : 'Demo mode: enter any 6-digit code. No SMS will be sent.')
+              : <>{t('otpSent', lang)} +91 {phone}</>}</p>
             <input
               type="tel"
               value={otp}

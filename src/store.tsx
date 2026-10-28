@@ -44,6 +44,7 @@ const initialState: AppState = {
 
 type Action =
   | { type: 'LOAD_STATE'; payload: AppState }
+  | { type: 'DEMO_LOGIN'; payload: string }
   | { type: 'SET_LANGUAGE'; payload: Language }
   | { type: 'SET_THEME'; payload: Theme }
   | { type: 'SET_ONBOARDING_STEP'; payload: number }
@@ -73,6 +74,28 @@ function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
     case 'LOAD_STATE':
       return action.payload;
+    case 'DEMO_LOGIN': {
+      const phone = action.payload;
+      try {
+        const saved = localStorage.getItem(demoStateKey(phone));
+        if (saved) {
+          const loaded = { ...initialState, ...JSON.parse(saved), phoneNumber: phone };
+          return loaded.onboardingComplete
+            ? loaded
+            : { ...loaded, onboardingStep: Math.max(3, loaded.onboardingStep) };
+        }
+      } catch (e) {
+        console.error('Failed to load this demo phone profile:', e);
+      }
+      return {
+        ...initialState,
+        language: state.language,
+        theme: state.theme,
+        onboardingStep: 3,
+        onboardingComplete: false,
+        phoneNumber: phone,
+      };
+    }
     case 'SET_LANGUAGE':
       return { ...state, language: action.payload };
     case 'SET_THEME':
@@ -142,12 +165,28 @@ function reducer(state: AppState, action: Action): AppState {
 
 // Before authentication, persist only non-sensitive setup preferences.
 // Never reuse the legacy, unencrypted global state for a different account.
+const demoLoginEnabled = import.meta.env.VITE_DEMO_LOGIN === 'true';
+
+function demoStateKey(phone: string): string {
+  return `dukaandost_demo_state_${phone.replace(/\D/g, '')}`;
+}
+
+// Demo mode keeps each test phone's prototype data in this browser only.
+// It deliberately does not write demo records to Supabase.
 function loadState(): AppState {
   try {
+    if (demoLoginEnabled) {
+      const demoPhone = localStorage.getItem('dukaandost_demo_phone');
+      if (demoPhone) {
+        const savedDemoState = localStorage.getItem(demoStateKey(demoPhone));
+        if (savedDemoState) {
+          return { ...initialState, ...JSON.parse(savedDemoState), phoneNumber: demoPhone };
+        }
+        return { ...initialState, phoneNumber: demoPhone, onboardingStep: 3 };
+      }
+    }
+
     const saved = localStorage.getItem('dukaandost_pre_auth_state');
-    // The prototype's old global state is deliberately not imported because it
-    // has no verified owner. Keep it untouched until a safe, explicit migration
-    // or deletion is chosen by the device owner.
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
@@ -159,7 +198,7 @@ function loadState(): AppState {
       };
     }
   } catch (e) {
-    console.error('Failed to load safe setup preferences:', e);
+    console.error('Failed to load Dukaan Dost state:', e);
   }
   return initialState;
 }
@@ -205,6 +244,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const currentUserRef = React.useRef<string | null>(null);
 
   useEffect(() => {
+    if (demoLoginEnabled) {
+      const demoPhone = localStorage.getItem('dukaandost_demo_phone');
+      const demoId = demoPhone ? `demo:${demoPhone.replace(/\D/g, '')}` : null;
+      currentUserRef.current = demoId;
+      setAuthUserId(demoId);
+      setVaultUnlocked(Boolean(demoId));
+      setVaultStatus(demoId ? 'existing' : 'signed_out');
+      setAuthReady(true);
+      return;
+    }
+
     if (!supabase) {
       setAuthUserId(null);
       setVaultStatus('signed_out');
@@ -244,6 +294,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (demoLoginEnabled && authUserId?.startsWith('demo:')) {
+      setVaultStatus('existing');
+      setVaultUnlocked(true);
+      return;
+    }
+
     if (!authReady || !authUserId || !supabase) {
       if (authReady && !authUserId) setVaultStatus('signed_out');
       return;
@@ -270,6 +326,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       active = false;
     };
   }, [authReady, authUserId]);
+
+  useEffect(() => {
+    if (!demoLoginEnabled || !authReady || !state.phoneNumber || state.onboardingStep < 3) return;
+    const savedPhone = localStorage.getItem('dukaandost_demo_phone');
+    if (savedPhone !== state.phoneNumber) return;
+
+    const demoId = `demo:${state.phoneNumber.replace(/\D/g, '')}`;
+    currentUserRef.current = demoId;
+    setAuthUserId(demoId);
+    setVaultUnlocked(true);
+    setVaultStatus('existing');
+  }, [authReady, state.phoneNumber, state.onboardingStep]);
 
   const unlockVault = async (passphrase: string) => {
     if (!supabase || !authUserId) {
@@ -340,6 +408,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    if (demoLoginEnabled) {
+      localStorage.removeItem('dukaandost_demo_phone');
+      passphraseRef.current = null;
+      saltRef.current = null;
+      currentUserRef.current = null;
+      setAuthUserId(null);
+      setVaultUnlocked(false);
+      setVaultStatus('signed_out');
+      dispatch({
+        type: 'LOAD_STATE',
+        payload: {
+          ...initialState,
+          language: state.language,
+          theme: state.theme,
+          onboardingStep: 2,
+        },
+      });
+      return;
+    }
+
     if (supabase) {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
@@ -359,6 +447,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    if (demoLoginEnabled && authReady && authUserId?.startsWith('demo:') && vaultUnlocked) {
+      const snapshot = state;
+      const phoneDigits = authUserId.slice('demo:'.length).replace(/\D/g, '');
+      const timer = window.setTimeout(() => {
+        try {
+          localStorage.setItem(demoStateKey(phoneDigits), JSON.stringify(snapshot));
+        } catch (error) {
+          console.error('Could not save this local demo profile:', error);
+        }
+      }, 200);
+      return () => window.clearTimeout(timer);
+    }
+
     if (!authReady || !authUserId || !vaultUnlocked || !supabase || !passphraseRef.current || !saltRef.current) {
       savePreAuthState(state);
       return;
