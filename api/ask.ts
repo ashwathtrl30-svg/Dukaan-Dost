@@ -2,6 +2,13 @@
 // Uses the Gemini API free tier when the project key/model are eligible.
 // Do not add customer names, phone numbers, or transaction-level records to this request.
 
+function getEnv(name: string): string | undefined {
+  const runtime = globalThis as typeof globalThis & {
+    process?: { env?: Record<string, string | undefined> };
+  };
+  return runtime.process?.env?.[name];
+}
+
 const SYSTEM_PROMPT = `
 You are Dukaan Dost, a practical business advisor for Indian local shopkeepers.
 
@@ -49,7 +56,8 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: "Method not allowed." });
   }
 
-  if (!process.env.GEMINI_API_KEY) {
+  const apiKey = getEnv("GEMINI_API_KEY");
+  if (!apiKey) {
     return res.status(503).json({
       error: "AI is not configured yet. The app administrator must add the Gemini API key in Vercel."
     });
@@ -89,14 +97,14 @@ export default async function handler(req: any, res: any) {
       dateParts.find((part) => part.type === "day")?.value,
     ].join("-");
 
-    const model = process.env.GEMINI_MODEL || "gemini-3.6-flash";
+    const model = getEnv("GEMINI_MODEL") || "gemini-3.6-flash";
     const googleResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": process.env.GEMINI_API_KEY,
+          "x-goog-api-key": apiKey,
         },
         body: JSON.stringify({
           systemInstruction: {
