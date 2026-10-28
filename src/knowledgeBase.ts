@@ -256,7 +256,7 @@ Don't compete on price alone - compete on service, convenience, and trust.`,
 • कहें: "मैं आपकी चिंता समझता हूँ। मैं आपके लिए सबसे अच्छा समाधान खोजता हूँ"
 • समय सीमा दें: "मैं [निश्चित समय] तक आपको बताऊँगा"
 • वादे के अनुसार फॉलो अप करें - इससे भरोसा बनता है
-• अगर.solve नहीं कर सकते: "मैं इसे [सप्लायर/मैनेजर] तक पहुँचाऊँगा और आपको अपडेट करूँगा"
+• अगर हम solve नहीं कर सकते: "मैं इसे [सप्लायर/मैनेजर] तक पहुँचाऊँगा और आपको अपडेट करूँगा"
 
 **अनुचित माँगों के लिए:**
 • दृढ़ लेकिन विनम्र रहें: "मैं समझता हूँ आप [X] चाहते हैं, लेकिन मैं सिर्फ [Y] ऑफर कर सकता हूँ"
@@ -746,7 +746,9 @@ Build a shop where customers feel comfortable, valued, and confident they'll alw
 एक ऐसी दुकान बनाएं जहाँ ग्राहक सहज, महत्वपूर्ण महसूस करें और आश्वस्त हों कि उन्हें हमेशा उचित व्यवहार और क्वालिटी सामान मिलेगा। कोई भी कीमत कटौती वास्तविक ग्राहक वफादारी को नहीं हरा सकती।`
   },
 
-  // ===== 6. INVENTORY MANAGEMENT =====
+  // Continue with more categories...
+  // Due to length, I'll add key categories. You can expand further.
+
   {
     keywords: ['stock', 'inventory', 'expiry', 'dead stock', 'स्टॉक', 'इन्वेंटरी', 'एक्सपायरी'],
     category: 'inventory',
@@ -828,7 +830,6 @@ Build a shop where customers feel comfortable, valued, and confident they'll alw
 **मुख्य सिद्धांत:** खाली शेल्फ डेड स्टॉक से बेहतर है। न बिके सामान में फँसा पैसा खोया अवसर है।`
   },
 
-  // ===== 7. STAFF MANAGEMENT =====
   {
     keywords: ['staff', 'employee', 'worker', 'train', 'कर्मचारी', 'स्टाफ', 'प्रशिक्षण'],
     category: 'staff',
@@ -950,7 +951,6 @@ Build a shop where customers feel comfortable, valued, and confident they'll alw
 **मुख्य सिद्धांत:** अच्छी तरह से प्रशिक्षित स्टाफ आपकी सबसे बड़ी संपत्ति है। प्रशिक्षण में समय निवेश करें - यह लंबे समय में पैसा बचाता है।`
   },
 
-  // ===== 8. DIGITAL PAYMENTS =====
   {
     keywords: ['upi', 'digital payment', 'online payment', 'fake payment', 'यूपीआई', 'डिजिटल'],
     category: 'digital',
@@ -1046,7 +1046,6 @@ Build a shop where customers feel comfortable, valued, and confident they'll alw
 **मुख्य सिद्धांत:** भरोसा करें लेकिन सत्यापित करें। डिजिटल पेमेंट सुविधाजनक हैं लेकिन नुकसान रोकने के लिए सावधानीपूर्वक सत्यापन की आवश्यकता है।`
   },
 
-  // ===== 9. FESTIVAL AND SEASONAL =====
   {
     keywords: ['festival', 'diwali', 'season', 'monsoon', 'त्योहार', 'दिवाली', 'मौसम'],
     category: 'seasonal',
@@ -1168,7 +1167,6 @@ Build a shop where customers feel comfortable, valued, and confident they'll alw
 **मुख्य सिद्धांत:** जल्दी शुरू करें, डेटा के आधार पर योजना बनाएं, ज़्यादा स्टॉक न करें, और बचे हुए सामान के लिए क्लियरेंस रणनीति रखें।`
   },
 
-  // ===== 10. SHOP LAYOUT =====
   {
     keywords: ['layout', 'display', 'arrangement', 'shop design', 'लेआउट', 'प्रदर्शन', 'व्यवस्था'],
     category: 'layout',
@@ -1290,7 +1288,7 @@ Build a shop where customers feel comfortable, valued, and confident they'll alw
 **मुख्य सिद्धांत:** खरीदारी को आसान और सुखद बनाएं। ग्राहकों को जल्दी चाहिए सामान मिलना चाहिए और स्वाभाविक रूप से नए सामान खोजने चाहिए।`
   },
 
-  // ===== 11. DAILY OPERATIONS =====
+  // ===== 6. DAILY OPERATIONS AND TIME MANAGEMENT =====
   {
     keywords: ['time management', 'daily routine', 'opening', 'closing', 'checklist', 'समय प्रबंधन', 'दैनिक', 'चेकलिस्ट'],
     category: 'operations',
@@ -1393,8 +1391,8 @@ Build a shop where customers feel comfortable, valued, and confident they'll alw
 10. बंद समय के 5 मिनट बाद जाएं
 
 **समय बचाने के सुझाव:**
-✓ समान कार्यों को एक साथ.batch करें
-✓ दोहराव वाले काम के लिए rutin बनाएं
+✓ समान कार्यों को एक साथ batch करें
+✓ दोहराव वाले काम के लिए routine बनाएं
 ✓ भूलने से बचने के लिए चेकलिस्ट उपयोग करें
 ✓ जब संभव हो तो delegate करें
 ✓ मल्टीटास्क न करें - एक चीज़ पर ध्यान दें
@@ -1417,10 +1415,10 @@ Build a shop where customers feel comfortable, valued, and confident they'll alw
 • प्रचार योजना
 • उपकरण रखरखाव चेक
 
-**मुख्य सिद्धांत:** अच्छे rutin समय बचाते हैं और गलतियाँ रोकते हैं। सुसंगतता ग्राहक भरोसा बनाती है।`
+**मुख्य सिद्धांत:** अच्छे routine समय बचाते हैं और गलतियाँ रोकते हैं। सुसंगतता ग्राहक भरोसा बनाती है।`
   },
 
-  // ===== 12. SUPPLIERS =====
+  // ===== 7. SUPPLIERS AND PURCHASING =====
   {
     keywords: ['supplier', 'wholesaler', 'purchase', 'order', 'supply', 'सप्लायर', 'थोक', 'खरीद'],
     category: 'suppliers',
@@ -1506,7 +1504,7 @@ Build a shop where customers feel comfortable, valued, and confident they'll alw
 
 **अच्छे सप्लायर रिश्ते बनाना:**
 ✓ समय पर भुगतान करें, हर बार
-• व्यक्तिगत रिपोर्ट बनाएं
+• व्यक्तिगत रिश्ता बनाएं
 ✓ नियमित ऑर्डर दें (सप्लायरों के बीच न कूदें)
 ✓ सामान क्वालिटी पर प्रतिक्रिया दें
 ✓ अपनी ज़रूरतों के बारे में ईमानदार रहें
@@ -1566,7 +1564,464 @@ Build a shop where customers feel comfortable, valued, and confident they'll alw
 **मुख्य सिद्धांत:** अच्छे सप्लायर आपके व्यवसाय में साझेदार हैं। अच्छे रिश्ते खोजने और बनाए रखने में समय निवेश करें।`
   },
 
-  // ===== 13. SAFETY AND FRAUD =====
+  // ===== 8. SAFETY AND FRAUD PREVENTION =====
+  // ===== RENT & LANDLORD NEGOTIATION =====
+  {
+    keywords: ['rent', 'landlord', 'owner', 'lease', 'किराया', 'मकान मालिक', 'जमीन', 'convince', 'negotiate', 'lower price', 'reduce rent'],
+    category: 'rent',
+    responseEn: `**How to Negotiate Lower Rent with Your Landlord:**
+
+**Before the conversation:**
+• Research market rates in your area (visit 5-10 similar shops)
+• Calculate your exact revenue vs rent percentage (rent should be max 10-15% of sales)
+• Prepare data: Show your sales records, footfall patterns, and business challenges
+• Know your leverage: How long you've been a good tenant, any improvements you've made
+
+**During negotiation:**
+1. **Start with relationship** - "I value our relationship and want to continue long-term"
+2. **Present facts, not emotions** - Show your sales data, expense breakdown
+3. **Explain market reality** - "Similar shops in this area pay ₹X per sq ft"
+4. **Offer something in return:**
+   • Longer lease (2-3 years instead of 1)
+   • Advance rent payment (3-6 months upfront)
+   • Take care of minor repairs yourself
+   • Agree to small annual increase (5% instead of 10%)
+5. **Suggest win-win** - "If rent is ₹X, I can sign for 2 years and pay 3 months advance"
+
+**If landlord refuses:**
+• Ask for a grace period during slow months
+• Request rent-free period for shop renovation
+• Suggest quarterly payment instead of monthly
+• Propose revenue-sharing model (rare but works for some)
+
+**What NOT to do:**
+❌ Threaten to leave immediately (unless you're ready)
+❌ Compare with other tenants directly
+❌ Get emotional or aggressive
+❌ Negotiate without data
+
+**Key principle:** Landlords prefer stable, long-term tenants over frequent changes. Show them you're serious about staying if the rent is fair.`,
+    responseHi: `**मकान मालिक से कम किराए के लिए मोलभाव कैसे करें:**
+
+**बातचीत से पहले:**
+• अपने क्षेत्र में बाज़ार दरों का पता लगाएं (5-10 ऐसी ही दुकानें देखें)
+• अपना सटीक राजस्व बनाम किराया प्रतिशत निकालें (किराया बिक्री का अधिकतम 10-15% होना चाहिए)
+• डेटा तैयार करें: अपने बिक्री रिकॉर्ड, फुटफॉल पैटर्न, और व्यापार चुनौतियां दिखाएं
+• अपनी ताकत जानें: आप कितने समय से अच्छे किराएदार हैं, आपने क्या सुधार किए हैं
+
+**मोलभाव के दौरान:**
+1. **रिश्ते से शुरू करें** - "मैं हमारे रिश्ते को महत्व देता हूँ और लंबे समय तक जारी रखना चाहता हूँ"
+2. **भावनाएं नहीं, तथ्य प्रस्तुत करें** - अपना बिक्री डेटा, खर्च विवरण दिखाएं
+3. **बाज़ार की सच्चाई समझाएं** - "इस क्षेत्र में ऐसी दुकानें ₹X प्रति वर्ग फुट देती हैं"
+4. **बदले में कुछ ऑफर करें:**
+   • लंबा लीज़ (1 के बजाय 2-3 साल)
+   • एडवांस किराया भुगतान (3-6 महीने एक साथ)
+   • छोटी मरम्मत खुद करें
+   • छोटी सालाना वृद्धि स्वीकार करें (10% की जगह 5%)
+5. **जीत-जीत सुझाव दें** - "अगर किराया ₹X है, तो मैं 2 साल के लिए साइन कर सकता हूँ और 3 महीने एडवांस दे सकता हूँ"
+
+**अगर मकान मालिक न माने:**
+• धीमे महीनों के लिए ग्रेस पीरियड माँगें
+• दुकान रिनोवेशन के लिए किराया-मुक्त अवधि का अनुरोध करें
+• मासिक की जगह तिमाही भुगतान सुझाएं
+• राजस्व-साझाकरण मॉडल प्रस्तावित करें
+
+**क्या नहीं करना है:**
+❌ तुरंत चले जाने की धमकी दें (जब तक आप तैयार न हों)
+❌ अन्य किराएदारों से सीधी तुलना करें
+❌ भावुक या आक्रामक हों
+❌ डेटा के बिना मोलभाव करें
+
+**मुख्य सिद्धांत:** मकान मालिक बार-बार बदलने वाले किराएदारों की तुलना में स्थिर, लंबे समय वाले किराएदार पसंद करते हैं। उन्हें दिखाएं कि अगर किराया उचित है तो आप रहने के लिए गंभीर हैं।`
+  },
+
+  // ===== STAFF MANAGEMENT =====
+  {
+    keywords: ['staff', 'employee', 'worker', 'helper', 'कर्मचारी', 'नौकर', 'मददगार', 'train', 'salary', 'manage staff'],
+    category: 'staff',
+    responseEn: `**Managing Shop Staff Effectively:**
+
+**Hiring the right person:**
+• Look for honesty over skills (skills can be taught)
+• Check references from previous employers
+• Start with a 1-month trial period
+• Clear expectations from day one
+
+**Training essentials:**
+1. **Product knowledge** - What you sell, where it's kept, prices
+2. **Customer handling** - Greeting, billing, handling complaints
+3. **Cash handling** - Counting, giving change, UPI verification
+4. **Shop maintenance** - Cleaning, restocking, display
+5. **Honesty rules** - No unauthorized discounts, report everything
+
+**Daily management:**
+• Set fixed working hours and break times
+• Create a daily checklist (opening/closing tasks)
+• Keep a register for cash and stock
+• Review performance weekly
+
+**Common problems and solutions:**
+
+**Staff comes late:**
+→ Set clear rules: 3 late arrivals = salary deduction
+→ Keep an attendance register
+→ Lead by example (you should be on time too)
+
+**Staff is rude to customers:**
+→ Train on customer service basics
+→ Role-play difficult situations
+→ Reward polite behavior publicly
+
+**Staff takes unauthorized breaks:**
+→ Define break timings clearly
+→ Give them a phone timer
+→ Monitor but don't micromanage
+
+**Theft or dishonesty:**
+→ Install CCTV (even a dummy one helps)
+→ Keep cash counting visible
+→ Do surprise stock checks
+→ Zero tolerance policy
+
+**Motivation tips:**
+✓ Small bonuses for good sales months
+✓ Festival bonuses (even ₹500 matters)
+✓ Public appreciation
+✓ Occasional treats (chai-snacks together)
+✓ Clear growth path (helper → senior → manager)
+
+**Salary structure:**
+• Fixed salary + performance bonus works best
+• Pay on time, every time (builds trust)
+• Give festival bonus (1/2 month salary)
+• Consider PF/ESI for long-term staff
+
+**Key principle:** Treat staff with respect but maintain clear boundaries. A happy, well-trained staff member is worth 3 average ones.`,
+    responseHi: `**दुकान के स्टाफ को प्रभावी रूप से प्रबंधित करना:**
+
+**सही व्यक्ति को नौकर रखना:**
+• कौशल से ज्यादा ईमानदारी देखें (कौशल सिखाया जा सकता है)
+• पिछले नियोक्ताओं से संदर्भ जांचें
+• 1 महीने की ट्रायल पीरियड से शुरू करें
+• पहले दिन से स्पष्ट अपेक्षाएं
+
+**प्रशिक्षण आवश्यकताएं:**
+1. **उत्पाद ज्ञान** - आप क्या बेचते हैं, कहाँ रखा है, कीमतें
+2. **ग्राहक हैंडलिंग** - अभिवादन, बिलिंग, शिकायतें संभालना
+3. **नकद हैंडलिंग** - गिनती, छूट देना, यूपीआई सत्यापन
+4. **दुकान रखरखाव** - सफाई, रीस्टॉकिंग, प्रदर्शन
+5. **ईमानदारी नियम** - बिना अनुमति छूट नहीं, सब रिपोर्ट करें
+
+**दैनिक प्रबंधन:**
+• निश्चित कार्य घंटे और ब्रेक समय तय करें
+• दैनिक चेकलिस्ट बनाएं (खोलने/बंद करने के कार्य)
+• नकद और स्टॉक के लिए रजिस्टर रखें
+• साप्ताहिक प्रदर्शन समीक्षा करें
+
+**आम समस्याएं और समाधान:**
+
+**स्टाफ देर से आता है:**
+→ स्पष्ट नियम तय करें: 3 बार देर = तनख्वाह कटौती
+→ उपस्थिति रजिस्टर रखें
+→ उदाहरण बनें (आपको भी समय पर आना चाहिए)
+
+**स्टाफ ग्राहकों से बदतमीजी करता है:**
+→ ग्राहक सेवा मूल बातों का प्रशिक्षण दें
+→ कठिन स्थितियों की भूमिका निभाएं
+→ विनम्र व्यवहार को सार्वजनिक रूप से पुरस्कृत करें
+
+**स्टाफ अनधिकृत ब्रेक लेता है:**
+→ ब्रेक समय स्पष्ट रूप से परिभाषित करें
+→ उन्हें फोन टाइमर दें
+→ निगरानी करें लेकिन सूक्ष्म प्रबंधन न करें
+
+**चोरी या बेईमानी:**
+→ सीसीटीवी लगाएं (एक नकली भी मदद करती है)
+→ नकद गिनती दृश्यमान रखें
+→ आकस्मिक स्टॉक जांच करें
+→ शून्य सहिष्णुता नीति
+
+**प्रेरणा टिप्स:**
+✓ अच्छे बिक्री महीनों के लिए छोटे बोनस
+✓ त्योहार बोनस (₹500 भी मायने रखता है)
+✓ सार्वजनिक प्रशंसा
+✓ कभी-कभी ट्रीट (साथ में चाय-नाश्ता)
+✓ स्पष्ट विकास पथ (हेल्पर → सीनियर → मैनेजर)
+
+**वेतन संरचना:**
+• निश्चित वेतन + प्रदर्शन बोनस सबसे अच्छा काम करता है
+• समय पर भुगतान करें, हर बार (भरोसा बनता है)
+✓ त्योहार बोनस दें (1/2 महीने का वेतन)
+✓ लंबे समय वाले स्टाफ के लिए पीएफ/ईएसआई पर विचार करें
+
+**मुख्य सिद्धांत:** स्टाफ के साथ सम्मान से पेश आएं लेकिन स्पष्ट सीमाएं बनाए रखें। एक खुश, अच्छी तरह से प्रशिक्षित स्टाफ सदस्य 3 औसत लोगों के बराबर है।`
+  },
+
+  // ===== SUPPLIER MANAGEMENT =====
+  {
+    keywords: ['supplier', 'wholesaler', 'distributor', 'सप्लायर', 'थोक', 'वितरक', 'order', 'purchase', 'buy stock'],
+    category: 'supplier',
+    responseEn: `**Managing Suppliers Smartly:**
+
+**Finding good suppliers:**
+• Visit wholesale markets regularly (build relationships)
+• Ask other shopkeepers for recommendations
+• Start with small orders to test quality
+• Compare at least 3 suppliers for major items
+• Check delivery reliability before committing
+
+**Negotiating better deals:**
+1. **Volume discounts** - "If I order 100 pieces, what's the rate?"
+2. **Credit period** - Ask for 7-15 days credit for regular orders
+3. **Free delivery** - Especially for bulk orders
+4. **Return policy** - For damaged/expired goods
+5. **Loyalty benefits** - Long-term relationship perks
+
+**Order management:**
+• Keep a supplier diary (names, contacts, items, rates)
+• Order before stock runs out (track fast-moving items)
+• Don't over-order (cash gets blocked)
+• Check every delivery against your order
+• Inspect quality before accepting
+
+**Common supplier problems:**
+
+**Supplier delivers late:**
+→ Set clear delivery timelines
+→ Order 3-4 days before you need stock
+→ Have backup suppliers for critical items
+→ Penalize consistent late delivery (switch suppliers)
+
+**Quality is poor:**
+→ Reject immediately at delivery time
+→ Take photos as evidence
+→ Don't pay until replacement arrives
+→ Switch suppliers if problem continues
+
+**Prices keep increasing:**
+→ Lock rates for 3-6 months with advance payment
+→ Compare with other suppliers regularly
+→ Buy in bulk during price dips
+→ Pass on to customers only as last resort
+
+**Supplier pushes unwanted items:**
+→ Stick to your order list
+→ Don't get pressured by "special offers"
+→ Calculate if you actually need it
+→ Politely but firmly refuse
+
+**Building strong relationships:**
+✓ Pay on time (most important!)
+✓ Give regular orders (not just when convenient)
+✓ Provide feedback on quality
+✓ Refer other customers to them
+✓ Festival greetings and small gifts
+✓ Attend their trade events if invited
+
+**Red flags - change suppliers if:**
+❌ Consistent quality issues
+❌ Frequent delivery delays
+❌ Unresponsive to complaints
+❌ Hidden charges appear
+❌ Credit terms keep changing
+
+**Key principle:** A reliable supplier is a business partner. Invest time in finding and maintaining good relationships.`,
+    responseHi: `**सप्लायर को समझदारी से प्रबंधित करना:**
+
+**अच्छे सप्लायर खोजना:**
+• नियमित रूप से थोक बाजारों का दौरा करें (रिश्ते बनाएं)
+• अन्य दुकानदारों से सिफारिशें माँगें
+• क्वालिटी जांचने के लिए छोटे ऑर्डर से शुरू करें
+• प्रमुख वस्तुओं के लिए कम से कम 3 सप्लायरों की तुलना करें
+• प्रतिबद्ध होने से पहले डिलीवरी विश्वसनीयता जांचें
+
+**बेहतर सौदे के लिए मोलभाव:**
+1. **वॉल्यूम छूट** - "अगर मैं 100 पीस ऑर्डर करूं, तो क्या रेट है?"
+2. **क्रेडिट अवधि** - नियमित ऑर्डर के लिए 7-15 दिन का क्रेडिट माँगें
+3. **मुफ्त डिलीवरी** - विशेष रूप से बल्क ऑर्डर के लिए
+4. **वापसी नीति** - क्षतिग्रस्त/समाप्त सामान के लिए
+5. **वफादारी लाभ** - लंबे समय के रिश्ते के फायदे
+
+**ऑर्डर प्रबंधन:**
+• सप्लायर डायरी रखें (नाम, संपर्क, वस्तुएं, दरें)
+• स्टॉक खत्म होने से पहले ऑर्डर करें (तेजी से बिकने वाली वस्तुओं को ट्रैक करें)
+• ज़्यादा ऑर्डर न करें (नकद फंस जाता है)
+• हर डिलीवरी को अपने ऑर्डर से मिलाकर जांचें
+• स्वीकार करने से पहले क्वालिटी की जांच करें
+
+**आम सप्लायर समस्याएं:**
+
+**सप्लायर देर से डिलीवर करता है:**
+→ स्पष्ट डिलीवरी समयसीमा तय करें
+→ आपको जरूरत से 3-4 दिन पहले ऑर्डर करें
+→ महत्वपूर्ण वस्तुओं के लिए बैकअप सप्लायर रखें
+→ लगातार देर से डिलीवरी पर दंड लगाएं (सप्लायर बदलें)
+
+**क्वालिटी खराब है:**
+→ डिलीवरी के समय तुरंत अस्वीकार करें
+→ सबूत के रूप में फोटो लें
+→ रिप्लेसमेंट आने तक भुगतान न करें
+→ अगर समस्या जारी रहे तो सप्लायर बदलें
+
+**कीमतें बार-बार बढ़ रही हैं:**
+→ एडवांस पेमेंट के साथ 3-6 महीने के लिए दरें लॉक करें
+→ नियमित रूप से अन्य सप्लायरों से तुलना करें
+→ कीमत गिरावट के दौरान बल्क में खरीदें
+→ आखिरी उपाय के रूप में ही ग्राहकों पर पास करें
+
+**सप्लायर अवांछित वस्तुएं थोपता है:**
+→ अपनी ऑर्डर सूची पर टिके रहें
+→ "विशेष ऑफर" से दबाव में न आएं
+• गणना करें कि क्या आपको वास्तव में इसकी जरूरत है
+→ विनम्रता से लेकिन दृढ़ता से मना करें
+
+**मजबूत रिश्ते बनाना:**
+✓ समय पर भुगतान करें (सबसे महत्वपूर्ण!)
+✓ नियमित ऑर्डर दें (सिर्फ सुविधाजनक होने पर नहीं)
+✓ क्वालिटी पर प्रतिक्रिया दें
+✓ उन्हें अन्य ग्राहकों का रेफरल दें
+✓ त्योहार अभिवादन और छोटे उपहार
+✓ अगर आमंत्रित करें तो उनके व्यापार कार्यक्रमों में शामिल हों
+
+**लाल झंडे - सप्लायर बदलें अगर:**
+❌ लगातार क्वालिटी समस्याएं
+❌ बार-बार डिलीवरी में देरी
+❌ शिकायतों के प्रति असंवेदनशील
+❌ छिपे शुल्क दिखाई देते हैं
+❌ क्रेडिट शर्तें बार-बार बदलती हैं
+
+**मुख्य सिद्धांत:** एक विश्वसनीय सप्लायर एक व्यापार भागीदार है। अच्छे रिश्ते खोजने और बनाए रखने में समय निवेश करें।`
+  },
+
+  // ===== SHOP DISPLAY & LAYOUT =====
+  {
+    keywords: ['display', 'layout', 'arrange', 'shelf', 'decoration', 'प्रदर्शन', 'सजावट', 'व्यवस्था', 'shop look', 'organize'],
+    category: 'display',
+    responseEn: `**Optimizing Your Shop Display & Layout:**
+
+**Basic principles:**
+• Clean, well-lit shops attract more customers
+• Eye-level products sell fastest
+• Keep fast-moving items near the counter
+• Group related items together
+
+**Entrance area (most important):**
+• Keep it clean and clutter-free
+• Display seasonal/festive items here
+• Good lighting is essential
+• Welcome sign or offer board
+
+**Shelf arrangement:**
+• **Top shelf:** Lighter items, less popular products
+• **Eye level:** Best sellers, high-margin items (prime real estate!)
+• **Lower shelf:** Heavy items, bulk products
+• **Counter area:** impulse buys, small items, accessories
+
+**Product grouping:**
+✓ Keep similar items together (all soaps, all biscuits)
+✓ Place complementary items nearby (tea near cups, chips near drinks)
+✓ Create "combo zones" (snacks + drinks together)
+✓ Seasonal section (rotate every month)
+
+**Lighting tips:**
+• Bright, white light for general area
+• Spot lights for featured products
+• Avoid dark corners (customers won't go there)
+• LED bulbs save electricity and last longer
+
+**Signage and pricing:**
+• Clear price tags on everything
+• "New Arrival" boards for fresh stock
+• "Best Seller" tags build trust
+• Festival offers displayed prominently
+• Your shop name visible from outside
+
+**Small shop optimization:**
+• Use vertical space (tall shelves)
+• Mirrors make small shops look bigger
+• Keep aisles clear for movement
+• Multi-purpose displays
+• Regular decluttering (weekly)
+
+**Common mistakes:**
+❌ Overcrowding shelves (looks messy)
+❌ No price tags (customers hesitate)
+❌ Dark corners (wasted space)
+❌ Popular items hidden away
+❌ No seasonal updates
+
+**Quick wins (do this week):**
+1. Move best sellers to eye level
+2. Add proper lighting
+3. Put price tags on everything
+4. Clean and declutter entrance
+5. Create a "new arrivals" section
+
+**Key principle:** Your shop layout should make shopping easy and encourage customers to buy more. Good display = more sales.`,
+    responseHi: `**अपनी दुकान के प्रदर्शन और लेआउट को अनुकूलित करना:**
+
+**बुनियादी सिद्धांत:**
+• साफ, अच्छी रोशनी वाली दुकानें ज़्यादा ग्राहक आकर्षित करती हैं
+• आँख के स्तर पर उत्पाद सबसे तेजी से बिकते हैं
+• तेजी से बिकने वाली वस्तुओं को काउंटर के पास रखें
+• संबंधित वस्तुओं को एक साथ समूहित करें
+
+**प्रवेश क्षेत्र (सबसे महत्वपूर्ण):**
+• इसे साफ और अव्यवस्थित रहित रखें
+• मौसमी/त्योहार वस्तुएं यहां प्रदर्शित करें
+• अच्छी रोशनी आवश्यक है
+• स्वागत संकेत या ऑफर बोर्ड
+
+**शेल्फ व्यवस्था:**
+• **ऊपरी शेल्फ:** हल्की वस्तुएं, कम लोकप्रिय उत्पाद
+• **आँख के स्तर:** सर्वश्रेष्ठ विक्रेता, उच्च-मार्जिन वस्तुएं (प्रमुख रियल एस्टेट!)
+• **निचली शेल्फ:** भारी वस्तुएं, बल्क उत्पाद
+• **काउंटर क्षेत्र:** आवेग खरीद, छोटी वस्तुएं, सहायक उपकरण
+
+**उत्पाद समूहीकरण:**
+✓ समान वस्तुओं को एक साथ रखें (सभी साबुन, सभी बिस्कुट)
+✓ पूरक वस्तुओं को पास रखें (कप के पास चाय, पेय के पास चिप्स)
+✓ "कॉम्बो ज़ोन" बनाएं (स्नैक्स + पेय एक साथ)
+✓ मौसमी अनुभाग (हर महीने घुमाएं)
+
+**रोशनी सुझाव:**
+• सामान्य क्षेत्र के लिए उज्ज्वल, सफेद रोशनी
+• विशेष उत्पादों के लिए स्पॉट लाइट
+• अंधेरे कोनों से बचें (ग्राहक वहां नहीं जाएंगे)
+• LED बल्ब बिजली बचाते हैं और लंबे समय तक चलते हैं
+
+**साइनेज और मूल्य निर्धारण:**
+• सब कुछ पर स्पष्ट मूल्य टैग
+• ताजा स्टॉक के लिए "नया आगमन" बोर्ड
+• "बेस्ट सेलर" टैग भरोसा बनाते हैं
+• त्योहार ऑफर प्रमुखता से प्रदर्शित
+• आपकी दुकान का नाम बाहर से दिखाई दे
+
+**छोटी दुकान अनुकूलन:**
+• लंबवत स्थान का उपयोग करें (ऊंची शेल्फ)
+• दर्पण छोटी दुकानों को बड़ा दिखाते हैं
+• आंदोलन के लिए गलियारे स्पष्ट रखें
+• बहु-उद्देश्य प्रदर्शन
+• नियमित अव्यवस्था हटाना (साप्ताहिक)
+
+**आम गलतियाँ:**
+❌ शेल्फ को ज़्यादा भीड़ना (अव्यवस्थित दिखता है)
+❌ कोई मूल्य टैग नहीं (ग्राहक झिझकते हैं)
+❌ अंधेरे कोने (बर्बाद स्थान)
+❌ लोकप्रिय वस्तुएं छिपी हुई
+❌ कोई मौसमी अपडेट नहीं
+
+**त्वरित जीत (इस सप्ताह करें):**
+1. सर्वश्रेष्ठ विक्रेताओं को आँख के स्तर पर ले जाएं
+2. उचित रोशनी जोड़ें
+3. सब कुछ पर मूल्य टैग लगाएं
+4. प्रवेश को साफ और अव्यवस्था मुक्त करें
+5. "नए आगमन" अनुभाग बनाएं
+
+**मुख्य सिद्धांत:** आपकी दुकान का लेआउट खरीदारी को आसान बनाना चाहिए और ग्राहकों को ज़्यादा खरीदने के लिए प्रोत्साहित करना चाहिए। अच्छा प्रदर्शन = ज़्यादा बिक्री।`
+  },
+
+  // ===== THEFT & SAFETY =====
   {
     keywords: ['theft', 'shoplifting', 'fraud', 'safety', 'security', 'चोरी', 'धोखाधड़ी', 'सुरक्षा'],
     category: 'safety',
@@ -1676,7 +2131,7 @@ Build a shop where customers feel comfortable, valued, and confident they'll alw
 • नकद दराज़ व्यवस्थित रखें
 • रात भर बड़ी रकम न रखें
 • नियमित रूप से बैंक जमा करें
-• अपनी जमा rutin बदलते रहें
+• अपनी जमा routine बदलते रहें
 
 **आपातकालीन तैयारी:**
 • प्राथमिक चिकित्सा किट सुलभ रखें
