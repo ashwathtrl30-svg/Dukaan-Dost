@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { StoreProvider, useStore } from './store';
 import { t } from './i18n';
 import { LanguageScreen, WelcomeScreen, PhoneScreen, InterviewScreen, ProfileSummaryScreen, TourScreen } from './screens/Onboarding';
@@ -128,6 +129,7 @@ export default function App() {
   return (
     <StoreProvider>
       <AppContent />
+      <Analytics />
     </StoreProvider>
   );
 }
