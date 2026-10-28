@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { StoreProvider, useStore } from './store';
 import { t } from './i18n';
 import { LanguageScreen, WelcomeScreen, PhoneScreen, InterviewScreen, ProfileSummaryScreen, TourScreen } from './screens/Onboarding';
-import { VaultAccessScreen } from './screens/VaultAccess';
 import { HomeScreen } from './screens/Home';
 import { InsightsScreen } from './screens/Insights';
 import { AskScreen } from './screens/Ask';
@@ -14,37 +13,16 @@ import { Home, BarChart3, MessageCircle, Wrench, BookOpen, User, WifiOff } from 
 type Tab = 'home' | 'insights' | 'ask' | 'tools' | 'learn';
 
 function AppContent() {
-  const { state, authReady, authUserId, vaultUnlocked } = useStore();
+  const { state } = useStore();
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [showProfile, setShowProfile] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
-
-  // Keep the app behind real authentication and the user's client-side encrypted vault.
-  if (!authReady) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center px-6 bg-bg">
-        <div className="text-section-title text-text mb-2">Dukaan Dost</div>
-        <p className="text-body text-text-secondary">Securing your session…</p>
-      </div>
-    );
-  }
-
-  if (!authUserId) {
-    if (!state.language) return <LanguageScreen />;
-    if (state.onboardingStep <= 1) return <WelcomeScreen />;
-    if (state.onboardingStep === 2) return <PhoneScreen />;
-    return <LanguageScreen />;
-  }
-
-  if (!vaultUnlocked) {
-    return <VaultAccessScreen />;
-  }
 
   // Handle onboarding flow
   if (!state.language) {
     return <LanguageScreen />;
   }
-  
+
   if (!state.onboardingComplete) {
     const step = state.onboardingStep;
     if (step === 0 || step === 1) return <WelcomeScreen />;
@@ -54,9 +32,9 @@ function AppContent() {
     if (step === 14) return <TourScreen />;
     return <WelcomeScreen />;
   }
-  
+
   const lang = state.language!;
-  
+
   // Show profile
   if (showProfile) {
     return (
@@ -68,7 +46,7 @@ function AppContent() {
       </div>
     );
   }
-  
+
   return (
     <div className="h-full flex flex-col">
       {/* Top bar with profile icon */}
@@ -80,7 +58,7 @@ function AppContent() {
           <User size={24} className="text-primary" />
         </button>
       </div>
-      
+
       {/* Offline banner */}
       {!isOnline && (
         <div className="bg-warning text-white px-4 py-2 flex items-center gap-2 text-sm font-medium">
@@ -88,7 +66,7 @@ function AppContent() {
           {t('noInternet', lang)}
         </div>
       )}
-      
+
       {/* Main content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'home' && <HomeScreen />}
@@ -97,7 +75,7 @@ function AppContent() {
         {activeTab === 'tools' && <ToolsScreen />}
         {activeTab === 'learn' && <LearnScreen />}
       </div>
-      
+
       {/* Bottom navigation */}
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
     </div>
@@ -108,7 +86,7 @@ function AppContent() {
 function BottomNav({ activeTab, onTabChange }: { activeTab: Tab; onTabChange: (tab: Tab) => void }) {
   const { state } = useStore();
   const lang = state.language!;
-  
+
   const tabs: { id: Tab; icon: any; label: string }[] = [
     { id: 'home', icon: Home, label: t('navHome', lang) },
     { id: 'insights', icon: BarChart3, label: t('navInsights', lang) },
@@ -116,7 +94,7 @@ function BottomNav({ activeTab, onTabChange }: { activeTab: Tab; onTabChange: (t
     { id: 'tools', icon: Wrench, label: t('navTools', lang) },
     { id: 'learn', icon: BookOpen, label: t('navLearn', lang) },
   ];
-  
+
   return (
     <nav className="bg-card border-t border-border bottom-nav">
       <div className="flex items-center justify-around h-full">
