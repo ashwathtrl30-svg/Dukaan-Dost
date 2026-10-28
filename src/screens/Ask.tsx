@@ -106,6 +106,25 @@ function buildShopContext(state: any): string {
   return context;
 }
 
+// Send only minimal shop context to the free-tier LLM.
+// Never send customer records, phone numbers, ledgers, or exact financial entries.
+function buildAIShopContext(state: any): string {
+  const profile = state.shopProfile || {};
+  const details: string[] = [];
+
+  if (profile.shopType) {
+    details.push(`Shop type: ${t(`st_${profile.shopType}` as any, 'en')}`);
+  }
+  if (typeof profile.city === 'string' && profile.city.trim()) {
+    details.push(`City: ${profile.city.trim().slice(0, 80)}`);
+  }
+  if (Number.isInteger(profile.workers) && profile.workers > 0) {
+    details.push(`Workers: ${profile.workers}`);
+  }
+
+  return details.length ? details.join("\\n") : "Shop type not provided.";
+}
+
 // Get current season/festival context
 function getTimeContext(): string {
   const now = new Date();
@@ -494,6 +513,7 @@ export function AskScreen() {
   const { state, dispatch } = useStore();
   const lang = state.language!;
   const [input, setInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -515,11 +535,11 @@ export function AskScreen() {
     }
   }, [messages]);
   
-  const handleSend = (text?: string) => {
+  const handleSend = async (text?: string) => {
     const message = text || input.trim();
-    if (!message) return;
-    
-    // Add user message
+    if (!message || isSending) return;
+
+    // Add user message immediately.
     const userMsg: ChatMessage = {
       id: generateId(),
       role: 'user',
@@ -528,18 +548,58 @@ export function AskScreen() {
     };
     dispatch({ type: 'ADD_CHAT_MESSAGE', payload: userMsg });
     setInput('');
-    
-    // Generate response after a short delay
-    setTimeout(() => {
-      const response = generateResponse(message, state, lang);
-      const assistantMsg: ChatMessage = {
-        id: generateId(),
-        role: 'assistant',
-        content: response,
-        timestamp: Date.now(),
-      };
-      dispatch({ type: 'ADD_CHAT_MESSAGE', payload: assistantMsg });
-    }, 800);
+    setIsSending(true);
+
+    let response = '';
+    try {
+      // Keep factual shop-ledger calculations local. Use the LLM for advice,
+      // planning, explanations, and questions the local rules cannot understand.
+      const intent = classifyIntent(message.toLowerCase().trim());
+
+      if (intent === 'data_query') {
+        response = generateResponse(message, state, lang);
+      } else {
+        const apiResponse = await fetch('/api/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            question: message,
+            language: lang === 'hi' ? 'Hindi' : 'English',
+            shopContext: buildAIShopContext(state),
+          }),
+        });
+
+        const result = await apiResponse.json().catch(() => ({}));
+        if (!apiResponse.ok) {
+          throw new Error(
+            typeof result?.error === 'string'
+              ? result.error
+              : 'The AI advisor could not answer right now. Please try again.'
+          );
+        }
+
+        response = typeof result?.answer === 'string' ? result.answer.trim() : '';
+        if (!response) {
+          throw new Error('The AI returned an empty answer. Please try again.');
+        }
+      }
+    } catch (error) {
+      response = error instanceof Error && error.message !== 'Failed to fetch'
+        ? error.message
+        : (lang === 'hi'
+          ? 'अभी AI सलाह उपलब्ध नहीं है। कृपया थोड़ी देर बाद फिर कोशिश करें।'
+          : 'The AI advisor is unavailable right now. Please try again shortly.');
+    } finally {
+      setIsSending(false);
+    }
+
+    const assistantMsg: ChatMessage = {
+      id: generateId(),
+      role: 'assistant',
+      content: response,
+      timestamp: Date.now(),
+    };
+    dispatch({ type: 'ADD_CHAT_MESSAGE', payload: assistantMsg });
   };
   
   const handleNewChat = () => {
@@ -754,7 +814,7 @@ export function AskScreen() {
           />
           <button
             onClick={() => handleSend()}
-            disabled={!input.trim()}
+            disabled={!input.trim() || isSending}
             className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
           >
             <Send size={20} />
