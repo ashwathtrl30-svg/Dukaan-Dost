@@ -30,34 +30,39 @@ function isMonthQuestion(q: string): boolean {
   return /month|mahine|महीने|महीने का|इस महीने|this month|last month|पिछले महीने/.test(q);
 }
 
-// Helper: detect sales-related questions
+// Helper: detect sales-related questions (use word boundaries to avoid "wholesale" matching "sale")
 function isSalesQuestion(q: string): boolean {
-  return /sale|bikr|बिक्री|बिका|bika|बेचा|becha|selling|कितना बिका|how much sold|revenue/.test(q);
+  return /\bsale\b|\bsales\b|\bbikr\b|बिक्री|बिका|\bbika\b|बेचा|\bbecha\b|\bselling\b|कितना बिका|\bhow much sold\b|\brevenue\b|\bturnover\b/.test(q);
 }
 
 // Helper: detect expense-related questions
 function isExpenseQuestion(q: string): boolean {
-  return /expense|kharch|खर्च|ख़र्च|खर्चा|kharcha|spend|spending|कितना खर्च|how much spent/.test(q);
+  return /\bexpense\b|\bexpenses\b|\bkharch\b|खर्च|ख़र्च|खर्चा|\bkharcha\b|\bspending\b|कितना खर्च|\bhow much spent\b|\bcost\b|\bcosts\b/.test(q);
 }
 
 // Helper: detect profit questions
 function isProfitQuestion(q: string): boolean {
-  return /profit|munafa|मुनाफ़ा|मुनाफा|kama|कमाई|कमाया|earn|earning|net/.test(q);
+  return /\bprofit\b|\bmunafa\b|मुनाफ़ा|मुनाफा|\bkama\b|कमाई|कमाया|\bearn\b|\bearning\b|\bnet\b|\bgain\b/.test(q);
 }
 
 // Helper: detect profit % questions
 function isProfitPercentQuestion(q: string): boolean {
-  return /percent|%|प्रतिशत|प्रति सौ|margin|कितना प्रतिशत|how much percent|profit %/.test(q);
+  return /\bpercent\b|%|प्रतिशत|प्रति सौ|\bmargin\b|कितना प्रतिशत|\bhow much percent\b|\bprofit %\b|\bprofit percent\b/.test(q);
 }
 
-// Helper: detect udhaar questions
+// Helper: detect udhaar questions - FIXED: use word boundaries so "owe" doesn't match "lower"
 function isUdhaarQuestion(q: string): boolean {
-  return /udhaar|उधार|credit|owe|owed|किसने|kisne|देना|dena|बाकी|baki|pending/.test(q);
+  return /\budhaar\b|उधार|\bcredit\b|\bowes\b|\bowed\b|\bowe me\b|\bowe you\b|किसने|\bkisne\b|\bdena\b|बाकी|\bbaki\b|\bpending\b|\boutstanding\b|\bdues\b|\budhaar\b/.test(q);
 }
 
 // Helper: detect "who owes" questions
 function isWhoOwesQuestion(q: string): boolean {
-  return /who|कौन|kisne|किसने|kab देंगे|kab denge|when pay|due/.test(q) && isUdhaarQuestion(q);
+  return /(\bwho\b|कौन|\bkisne\b|किसने|\bkab देंगे\b|\bkab denge\b|\bwhen pay\b|\bdue date\b)/.test(q) && isUdhaarQuestion(q);
+}
+
+// Helper: detect if question is seeking BUSINESS ADVICE (not data lookup)
+function isAdviceQuestion(q: string): boolean {
+  return /\bhow to\b|\bhow do\b|\bhow can\b|\bhow should\b|\bwhat should\b|\bwhat to\b|\bkaise\b|\bkya karu\b|\bkya karen\b|\bkaise karu\b|कैसे करें|क्या करूँ|क्या करूं|\bhow to handle\b|\bhow to deal\b|\bhow to manage\b|\bhow to attract\b|\bhow to compete\b|\bhow to train\b|\bhow to prepare\b|\bhow to reduce\b|\bhow to improve\b|\bhow to convince\b|\bhow to negotiate\b|\bhow to stop\b|\bhow to avoid\b|\bhow to start\b|\btips for\b|\badvice for\b|\bsuggest\b|\bsuggestion\b|\bshould i\b|\bwhat if\b|\bwhat is the best\b|\bbest way\b|\bstrategies\b|\bsteps to\b|\bways to\b|\bguide\b|\bhelp me\b|\bconvinced\b|\bpersuade\b|\bnegotiate\b|\brent\b|\blandlord\b|\bowner\b|\bsupplier\b|\bstaff\b|\bemployee\b|\bcustomer\b|\bcompetition\b|\bmarketing\b|\badvertise\b|\bdisplay\b|\barrange\b|\borganize\b|\bsave money\b|\bcut costs\b|\bincrease sales\b|\bbetter business\b|\bgrow business\b|\bsuccess\b/.test(q);
 }
 
 // Main AI response generator - uses actual data from state
@@ -69,6 +74,34 @@ function generateResponse(question: string, state: any, lang: string): string {
   const totalUdhaar = getTotalUdhaar(state.udhaar);
   const today = getTodayStr();
   const shopType = state.shopProfile.shopType;
+  
+  // ===== PRIORITY 1: GREETINGS & THANK YOU (always check first) =====
+  if (q.includes('hello') || q.includes('hi ') || q === 'hi' || q.includes('नमस्ते') || q.includes('हैलो') || q.includes('hey') || q === 'hlo' || q === 'hii') {
+    return lang === 'hi'
+      ? 'नमस्ते! 🙏 मैं दुकानदोस्त हूँ। आप अपनी दुकान के बारे में कुछ भी पूछ सकते हैं:\n\n• "आज की बिक्री कितनी?"\n• "मुनाफ़ा कितना हुआ?"\n• "किसने उधार लिया?"\n• "ग्राहक मोलभाव करें तो क्या करूँ?"\n• "नए ग्राहक कैसे लाएं?"'
+      : 'Namaste! 🙏 I\'m DukaanDost. You can ask me anything about your shop:\n\n• "What are today\'s sales?"\n• "How much profit did I make?"\n• "Who owes me money?"\n• "How to handle bargaining customers?"\n• "How to attract more customers?"';
+  }
+  
+  if (q.includes('thank') || q.includes('shukriya') || q.includes('धन्यवाद') || q.includes('शुक्रिया') || q.includes('thanks')) {
+    return lang === 'hi'
+      ? 'आपका स्वागत है! 😊 और कुछ पूछना हो तो बेझिझक पूछें।'
+      : 'You\'re welcome! 😊 Feel free to ask anything else.';
+  }
+  
+  // ===== PRIORITY 2: ADVICE QUESTIONS → Knowledge Base FIRST =====
+  // If the question is seeking business advice, check knowledge base BEFORE data queries
+  if (isAdviceQuestion(q)) {
+    const knowledgeEntry = findKnowledgeEntry(question);
+    if (knowledgeEntry) {
+      return lang === 'hi' ? knowledgeEntry.responseHi : knowledgeEntry.responseEn;
+    }
+    // If no exact match in knowledge base but it's clearly an advice question,
+    // give a helpful generic response instead of showing data
+    if (lang === 'hi') {
+      return `यह एक अच्छा सवाल है! 🤔\n\nइस विषय पर मेरे पास अभी विशिष्ट सलाह नहीं है, लेकिन आप मुझसे ये पूछ सकते हैं:\n\n• "ग्राहक मोलभाव करें तो क्या करूँ?"\n• "नए ग्राहक कैसे लाएं?"\n• "स्टॉक कैसे मैनेज करें?"\n• "स्टाफ को कैसे प्रशिक्षित करें?"\n• "प्रतिस्पर्धा कैसे करें?"\n• "उधार कैसे वसूलें?"\n• "त्योहार की तैयारी कैसे करें?"\n\nया अपना सवाल थोड़ा और विस्तार से पूछें।`;
+    }
+    return `That's a good question! 🤔\n\nI don't have specific advice on this topic yet, but you can ask me:\n\n• "How to handle bargaining customers?"\n• "How to attract more customers?"\n• "How to manage inventory?"\n• "How to train staff?"\n• "How to compete with other shops?"\n• "How to collect udhaar?"\n• "How to prepare for festivals?"\n\nOr try rephrasing your question with more details.`;
+  }
   
   // ===== TODAY'S SALES =====
   if (isTodayQuestion(q) && isSalesQuestion(q)) {
@@ -349,22 +382,8 @@ function generateResponse(question: string, state: any, lang: string): string {
     return 'Preparing for upcoming festivals:\n\n• Diwali: Sweets, dry fruits, decorations, crackers\n• Holi: Colours, sweets, thandai ingredients\n\nTip: Start stocking 2 weeks before the festival. Keep higher margins as demand is high. Stock 20-30% more than usual days.';
   }
   
-  // ===== GREETINGS =====
-  if (q.includes('hello') || q.includes('hi ') || q === 'hi' || q.includes('नमस्ते') || q.includes('हैलो') || q.includes('hey')) {
-    return lang === 'hi'
-      ? 'नमस्ते! 🙏 मैं दुकानदोस्त हूँ। आप अपनी दुकान के बारे में कुछ भी पूछ सकते हैं:\n\n• "आज की बिक्री कितनी?"\n• "मुनाफ़ा कितना हुआ?"\n• "किसने उधार लिया?"\n• "बिजली का बिल कैसे कम करें?"'
-      : 'Namaste! 🙏 I\'m DukaanDost. You can ask me anything about your shop:\n\n• "What are today\'s sales?"\n• "How much profit did I make?"\n• "Who owes me money?"\n• "How to reduce electricity bill?"';
-  }
-  
-  // ===== THANK YOU =====
-  if (q.includes('thank') || q.includes('shukriya') || q.includes('धन्यवाद') || q.includes('शुक्रिया')) {
-    return lang === 'hi'
-      ? 'आपका स्वागत है! 😊 और कुछ पूछना हो तो बेझिझक पूछें।'
-      : 'You\'re welcome! 😊 Feel free to ask anything else.';
-  }
-  
   // ===== KNOWLEDGE BASE: GENERAL BUSINESS ADVICE =====
-  // Check knowledge base for business advice questions
+  // Check knowledge base for any remaining business advice questions
   const knowledgeEntry = findKnowledgeEntry(question);
   if (knowledgeEntry) {
     return lang === 'hi' ? knowledgeEntry.responseHi : knowledgeEntry.responseEn;
@@ -382,7 +401,7 @@ function generateResponse(question: string, state: any, lang: string): string {
   if (lang === 'hi') {
     return `मैं आपकी मदद करना चाहता हूँ। आप मुझसे ये पूछ सकते हैं:\n\n**आपकी दुकान का डेटा:**\n• "आज की बिक्री कितनी?"\n• "मुनाफ़ा कितना हुआ?"\n• "किसने उधार लिया है?"\n\n**व्यापार सलाह:**\n• "ग्राहक मोलभाव करें तो क्या करूँ?"\n• "नए ग्राहक कैसे लाएं?"\n• "स्टॉक कैसे मैनेज करें?"\n• "स्टाफ को कैसे प्रशिक्षित करें?"\n• "त्योहार की तैयारी कैसे करें?"\n\nआपका सवाल थोड़ा और स्पष्ट करें तो मैं बेहतर मदद कर सकता हूँ।`;
   }
-  return `I'd like to help you. You can ask me:\n\n**Your shop **\n• "What are today's sales?"\n• "How much profit did I make?"\n• "Who owes me money?"\n\n**Business advice:**\n• "How to handle bargaining customers?"\n• "How to attract more customers?"\n• "How to manage inventory?"\n• "How to train staff?"\n• "How to prepare for festivals?"\n\nPlease rephrase your question more specifically so I can help you better.`;
+  return `I'd like to help you. You can ask me:\n\n**Your shop data:**\n• "What are today's sales?"\n• "How much profit did I make?"\n• "Who owes me money?"\n\n**Business advice:**\n• "How to handle bargaining customers?"\n• "How to attract more customers?"\n• "How to manage inventory?"\n• "How to train staff?"\n• "How to prepare for festivals?"\n\nPlease rephrase your question more specifically so I can help you better.`;
 }
 
 // Helper: Format date for display
