@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore, formatRupee, getTodaySales, getTodayExpenses, getTotalUdhaar, generateId, getWeekSales } from '../store';
 import { t } from '../i18n';
-import { ChatMessage } from '../types';
-import { Send } from 'lucide-react';
+import { ChatMessage, ChatSession } from '../types';
+import { Send, MoreVertical, Plus, ArrowLeft, Trash2, MessageCircle, Clock } from 'lucide-react';
+import { findKnowledgeEntry } from '../knowledgeBase';
 
 // Helper: get today's date string
 function getTodayStr(): string {
@@ -59,11 +60,6 @@ function isWhoOwesQuestion(q: string): boolean {
   return /who|कौन|kisne|किसने|kab देंगे|kab denge|when pay|due/.test(q) && isUdhaarQuestion(q);
 }
 
-// Helper: detect "best day" questions
-function isBestDayQuestion(q: string): boolean {
-  return /best|अच्छा|badhiya|best day|सबसे अच्छा|top day/.test(q);
-}
-
 // Main AI response generator - uses actual data from state
 function generateResponse(question: string, state: any, lang: string): string {
   const q = question.toLowerCase().trim();
@@ -109,7 +105,6 @@ function generateResponse(question: string, state: any, lang: string): string {
         ? 'आज का अभी तक कोई खर्च नहीं डाला गया।\n\nखर्च डालने के लिए होम स्क्रीन पर "खर्च" बटन दबाएँ।'
         : 'No expenses have been added for today yet.\n\nTap "Expense" on the home screen to add today\'s expenses.';
     }
-    // Group by category
     const byCategory: Record<string, number> = {};
     todayExpenseEntries.forEach((e: any) => {
       byCategory[e.category] = (byCategory[e.category] || 0) + e.amount;
@@ -275,7 +270,7 @@ function generateResponse(question: string, state: any, lang: string): string {
     return `This month's total sales: **₹${fmt(monthSales)}**\n\n(Based on your data)`;
   }
   
-  // ===== GENERAL PROFIT QUESTION (not today-specific) =====
+  // ===== GENERAL PROFIT QUESTION =====
   if (isProfitQuestion(q)) {
     if (state.sales.length === 0) {
       return lang === 'hi'
@@ -319,7 +314,6 @@ function generateResponse(question: string, state: any, lang: string): string {
         : 'No expense data yet. Tap "Expense" on the home screen to start tracking.';
     }
     const totalExpenses = state.expenses.reduce((sum: number, e: any) => sum + e.amount, 0);
-    // Group by category
     const byCategory: Record<string, number> = {};
     state.expenses.forEach((e: any) => {
       byCategory[e.category] = (byCategory[e.category] || 0) + e.amount;
@@ -369,8 +363,14 @@ function generateResponse(question: string, state: any, lang: string): string {
       : 'You\'re welcome! 😊 Feel free to ask anything else.';
   }
   
+  // ===== KNOWLEDGE BASE: GENERAL BUSINESS ADVICE =====
+  // Check knowledge base for business advice questions
+  const knowledgeEntry = findKnowledgeEntry(question);
+  if (knowledgeEntry) {
+    return lang === 'hi' ? knowledgeEntry.responseHi : knowledgeEntry.responseEn;
+  }
+  
   // ===== DEFAULT: NOT ENOUGH DATA / UNSURE =====
-  // Check if the question seems to be about the user's data but we can't answer
   const dataKeywords = /sales|expense|profit|udhaar|stock|bikri|kharch|munafa|udhaar|बिक्री|खर्च|मुनाफ़ा|उधार/;
   if (dataKeywords.test(q)) {
     return lang === 'hi'
@@ -378,11 +378,33 @@ function generateResponse(question: string, state: any, lang: string): string {
       : 'I don\'t have enough data to answer this question.\n\nPlease add sales, expenses, and udhaar entries first, then ask again.';
   }
   
-  // General fallback
+  // General fallback with helpful suggestions
   if (lang === 'hi') {
-    return `मैं यह सवाल समझ गया। आपके ${shopType ? t(`st_${shopType}` as any, 'hi') : 'दुकान'} के बारे में आप मुझसे ये पूछ सकते हैं:\n\n• "आज की बिक्री/खर्च/मुनाफ़ा"\n• "कितना उधार बाकी है"\n• "इस हफ़्ते कैसा रहा"\n• "बिजली का बिल कैसे कम करें"\n\nक्या आप कुछ और ख़ास पूछना चाहते हैं?`;
+    return `मैं आपकी मदद करना चाहता हूँ। आप मुझसे ये पूछ सकते हैं:\n\n**आपकी दुकान का डेटा:**\n• "आज की बिक्री कितनी?"\n• "मुनाफ़ा कितना हुआ?"\n• "किसने उधार लिया है?"\n\n**व्यापार सलाह:**\n• "ग्राहक मोलभाव करें तो क्या करूँ?"\n• "नए ग्राहक कैसे लाएं?"\n• "स्टॉक कैसे मैनेज करें?"\n• "स्टाफ को कैसे प्रशिक्षित करें?"\n• "त्योहार की तैयारी कैसे करें?"\n\nआपका सवाल थोड़ा और स्पष्ट करें तो मैं बेहतर मदद कर सकता हूँ।`;
   }
-  return `I understand your question. For your ${shopType ? t(`st_${shopType}` as any, 'en') : 'shop'}, you can ask me things like:\n\n• "Today's sales/expense/profit"\n• "How much udhaar is pending"\n• "How was this week"\n• "How to reduce electricity bill"\n\nWould you like to ask something more specific?`;
+  return `I'd like to help you. You can ask me:\n\n**Your shop **\n• "What are today's sales?"\n• "How much profit did I make?"\n• "Who owes me money?"\n\n**Business advice:**\n• "How to handle bargaining customers?"\n• "How to attract more customers?"\n• "How to manage inventory?"\n• "How to train staff?"\n• "How to prepare for festivals?"\n\nPlease rephrase your question more specifically so I can help you better.`;
+}
+
+// Helper: Format date for display
+function formatDate(timestamp: number, lang: string): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    return lang === 'hi' ? 'आज' : 'Today';
+  } else if (diffDays === 1) {
+    return lang === 'hi' ? 'कल' : 'Yesterday';
+  } else if (diffDays < 7) {
+    return date.toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { weekday: 'long' });
+  } else {
+    return date.toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { 
+      day: 'numeric', 
+      month: 'short',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
+  }
 }
 
 // ============ ASK SCREEN ============
@@ -390,7 +412,13 @@ export function AskScreen() {
   const { state, dispatch } = useStore();
   const lang = state.language!;
   const [input, setInput] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // Get active session
+  const activeSession = state.chatSessions.find(s => s.id === state.activeSessionId);
+  const messages = activeSession?.messages || [];
   
   const suggestedQuestions = [
     lang === 'hi' ? 'आज की बिक्री कितनी हुई?' : 'What are today\'s sales?',
@@ -403,7 +431,7 @@ export function AskScreen() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [state.chatHistory]);
+  }, [messages]);
   
   const handleSend = (text?: string) => {
     const message = text || input.trim();
@@ -432,38 +460,173 @@ export function AskScreen() {
     }, 800);
   };
   
+  const handleNewChat = () => {
+    dispatch({ type: 'CREATE_NEW_CHAT' });
+    setShowHistory(false);
+    setShowMenu(false);
+  };
+  
+  const handleSelectSession = (sessionId: string) => {
+    dispatch({ type: 'SET_ACTIVE_CHAT', payload: sessionId });
+    setShowHistory(false);
+  };
+  
+  const handleDeleteSession = (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (confirm(lang === 'hi' ? 'यह बातचीत मिटा दें?' : 'Delete this conversation?')) {
+      dispatch({ type: 'DELETE_CHAT', payload: sessionId });
+    }
+  };
+  
+  // Show history view
+  if (showHistory) {
+    return (
+      <div className="h-full flex flex-col bg-bg">
+        <div className="px-5 pt-4 pb-3 flex items-center gap-3 border-b border-border">
+          <button 
+            onClick={() => setShowHistory(false)}
+            className="w-12 h-12 rounded-full flex items-center justify-center"
+          >
+            <ArrowLeft size={24} className="text-text" />
+          </button>
+          <h1 className="text-section-title text-text flex-1">
+            {lang === 'hi' ? 'बातचीत इतिहास' : 'Chat History'}
+          </h1>
+        </div>
+        
+        <div className="flex-1 scroll-area px-5 py-4">
+          {state.chatSessions.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-6xl mb-4">💬</div>
+              <p className="text-body-lg text-text-secondary mb-2">
+                {lang === 'hi' ? 'कोई बातचीत नहीं' : 'No conversations yet'}
+              </p>
+              <p className="text-body text-text-secondary">
+                {lang === 'hi' ? 'नई बातचीत शुरू करें' : 'Start a new conversation'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {state.chatSessions.map((session) => (
+                <button
+                  key={session.id}
+                  onClick={() => handleSelectSession(session.id)}
+                  className={`card w-full text-left flex items-center gap-4 p-4 transition-all active:scale-98 ${
+                    session.id === state.activeSessionId ? 'ring-2 ring-primary' : ''
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <MessageCircle size={24} className="text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-body font-semibold text-text truncate">
+                      {session.title}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Clock size={14} className="text-text-secondary" />
+                      <p className="text-small text-text-secondary">
+                        {formatDate(session.createdAt, lang)}
+                      </p>
+                      <span className="text-small text-text-secondary">•</span>
+                      <p className="text-small text-text-secondary">
+                        {session.messages.length} {lang === 'hi' ? 'संदेश' : 'messages'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => handleDeleteSession(session.id, e)}
+                    className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-red-50"
+                  >
+                    <Trash2 size={18} className="text-problem" />
+                  </button>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        <div className="px-5 py-4 border-t border-border">
+          <button onClick={handleNewChat} className="btn-primary">
+            <Plus size={20} />
+            {lang === 'hi' ? 'नई बातचीत' : 'New Chat'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="h-full flex flex-col bg-bg">
       {/* Header */}
-      <div className="px-5 pt-4 pb-2 flex items-center justify-between">
+      <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-border">
         <h1 className="text-section-title text-text">{t('askTitle', lang)}</h1>
-        {state.chatHistory.length > 0 && (
+        <div className="relative">
           <button
-            onClick={() => {
-              if (confirm(lang === 'hi' ? 'सारी बातचीत मिटा दें?' : 'Clear all chat history?')) {
-                dispatch({ type: 'CLEAR_CHAT' });
-              }
-            }}
-            className="text-small text-text-secondary px-3 py-2"
+            onClick={() => setShowMenu(!showMenu)}
+            className="w-12 h-12 rounded-full flex items-center justify-center"
           >
-            {lang === 'hi' ? 'मिटाएँ' : 'Clear'}
+            <MoreVertical size={24} className="text-text" />
           </button>
-        )}
+          
+          {showMenu && (
+            <>
+              <div 
+                className="fixed inset-0 z-40"
+                onClick={() => setShowMenu(false)}
+              />
+              <div className="absolute right-0 top-14 bg-card rounded-xl shadow-lg border border-border z-50 min-w-[200px]">
+                <button
+                  onClick={() => {
+                    setShowHistory(true);
+                    setShowMenu(false);
+                  }}
+                  className="w-full px-4 py-3 text-left text-body text-text hover:bg-bg rounded-t-xl flex items-center gap-3"
+                >
+                  <Clock size={20} className="text-text-secondary" />
+                  {lang === 'hi' ? 'बातचीत इतिहास' : 'Chat History'}
+                </button>
+                <button
+                  onClick={() => {
+                    handleNewChat();
+                  }}
+                  className="w-full px-4 py-3 text-left text-body text-text hover:bg-bg flex items-center gap-3"
+                >
+                  <Plus size={20} className="text-text-secondary" />
+                  {lang === 'hi' ? 'नई बातचीत' : 'New Chat'}
+                </button>
+                {state.chatSessions.length > 0 && (
+                  <button
+                    onClick={() => {
+                      if (confirm(lang === 'hi' ? 'सारी बातचीत मिटा दें?' : 'Clear all chat history?')) {
+                        dispatch({ type: 'CLEAR_CHAT' });
+                      }
+                      setShowMenu(false);
+                    }}
+                    className="w-full px-4 py-3 text-left text-body text-problem hover:bg-red-50 rounded-b-xl flex items-center gap-3"
+                  >
+                    <Trash2 size={20} />
+                    {lang === 'hi' ? 'सब मिटाएँ' : 'Clear All'}
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
       
       {/* Chat area */}
-      <div ref={scrollRef} className="flex-1 scroll-area px-5 py-2">
-        {state.chatHistory.length === 0 && (
+      <div ref={scrollRef} className="flex-1 scroll-area px-5 py-4">
+        {messages.length === 0 && (
           <div className="text-center py-8">
-            <div className="text-5xl mb-3">🤝</div>
-            <p className="text-body text-text-secondary">
+            <div className="text-6xl mb-4">🤝</div>
+            <p className="text-body-lg text-text-secondary mb-2">
               {lang === 'hi' ? 'अपनी दुकान के बारे में कुछ भी पूछें' : 'Ask anything about your shop'}
             </p>
           </div>
         )}
         
         {/* Suggested questions */}
-        {state.chatHistory.length === 0 && (
+        {messages.length === 0 && (
           <div className="space-y-3 mb-4">
             {suggestedQuestions.map((q, i) => (
               <button
@@ -479,8 +642,8 @@ export function AskScreen() {
         )}
         
         {/* Chat messages */}
-        {state.chatHistory.map((msg) => (
-          <div key={msg.id} className={`mb-3 animate-fade-in ${msg.role === 'user' ? 'flex justify-end' : ''}`}>
+        {messages.map((msg: ChatMessage) => (
+          <div key={msg.id} className={`mb-4 animate-fade-in ${msg.role === 'user' ? 'flex justify-end' : ''}`}>
             {msg.role === 'user' ? (
               <div className="bg-primary text-white rounded-2xl rounded-br-md px-4 py-3 max-w-[80%]">
                 <p className="text-body">{msg.content}</p>
@@ -494,11 +657,10 @@ export function AskScreen() {
             )}
           </div>
         ))}
-        
       </div>
       
       {/* Input area */}
-      <div className="px-5 pb-4 pt-3 safe-bottom border-t border-border bg-bg">
+      <div className="px-5 pb-4 pt-3 border-t border-border bg-bg">
         <div className="flex items-center gap-3">
           <input
             type="text"
