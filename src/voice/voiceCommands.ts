@@ -226,7 +226,7 @@ function findExpenseCategoryMatches(text: string): ExpenseCategoryMatch[] {
     },
     {
       category: 'salary',
-      pattern: /\b(?:salary|salaries|wage|wages|payroll|staff payment|staff salary|employee payment|mazdoori|majduri|tankhwa|tankh्वाह|vetan)\b|तनख़्वाह|तनख्वाह|वेतन|मजदूरी|मज़दूरी/iu,
+      pattern: /\b(?:salary|salaries|wage|wages|payroll|staff payment|staff salary|employee payment|mazdoori|majduri|tankhwa|tankha|pagar|pagaar|vetan)\b|तनख़्वाह|तनख्वाह|वेतन|मजदूरी|मज़दूरी/iu,
     },
     {
       category: 'transport',
