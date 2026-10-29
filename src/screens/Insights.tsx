@@ -45,12 +45,129 @@ function changePhrase(change: number, lang: Language, subject: 'sales' | 'expens
   return change > 0 ? `expenses are up ${amount}%` : change < 0 ? `expenses are down ${amount}%` : 'expenses are unchanged';
 }
 
+type ShopActionScenario = 'growth' | 'shortfall' | 'cost-stock' | 'cost' | 'uneven-days' | 'sales-fall' | 'routine';
+
+function getShopAction(shopType: string | null | undefined, scenario: ShopActionScenario, lang: Language): string {
+  const type = shopType || 'other';
+  const serviceBusiness = type === 'salon' || type === 'tailor';
+  const foodBusiness = ['restaurant', 'tea', 'bakery', 'sweet', 'vegetable'].includes(type);
+
+  const en: Record<ShopActionScenario, string> = {
+    growth: 'Keep the items or services customers ask for most ready, and continue your daily closing routine.',
+    shortfall: 'Check that every sale or service and every expense was recorded. Match the largest bills, then pause non-urgent spending until you understand the gap.',
+    'cost-stock': 'Before replenishing, count what is on hand and compare it with recent item sales. Buy in smaller batches when demand is uncertain.',
+    cost: 'Compare recent bills and payment entries. Identify which cost rose and discuss pricing, quantity or alternatives before cutting something customers need.',
+    'uneven-days': 'Record each sale for the next two weeks. Compare quieter and busier days, then test one small change suited to your customers and review the result.',
+    'sales-fall': 'Check opening hours, missing entries and the availability of the services or items customers most often request. Change one thing at a time before using discounts.',
+    routine: 'At closing, reconcile sales, expenses and payments. Review your most requested items or services weekly and make the next plan from those records.',
+  };
+  const hi: Record<ShopActionScenario, string> = {
+    growth: 'ग्राहकों की सबसे ज़्यादा माँग वाली चीज़ें या सेवाएँ तैयार रखें और रोज़ का हिसाब जारी रखें।',
+    shortfall: 'हर बिक्री या सेवा और हर खर्च की एंट्री जाँचें। बड़े बिल मिलाएँ और अंतर समझ आने तक गैर-ज़रूरी खर्च रोकें।',
+    'cost-stock': 'सामान भरने से पहले मौजूदा स्टॉक गिनें और हाल की बिक्री से तुलना करें। माँग साफ़ न हो तो कम मात्रा में खरीदें।',
+    cost: 'हाल के बिल और भुगतान मिलाएँ। कौन-सा खर्च बढ़ा है, पहचानें और ज़रूरी सेवा या गुणवत्ता घटाने से पहले विकल्प देखें।',
+    'uneven-days': 'अगले दो हफ़्ते हर बिक्री दर्ज करें। कम और ज़्यादा बिक्री वाले दिनों की तुलना करें, फिर ग्राहकों के हिसाब से एक छोटा बदलाव आज़माएँ।',
+    'sales-fall': 'दुकान के समय, छूटी एंट्री और ग्राहकों की माँग वाली चीज़ों या सेवाओं की उपलब्धता जाँचें। छूट देने से पहले एक समय में एक बदलाव करें।',
+    routine: 'दुकान बंद करते समय बिक्री, खर्च और भुगतान मिलाएँ। सबसे ज़्यादा माँग वाली चीज़ों या सेवाओं की साप्ताहिक समीक्षा करें।',
+  };
+
+  if (serviceBusiness) {
+    const serviceEn: Record<ShopActionScenario, string> = {
+      growth: type === 'salon'
+        ? 'Protect time for your most-requested services, offer rebooking to satisfied customers and keep the consumables used by those services ready.'
+        : 'Protect time for your most-requested stitching and alteration work, confirm delivery dates, and replenish thread, lining and fasteners against orders.',
+      shortfall: type === 'salon'
+        ? 'Check that every haircut, treatment and other service was recorded, then match product-use and utility costs. Pause non-urgent product orders until the gap is understood.'
+        : 'Check that every stitching job, alteration and advance payment was recorded. Match material purchases to orders and pause non-urgent fabric buying until the gap is understood.',
+      'cost-stock': type === 'salon'
+        ? 'Check shampoo, colour, treatment and hygiene consumables on hand. Replenish based on booked services and recent use, not on a general retail-stock list.'
+        : 'Check thread, lining, zips, hooks and the materials needed for confirmed jobs. Replenish common consumables first and avoid buying fabric for unconfirmed demand.',
+      cost: type === 'salon'
+        ? 'Compare utility, rent and product-cost bills. Review service pricing and how much product each service uses before cutting quality or needed hygiene supplies.'
+        : 'Compare rent, utility and material costs. Check the time and materials used by common jobs before changing prices or reducing quality.',
+      'uneven-days': type === 'salon'
+        ? 'Compare appointment counts and service mix on quieter and busier days. Test a reminder or a suitable off-peak appointment offer, then compare bookings.'
+        : 'Compare completed jobs and alteration requests by day. Use quieter slots for fittings or follow-ups and record whether this improves paid bookings.',
+      'sales-fall': type === 'salon'
+        ? 'Check appointment numbers, repeat visits, opening hours and whether popular services were available. Try a booking reminder before cutting prices.'
+        : 'Check new orders, repeat customers, fitting capacity and delivery times. Follow up on quotes that were not confirmed before reducing prices.',
+      routine: type === 'salon'
+        ? 'At closing, record each service and amount, and check consumables used. Review bookings and popular services weekly to plan supplies and appointment capacity.'
+        : 'At closing, record each job and amount. Review pending orders, delivery dates and common material use weekly before purchasing more fabric or supplies.',
+    };
+    return lang === 'hi' ? (type === 'salon' ? ({
+      growth: 'सबसे ज़्यादा माँग वाली सेवाओं के लिए समय रखें, संतुष्ट ग्राहकों को दोबारा बुकिंग का विकल्प दें और उन सेवाओं का ज़रूरी सामान तैयार रखें।',
+      shortfall: 'हर हेयरकट, ट्रीटमेंट और सेवा की एंट्री जाँचें। प्रोडक्ट और बिजली के खर्च मिलाएँ; अंतर समझ आने तक गैर-ज़रूरी प्रोडक्ट ऑर्डर रोकें।',
+      'cost-stock': 'शैम्पू, कलर, ट्रीटमेंट और सफ़ाई का उपलब्ध सामान जाँचें। बुकिंग और हाल के इस्तेमाल के आधार पर भरें, सामान्य रिटेल स्टॉक सूची से नहीं।',
+      cost: 'बिजली, किराया और प्रोडक्ट के बिल मिलाएँ। गुणवत्ता या ज़रूरी सफ़ाई का सामान घटाने से पहले सर्विस की कीमत और प्रति सेवा इस्तेमाल देखें।',
+      'uneven-days': 'कम और ज़्यादा व्यस्त दिनों की बुकिंग तथा सेवाओं की तुलना करें। शांत समय में रिमाइंडर या उपयुक्त ऑफ-पीक ऑफर आज़माएँ और बुकिंग देखें।',
+      'sales-fall': 'अपॉइंटमेंट, दोबारा आने वाले ग्राहक, दुकान के समय और लोकप्रिय सेवाओं की उपलब्धता जाँचें। कीमत घटाने से पहले बुकिंग रिमाइंडर आज़माएँ।',
+      routine: 'दिन के अंत में हर सेवा और रकम लिखें और इस्तेमाल हुआ सामान जाँचें। हर हफ़्ते बुकिंग और लोकप्रिय सेवाएँ देखकर सामान और समय की योजना बनाएँ।',
+    } as Record<ShopActionScenario, string>)[scenario] : ({
+      growth: 'सबसे ज़्यादा माँग वाली सिलाई और अल्टरेशन के लिए समय रखें, डिलीवरी तारीख़ तय करें और पक्के ऑर्डर के हिसाब से धागा, अस्तर व हुक-ज़िप भरें।',
+      shortfall: 'हर सिलाई, अल्टरेशन और एडवांस भुगतान दर्ज हुआ या नहीं, जाँचें। सामग्री की खरीद को ऑर्डर से मिलाएँ और अंतर समझ आने तक गैर-ज़रूरी कपड़ा न खरीदें।',
+      'cost-stock': 'धागा, अस्तर, ज़िप, हुक और पक्के काम की सामग्री जाँचें। आम इस्तेमाल की चीज़ें पहले भरें और बिना पक्के ऑर्डर के कपड़ा न खरीदें।',
+      cost: 'किराया, बिजली और सामग्री के बिल मिलाएँ। भाव या गुणवत्ता बदलने से पहले आम काम में लगने वाला समय और सामग्री देखें।',
+      'uneven-days': 'हर दिन पूरे हुए काम और अल्टरेशन की माँग की तुलना करें। शांत समय में फिटिंग या पुराने ग्राहकों से संपर्क करें और पक्के ऑर्डर देखें।',
+      'sales-fall': 'नए ऑर्डर, पुराने ग्राहक, फिटिंग की क्षमता और डिलीवरी समय जाँचें। कीमत घटाने से पहले दिए गए भावों पर फॉलो-अप करें।',
+      routine: 'दिन के अंत में हर काम और रकम लिखें। नया कपड़ा या सामान लेने से पहले लंबित ऑर्डर, डिलीवरी तारीख़ और सामग्री का इस्तेमाल देखें।',
+    } as Record<ShopActionScenario, string>)[scenario]) : serviceEn[scenario];
+  }
+
+  if (type === 'medical') {
+    const medicalEn: Record<ShopActionScenario, string> = {
+      growth: 'Keep frequently requested health essentials available, follow expiry rotation and continue recording every sale accurately.',
+      shortfall: 'Reconcile every counter sale with the record and match supplier bills. Check expiry and avoid urgent bulk purchases until the gap is clear.',
+      'cost-stock': 'Review recent demand, expiry dates and stock on hand. Restock compliant, fast-moving items first instead of increasing every category.',
+      cost: 'Compare supplier invoices and operating bills. Check which compliant products or utility costs changed before adjusting prices or assortment.',
+      'uneven-days': 'Compare customer footfall and recorded sales by day, and confirm that counter sales are fully entered. Keep regular essentials organised for busy periods.',
+      'sales-fall': 'Check opening hours, missing entries and availability of regularly requested essentials. Review expiry and supplier availability before changing prices.',
+      routine: 'At closing, reconcile counter sales and expenses. Review fast-moving categories and upcoming expiry dates each week.',
+    };
+    return lang === 'hi' ? ({
+      growth: 'नियमित माँग वाली स्वास्थ्य संबंधी ज़रूरी चीज़ें उपलब्ध रखें, एक्सपायरी के अनुसार स्टॉक घुमाएँ और हर बिक्री सही दर्ज करें।',
+      shortfall: 'काउंटर की हर बिक्री रिकॉर्ड से मिलाएँ और सप्लायर के बिल जाँचें। अंतर स्पष्ट होने तक अनुमान से बड़ी खरीद न करें और एक्सपायरी देखें।',
+      'cost-stock': 'हाल की माँग, एक्सपायरी और उपलब्ध स्टॉक देखें। नियमों के अनुसार रखे जाने वाले तेज़ बिकने वाले सामान पहले भरें।',
+      cost: 'सप्लायर के बिल और संचालन के खर्च मिलाएँ। भाव या सामान बदलने से पहले पता करें कि कौन-सी लागत बदली है।',
+      'uneven-days': 'हर दिन ग्राहकों की संख्या और दर्ज बिक्री की तुलना करें। व्यस्त समय में नियमित ज़रूरी सामान व्यवस्थित रखें और छूटी एंट्री जाँचें।',
+      'sales-fall': 'दुकान के समय, छूटी एंट्री और नियमित माँग वाले सामान की उपलब्धता जाँचें। भाव बदलने से पहले एक्सपायरी और सप्लायर की स्थिति देखें।',
+      routine: 'दुकान बंद करते समय काउंटर बिक्री और खर्च मिलाएँ। तेज़ बिकने वाली श्रेणियों और नज़दीक आती एक्सपायरी की साप्ताहिक समीक्षा करें।',
+    } as Record<ShopActionScenario, string>)[scenario] : medicalEn[scenario];
+  }
+
+  if (foodBusiness) {
+    const foodEn: Record<ShopActionScenario, string> = {
+      growth: type === 'restaurant' || type === 'tea'
+        ? 'Prepare staff and fresh ingredients for your busiest times; promote only the dishes or snack pairings that already sell well.'
+        : 'Keep your most-requested fresh products available and plan ingredients or packaging around recent sales and confirmed orders.',
+      shortfall: 'Check that every order or counter sale was recorded. Match ingredient purchases and bills, then limit non-urgent perishable buying until you understand the gap.',
+      'cost-stock': 'Check remaining ingredients or produce, freshness and recent sales before replenishing. Use smaller, more frequent orders for perishable stock.',
+      cost: 'Compare ingredient, packaging and utility costs. Check waste and portion sizes before reducing quality or increasing menu prices.',
+      'uneven-days': 'Compare orders and waste on quieter and busier days. Prepare smaller fresh batches and test one relevant combo or pre-order option.',
+      'sales-fall': 'Check opening hours, missing entries, menu availability and customer orders. Review freshness and waste before using discounts.',
+      routine: 'At closing, record orders and waste, then check ingredient use. Plan the next purchase from recent menu or produce demand and confirmed orders.',
+    };
+    return lang === 'hi' ? ({
+      growth: 'सबसे ज़्यादा बिकने वाले व्यंजन या ताज़े उत्पाद उपलब्ध रखें। व्यस्त समय के लिए स्टाफ, सामग्री और पक्के ऑर्डर की योजना बनाएँ।',
+      shortfall: 'हर ऑर्डर या काउंटर बिक्री दर्ज हुई या नहीं, जाँचें। सामग्री की खरीद और बिल मिलाएँ, फिर अंतर समझ आने तक गैर-ज़रूरी जल्दी खराब होने वाला सामान कम खरीदें।',
+      'cost-stock': 'सामग्री या सब्ज़ी-फल का बचा स्टॉक, ताज़गी और हाल की बिक्री देखकर भरें। जल्दी खराब होने वाली चीज़ें कम मात्रा में, बार-बार मँगाएँ।',
+      cost: 'सामग्री, पैकेजिंग और बिजली के खर्च मिलाएँ। गुणवत्ता घटाने या भाव बढ़ाने से पहले बर्बादी और पोर्शन देखें।',
+      'uneven-days': 'कम और ज़्यादा बिक्री वाले दिनों के ऑर्डर और बर्बादी की तुलना करें। कम मात्रा में ताज़ा तैयार करें और एक प्रासंगिक कॉम्बो या प्री-ऑर्डर आज़माएँ।',
+      'sales-fall': 'दुकान के समय, छूटी एंट्री, मेन्यू की उपलब्धता और ग्राहक ऑर्डर जाँचें। डिस्काउंट से पहले ताज़गी और बर्बादी देखें।',
+      routine: 'दिन के अंत में ऑर्डर और बर्बादी लिखें, सामग्री का इस्तेमाल देखें और अगली खरीद हाल की माँग व पक्के ऑर्डर के आधार पर करें।',
+    } as Record<ShopActionScenario, string>)[scenario] : foodEn[scenario];
+  }
+
+  return lang === 'hi' ? hi[scenario] : en[scenario];
+}
+
 function getInsightCards(
   week: PeriodMetrics,
   month: PeriodMetrics,
   lang: Language,
   hasAnyEntries: boolean,
   hasBusinessRisk: boolean,
+  shopType?: string | null,
 ): BusinessInsight[] {
   const celebrateWeek = !hasBusinessRisk &&
     week.profit > 0 &&
@@ -97,8 +214,8 @@ function getInsightCards(
         'positive',
         lang === 'hi' ? 'आपकी मेहनत का असर दिख रहा है!' : 'Your hard work is paying off!',
         lang === 'hi'
-          ? `इस हफ़्ते बिक्री ${metrics.salesChange}% बढ़ी और दर्ज खर्च के बाद ${formatRupee(metrics.profit)} बचा। मुनाफ़ा प्रतिशत ${metrics.profitMargin}% है। यह अच्छी प्रगति है—तेज़ बिकने वाला सामान तैयार रखें और रोज़ का हिसाब जारी रखें।`
-          : `Sales are up ${metrics.salesChange}% this week, with ${formatRupee(metrics.profit)} left after recorded expenses and a ${metrics.profitMargin}% margin. That is real progress. Keep fast-selling items ready and continue your daily close routine to protect it.`,
+          ? `इस हफ़्ते बिक्री ${metrics.salesChange}% बढ़ी और दर्ज खर्च के बाद ${formatRupee(metrics.profit)} बचा। मुनाफ़ा प्रतिशत ${metrics.profitMargin}% है। यह अच्छी प्रगति है—${getShopAction(shopType, 'growth', 'hi')}`
+          : `Sales are up ${metrics.salesChange}% this week, with ${formatRupee(metrics.profit)} left after recorded expenses and a ${metrics.profitMargin}% margin. That is real progress. ${getShopAction(shopType, 'growth', 'en')}` ,
       );
     }
 
@@ -312,6 +429,7 @@ function getMyAdvice(
   sales: { date: string; amount: number }[],
   udhaar: { customerName: string; amount: number; date: string; dueDate?: string; paid: boolean }[],
   lang: Language,
+  shopType?: string | null,
 ): MyAdviceItem[] {
   const today = getToday();
   const candidates: Array<MyAdviceItem & { priority: number }> = [];
@@ -386,9 +504,7 @@ function getMyAdvice(
       lang === 'hi'
         ? `दर्ज खर्च बिक्री से ${formatRupee(gap)} ज़्यादा हैं। यह असली नुकसान भी हो सकता है या कुछ बिक्री छूटने से ऐसा दिख सकता है।`
         : `Recorded expenses are ${formatRupee(gap)} above recorded sales. This may be a real shortfall, or some sales may not have been entered yet.`,
-      lang === 'hi'
-        ? 'बड़े गैर-ज़रूरी स्टॉक ऑर्डर को थोड़ी देर रोकें। पहले बिक्री की एंट्री और पिछले खर्च के बिल मिलाएँ, फिर सबसे बड़े खर्च की वजह जाँचकर अगला खरीद निर्णय लें।'
-        : 'Pause non-urgent bulk purchases briefly. First check that all sales were entered and match the largest expense against its bill. Once the gap is clear, decide what to reduce before the next order.',
+      getShopAction(shopType, 'shortfall', lang),
       105,
     );
   }
@@ -416,13 +532,7 @@ function getMyAdvice(
       lang === 'hi'
         ? `तुलना वाली अवधि में खर्च ${expenseGrowth}% बढ़ा, जबकि बिक्री ${salesGrowth}% बदली।${category ? ` ${category} सबसे बड़ा दर्ज खर्च है।` : ''}`
         : `Compared with the same elapsed period, expenses rose ${expenseGrowth}% while sales changed by ${salesGrowth}%. ${category ? `${category} is the largest recorded expense category.` : ''}`,
-      lang === 'hi'
-        ? (topCategory?.category === 'stock'
-            ? 'अगला ऑर्डर देने से पहले शेल्फ़ पर मौजूद माल गिनें और पिछले हफ़्ते क्या बिका, लिखें। तेज़ बिकने वाला सामान रखें; धीमे सामान की नई खरीद कम करें।'
-            : 'पिछली दो बिलों या भुगतान एंट्री को मिलाएँ। पता करें कि कौन-सा खर्च बढ़ा और क्या वह हर महीने ज़रूरी है; फिर सप्लायर से दर या मात्रा पर बात करें।')
-        : (topCategory?.category === 'stock'
-            ? 'Before the next order, count what is already on the shelves and list what sold last week. Refill fast-moving items first and reduce new orders for slow items.'
-            : 'Compare the last two bills or payment entries. Find which cost rose and whether it is needed every month; then discuss the rate or order size with the supplier.'),
+      getShopAction(shopType, topCategory?.category === 'stock' ? 'cost-stock' : 'cost', lang),
       96,
     );
   }
@@ -442,13 +552,7 @@ function getMyAdvice(
       lang === 'hi'
         ? `${name} इस अवधि के दर्ज खर्च का लगभग ${topCategory.share}% है। यह ज़रूरी खर्च हो सकता है, लेकिन इसकी पुष्टि करना सही रहेगा।`
         : `${name} makes up about ${topCategory.share}% of recorded expenses in this period. It may be necessary, but it is worth checking before committing more money.`,
-      lang === 'hi'
-        ? (topCategory.category === 'stock'
-            ? 'अगली खरीद से पहले बचा हुआ स्टॉक गिनें, पिछले 7 दिनों की बिक्री देखें और सिर्फ़ तेज़ बिकने वाला माल भरें।'
-            : 'बिल और पिछली भुगतान एंट्री मिलाएँ। अगर खर्च बार-बार आता है, तो उसी सेवा या सप्लायर का दूसरा भाव लेकर तुलना करें; गुणवत्ता या ज़रूरी सुविधा तुरंत कम न करें।')
-        : (topCategory.category === 'stock'
-            ? 'Before the next order, count remaining stock and check sales from the last 7 days. Refill fast-moving goods first instead of tying up cash in slow items.'
-            : 'Match the bill with past payments. For a repeated cost, compare one other quote before renewing; do not cut a needed service or quality without checking the impact.'),
+      getShopAction(shopType, topCategory.category === 'stock' ? 'cost-stock' : 'cost', lang),
       70,
     );
   }
@@ -474,9 +578,7 @@ function getMyAdvice(
         lang === 'hi'
           ? `${lowDate} को ${formatRupee(low[1])} और ${highDate} को ${formatRupee(high[1])} की बिक्री दर्ज हुई। यह दिन, माँग या अधूरी एंट्री के कारण हो सकता है।`
           : `Recorded sales were ${formatRupee(low[1])} on ${lowDate} and ${formatRupee(high[1])} on ${highDate}. This may reflect the day, demand, or incomplete entries.`,
-        lang === 'hi'
-          ? 'अगले दो हफ़्ते सभी बिक्री दर्ज करें। धीमे दिन पर तेज़ बिकने वाला सामान सामने रखें और एक छोटा कॉम्बो आज़माएँ; फिर उसी दिन की बिक्री से तुलना करें।'
-          : 'For the next two weeks, make sure every sale is entered. On the slower recorded day, display a fast-selling item prominently or test one small bundle offer, then compare that day again.',
+        getShopAction(shopType, 'uneven-days', lang),
         62,
       );
     }
@@ -491,9 +593,7 @@ function getMyAdvice(
       lang === 'hi'
         ? `तुलना वाली अवधि में दर्ज बिक्री ${Math.abs(salesFalling.salesChange!)}% कम है। अंदाज़े से छूट देने से पहले कारण पहचानें।`
         : `Recorded sales are down ${Math.abs(salesFalling.salesChange!)}% versus the comparable period. Find the cause before offering discounts.`,
-      lang === 'hi'
-        ? 'तीन बातें जाँचें: क्या तेज़ बिकने वाला सामान उपलब्ध था, क्या किसी दिन दुकान कम समय खुली, और क्या सभी बिक्री दर्ज हुईं। फिर एक कारण पर छोटा बदलाव करके परिणाम देखें।'
-        : 'Check three things: were fast-selling items in stock, was the shop open for fewer hours on any day, and were all sales entered? Change one thing at a time so you can tell what helped.',
+      getShopAction(shopType, 'sales-fall', lang),
       82,
     );
   }
@@ -528,13 +628,7 @@ function getMyAdvice(
         : (strongWeek
             ? `Your records show ${formatRupee(week.profit)} left after recorded expenses and a ${week.profitMargin}% margin this week. That is encouraging progress.`
             : 'No major warning stands out in the entries available. Consistent records help you spot small problems early, while there is still time to act.'),
-      lang === 'hi'
-        ? (strongWeek
-            ? 'यही रोज़ का हिसाब जारी रखें। जिस सामान की माँग सबसे अच्छी रही, उसका स्टॉक जाँचें और अगला ऑर्डर बिक्री देखकर तय करें।'
-            : 'आज दुकान बंद करते समय बिक्री, खर्च और उधार तीनों मिलाएँ। हफ़्ते में एक बार सबसे बड़े खर्च और धीमे बिकने वाले सामान को जाँचें।')
-        : (strongWeek
-            ? 'Keep the daily closing routine. Check the stock of the items customers asked for most, and base your next order on recorded sales rather than guesswork.'
-            : 'At closing today, check sales, expenses and udhaar together. Once a week, review the largest cost and slow-moving stock before committing more cash.'),
+      getShopAction(shopType, 'routine', lang),
       20,
     );
     }
@@ -666,10 +760,10 @@ export function InsightsScreen() {
   const dashboard = getInsightsDashboard(state.sales, state.expenses);
   const hasAnyEntries = state.sales.length > 0 || state.expenses.length > 0;
 
-  const advice = getMyAdvice(dashboard.week, dashboard.month, state.sales, state.udhaar, lang);
+  const advice = getMyAdvice(dashboard.week, dashboard.month, state.sales, state.udhaar, lang, state.shopProfile.shopType);
   const hasBusinessRisk = advice.some(item => item.tone !== 'positive');
   const insights = hasAnyEntries
-    ? getInsightCards(dashboard.week, dashboard.month, lang, hasAnyEntries, hasBusinessRisk)
+    ? getInsightCards(dashboard.week, dashboard.month, lang, hasAnyEntries, hasBusinessRisk, state.shopProfile.shopType)
     : [];
 
   return (

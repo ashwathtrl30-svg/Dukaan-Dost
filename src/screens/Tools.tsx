@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore, formatRupee } from '../store';
 import { t } from '../i18n';
 import { Calculator, Tag, Target, BookOpen, Calendar, Package, Gift, Smartphone, Landmark, PiggyBank, Users, DollarSign } from 'lucide-react';
+import { getFestivalDateLabel, getFestivalName, getFestivalShopAdvice, getLocalDateKey, getUpcomingFestivals } from '../festivals';
 
 type ToolId = 'profit' | 'price' | 'breakeven' | 'udhaar' | 'cost' | 'stock' | 'festival' | 'digital' | 'loan' | 'savings' | 'split' | 'bargain';
 
@@ -359,22 +360,115 @@ function CostPlannerTool() {
 function StockReorderTool() {
   const { state } = useStore();
   const lang = state.language!;
-  
+  const shopType = state.shopProfile.shopType;
+  const serviceBusiness = shopType === 'salon' || shopType === 'tailor';
+  const [todayKey, setTodayKey] = useState(() => getLocalDateKey());
+
+  useEffect(() => {
+    const refreshDay = () => setTodayKey(getLocalDateKey());
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const timer = window.setTimeout(
+      refreshDay,
+      Math.max(1000, nextMidnight.getTime() - now.getTime() + 250),
+    );
+    window.addEventListener('focus', refreshDay);
+    document.addEventListener('visibilitychange', refreshDay);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('focus', refreshDay);
+      document.removeEventListener('visibilitychange', refreshDay);
+    };
+  }, [todayKey]);
+
+  const startDate = new Date(todayKey + 'T12:00:00');
+  startDate.setDate(startDate.getDate() - 6);
+  const startKey = getLocalDateKey(startDate);
+
+  const namedSales = state.sales.filter((sale) =>
+    typeof sale.itemName === 'string' &&
+    sale.itemName.trim().length > 0 &&
+    sale.date >= startKey &&
+    sale.date <= todayKey,
+  );
+  const totals = new Map<string, { name: string; amount: number; entries: number; lastSold: string }>();
+  namedSales.forEach((sale) => {
+    const name = sale.itemName!.trim().replace(/\s+/g, ' ');
+    const key = name.toLocaleLowerCase();
+    const current = totals.get(key) || { name, amount: 0, entries: 0, lastSold: sale.date };
+    current.amount += Number(sale.amount) || 0;
+    current.entries += 1;
+    if (sale.date > current.lastSold) current.lastSold = sale.date;
+    totals.set(key, current);
+  });
+  const ranked = [...totals.values()].sort((a, b) => b.amount - a.amount).slice(0, 6);
+
   return (
-    <div className="animate-fade-in text-center py-8">
-      <span className="text-6xl mb-4 block">📦</span>
-      <p className="text-text-secondary mb-4">
-        {lang === 'hi'
-          ? 'स्टॉक ट्रैकिंग शुरू करने के लिए रोज़ बिक्री में सामान का नाम डालें। 1 हफ़्ते बाद हम बताएँगे क्या खरीदना है।'
-          : 'Start adding item names in daily sales. After 1 week, we\'ll tell you what to reorder.'}
-      </p>
-      <div className="card mt-4 text-left">
-        <p className="font-semibold text-text mb-2">{lang === 'hi' ? 'कैसे काम करता है:' : 'How it works:'}</p>
-        <ol className="text-text-secondary space-y-2 text-sm list-decimal list-inside">
-          <li>{lang === 'hi' ? 'बिक्री डालते समय सामान का नाम लिखें' : 'Add item name when logging sales'}</li>
-          <li>{lang === 'hi' ? 'हम देखेंगे क्या ज़्यादा बिकता है' : 'We\'ll track what sells most'}</li>
-          <li>{lang === 'hi' ? 'हर हफ़्ते बताएँगे क्या खरीदना है' : 'Weekly suggestions on what to buy'}</li>
-        </ol>
+    <div className="animate-fade-in space-y-4">
+      <div className="card">
+        <p className="text-small text-text-secondary mb-1">{lang === 'hi' ? 'पिछले 7 दिन' : 'Last 7 days'}</p>
+        <h3 className="text-body-lg font-bold text-text">
+          {serviceBusiness
+            ? (lang === 'hi' ? 'सबसे ज़्यादा बिकने वाली सेवाएँ' : 'Your most-recorded services')
+            : (lang === 'hi' ? 'सबसे ज़्यादा दर्ज बिक्री वाले सामान' : 'Your top recorded items')}
+        </h3>
+        <p className="text-small text-text-secondary mt-2">
+          {serviceBusiness
+            ? (lang === 'hi'
+              ? 'सर्विस का नाम लिखकर बिक्री दर्ज करें। यह सूची बताती है कि किन सेवाओं से सबसे ज़्यादा दर्ज बिक्री आई।'
+              : 'Name each service when recording a sale. This list shows which services have the highest recorded sales value.')
+            : (lang === 'hi'
+              ? 'हर बिक्री में सामान का नाम लिखें। यह सूची दर्ज बिक्री के आधार पर दिखाती है कि किन सामानों से सबसे ज़्यादा बिक्री आई।'
+              : 'Name each item when recording a sale. This list ranks items by recorded sales value, not by units sold or shelf stock.')}
+        </p>
+      </div>
+
+      {ranked.length > 0 ? (
+        <div className="space-y-2">
+          {ranked.map((item, index) => (
+            <div key={item.name.toLocaleLowerCase()} className="card flex items-center gap-3 px-4 py-3">
+              <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
+                {index + 1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-text break-words">{item.name}</p>
+                <p className="text-small text-text-secondary">
+                  {item.entries} {lang === 'hi' ? 'बिक्री एंट्री' : (item.entries === 1 ? 'sale entry' : 'sales entries')}
+                </p>
+              </div>
+              <p className="font-bold text-positive whitespace-nowrap">{formatRupee(item.amount)}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="card text-center py-7">
+          <span className="text-5xl block mb-3">{serviceBusiness ? '✂️' : '📦'}</span>
+          <p className="font-semibold text-text mb-2">
+            {lang === 'hi' ? 'अभी नाम वाली बिक्री उपलब्ध नहीं' : 'No named sales in the last 7 days'}
+          </p>
+          <p className="text-text-secondary text-small">
+            {lang === 'hi'
+              ? 'होम पर बिक्री जोड़ते समय सामान या सेवा का नाम और रकम दर्ज करें।'
+              : 'When adding a sale on Home, enter the item or service name and amount.'}
+          </p>
+        </div>
+      )}
+
+      <div className="card border border-primary/20">
+        <p className="font-semibold text-text mb-2">
+          {serviceBusiness
+            ? (lang === 'hi' ? 'अगला कदम' : 'What to do next')
+            : (lang === 'hi' ? 'क्या दोबारा मँगाएँ?' : 'What should you reorder?')}
+        </p>
+        <p className="text-text-secondary text-small leading-relaxed">
+          {serviceBusiness
+            ? (lang === 'hi'
+              ? 'ऊपर दी गई सेवाओं की माँग देखकर अपॉइंटमेंट स्लॉट और ज़रूरी कंज़्यूमेबल्स की योजना बनाएँ। रिकॉर्ड अपने-आप यह नहीं बताता कि कितना सामान बचा है।'
+              : 'Use these service trends to plan appointment capacity and the consumables each service needs. Sales records do not show how much supply is left.')
+            : (lang === 'hi'
+              ? 'ऊपर के तेज़ बिकने वाले सामान का मौजूदा स्टॉक गिनें। जो कम बचा है, उसी की मात्रा तय करें। बिक्री का मूल्य माँग का संकेत है—यह अपने-आप मौजूदा स्टॉक या पीस की संख्या नहीं बताता।'
+              : 'Count current stock for the items at the top, then decide what needs replenishing. Recorded sales value is a demand signal; it does not tell us units sold or how much stock remains.')}
+        </p>
       </div>
     </div>
   );
@@ -384,26 +478,117 @@ function StockReorderTool() {
 function FestivalTool() {
   const { state } = useStore();
   const lang = state.language!;
-  
-  const festivals = [
-    { name: lang === 'hi' ? 'दिवाली' : 'Diwali', emoji: '🪔', months: 'Oct-Nov', tip: lang === 'hi' ? '2 हफ़्ते पहले स्टॉक शुरू करें' : 'Start stocking 2 weeks before' },
-    { name: lang === 'hi' ? 'होली' : 'Holi', emoji: '🎨', months: 'Mar', tip: lang === 'hi' ? 'रंग, गुलाल, मिठाई' : 'Colours, sweets, snacks' },
-    { name: lang === 'hi' ? 'रक्षा बंधन' : 'Raksha Bandhan', emoji: '🧵', months: 'Aug', tip: lang === 'hi' ? 'राखी, मिठाई, गिफ्ट' : 'Rakhi, sweets, gifts' },
-    { name: lang === 'hi' ? 'नवरात्रि' : 'Navratri', emoji: '🙏', months: 'Sep-Oct', tip: lang === 'hi' ? 'व्रत का सामान, फूल' : 'Fasting items, flowers' },
-  ];
-  
+  const [todayKey, setTodayKey] = useState(() => getLocalDateKey());
+
+  useEffect(() => {
+    const refreshDay = () => setTodayKey(getLocalDateKey());
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const timer = window.setTimeout(
+      refreshDay,
+      Math.max(1000, nextMidnight.getTime() - now.getTime() + 250),
+    );
+    window.addEventListener('focus', refreshDay);
+    document.addEventListener('visibilitychange', refreshDay);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('focus', refreshDay);
+      document.removeEventListener('visibilitychange', refreshDay);
+    };
+  }, [todayKey]);
+
+  const referenceDate = new Date(todayKey + 'T12:00:00');
+  const festivals = getUpcomingFestivals(referenceDate, 2);
+  const shopType = state.shopProfile.shopType;
+  const diwali = festivals.find((festival) => festival.id.includes('diwali'));
+  const diwaliDaysUntil = diwali
+    ? Math.max(0, Math.round((new Date(diwali.date + 'T12:00:00').getTime() - referenceDate.getTime()) / 86400000))
+    : null;
+  const showDiwaliBanner = diwali !== undefined && diwaliDaysUntil !== null && diwaliDaysUntil <= 14;
+
+  if (festivals.length === 0) {
+    return (
+      <div className="card text-center py-8">
+        <span className="text-5xl block mb-3">🗓️</span>
+        <p className="font-semibold text-text mb-2">
+          {lang === 'hi' ? 'अगले 2 महीनों में कोई बड़ा त्योहार सूचीबद्ध नहीं है' : 'No major festivals are listed in the next 2 months'}
+        </p>
+        <p className="text-text-secondary text-small">
+          {lang === 'hi'
+            ? 'स्थानीय आयोजनों, ग्राहकों की पूछताछ और अपनी बिक्री के रिकॉर्ड देखकर योजना बनाएँ।'
+            : 'Plan around local events, customer requests and your own sales records.'}
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="animate-fade-in space-y-3">
-      {festivals.map((f, i) => (
-        <div key={i} className="card flex items-center gap-4">
-          <span className="text-4xl">{f.emoji}</span>
-          <div className="flex-1">
-            <p className="font-bold text-text">{f.name}</p>
-            <p className="text-sm text-text-secondary">{f.months}</p>
-            <p className="text-sm text-primary mt-1">{f.tip}</p>
+    <div className="space-y-4 animate-fade-in">
+      {showDiwaliBanner && diwali && diwaliDaysUntil !== null && (
+        <div className="card p-4 border border-primary/20 flex items-start gap-3">
+          <span className="text-2xl leading-none flex-shrink-0">🪔</span>
+          <div className="min-w-0">
+            <p className="font-semibold text-text">
+              {lang === 'hi'
+                ? (diwaliDaysUntil === 0 ? 'दिवाली आज है' : `दिवाली पास है — ${diwaliDaysUntil} दिन बाकी`)
+                : (diwaliDaysUntil === 0 ? 'Diwali is today' : `Diwali is near — ${diwaliDaysUntil} ${diwaliDaysUntil === 1 ? 'day' : 'days'} to go`)}
+            </p>
+            <p className="text-small text-text-secondary mt-1">
+              {lang === 'hi'
+                ? 'नीचे दी गई तैयारी आपकी दुकान के प्रकार के अनुसार है। खरीदने से पहले हाल की बिक्री और मौजूद स्टॉक देखें।'
+                : 'The guidance below is tailored to your shop type. Check recent sales and current stock before buying.'}
+            </p>
           </div>
         </div>
-      ))}
+      )}
+      <p className="text-small text-text-secondary">
+        {lang === 'hi'
+          ? 'अगले 2 महीनों के त्योहार। तैयारी आपके कारोबार के प्रकार के हिसाब से है; खरीदने से पहले अपना स्टॉक और स्थानीय माँग जाँचें। कुछ त्योहारों की तारीख़ क्षेत्र के अनुसार बदल सकती है, इसलिए ऑर्डर से पहले स्थानीय तारीख़ की पुष्टि करें।'
+          : 'Upcoming festivals in the next 2 months. Advice is tailored to your shop type; check current stock and local demand before buying. Some observances can vary by region, so confirm the local date before placing festival orders.'}
+      </p>
+      {festivals.map((festival) => {
+        const date = new Date(festival.date + 'T12:00:00');
+        const daysUntil = Math.max(0, Math.round((date.getTime() - referenceDate.getTime()) / 86400000));
+        const advice = getFestivalShopAdvice(festival.id, shopType, lang);
+        return (
+          <div key={festival.id} className="card p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-4xl leading-none flex-shrink-0">{festival.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-body-lg font-bold text-text">{getFestivalName(festival, lang)}</h3>
+                <p className="text-small text-text-secondary mt-1">
+                  {getFestivalDateLabel(festival.date, lang)}
+                  {' · '}
+                  {daysUntil === 0
+                    ? (lang === 'hi' ? 'आज' : 'Today')
+                    : lang === 'hi' ? daysUntil + ' दिन बाकी' : 'In ' + daysUntil + (daysUntil === 1 ? ' day' : ' days')}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-border space-y-3">
+              <div>
+                <p className="text-small font-semibold text-text mb-1">
+                  {lang === 'hi' ? 'दुकान के लिए क्या तैयार रखें' : 'What to keep ready'}
+                </p>
+                <p className="text-small text-text-secondary leading-relaxed">{advice.keepReady}</p>
+              </div>
+              <div>
+                <p className="text-small font-semibold text-text mb-1">
+                  {lang === 'hi' ? 'क्या ज़्यादा मँगाएँ' : 'What to replenish'}
+                </p>
+                <p className="text-small text-text-secondary leading-relaxed">{advice.restock}</p>
+              </div>
+              <div className="rounded-xl bg-primary/5 p-3">
+                <p className="text-small font-semibold text-text mb-1">
+                  {lang === 'hi' ? 'काम की जानकारी' : 'Useful insight'}
+                </p>
+                <p className="text-small text-text-secondary leading-relaxed">{advice.insight}</p>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
