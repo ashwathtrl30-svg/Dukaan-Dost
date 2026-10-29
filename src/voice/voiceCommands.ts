@@ -442,7 +442,26 @@ function getNameFromContext(context: string): string | undefined {
   const name = getCustomerName(context);
   if (name) return name;
   const devanagariName = /([\u0900-\u097f]+(?:\s+[\u0900-\u097f]+){0,1})\s+(?:को|के नाम से|के नाम पर)/u.exec(context);
-  return devanagariName?.[1]?.trim().slice(0, 80);
+  if (devanagariName?.[1]) return devanagariName[1].trim().slice(0, 80);
+
+  // Accept a plain customer name only when the local amount segment resolves
+  // to one or two name-like tokens. Never substitute "Unknown" silently.
+  let candidate = stripVoiceCommandWords(context)
+    .replace(/[0-9०-९,₹.]+/gu, ' ')
+    .replace(/\b(?:rupees?|rupee|rs|rupay|rupaye|rupaya|rupiya|रुपये?|रुपया|रुपए|रूपये?|रूपए|पैसे?|udhaar|udhar|credit|उधार|को|नाम|पर|से|for|to|customer|named|name|is)\b/giu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const words = candidate.split(/\s+/u).filter(Boolean);
+  if (
+    words.length >= 1 &&
+    words.length <= 2 &&
+    words.every(word => /^[\p{L}][\p{L}'-]*$/u.test(word)) &&
+    !words.some(word => NUMBER_WORD_SET.has(word.toLowerCase())) &&
+    !/^(?:sales?|expense|expenses|sale|add|please|total|amount|and|or)$/iu.test(candidate)
+  ) {
+    return candidate.slice(0, 80);
+  }
+  return undefined;
 }
 
 function classifyVoiceTransaction(
