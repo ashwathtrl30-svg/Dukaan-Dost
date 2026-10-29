@@ -390,7 +390,7 @@ function getFestivalServiceProducts(
     if (id.includes('gudi-padwa')) return choose('offer new-year grooming slots based on confirmed local family-event bookings', 'पक्की स्थानीय पारिवारिक बुकिंग के अनुसार नए साल की ग्रूमिंग के स्लॉट रखें');
     if (id.includes('janmashtami') || id.includes('maha-shivratri') || id.includes('ram-navami')) return choose('confirm appointment times around local temple visits and observance schedules', 'स्थानीय मंदिर जाने और पूजा के समय के अनुसार अपॉइंटमेंट पक्के करें');
     if (id.includes('chhath-puja')) return choose('confirm bookings early because customers may travel or observe long rituals', 'बुकिंग पहले पक्की करें क्योंकि ग्राहक यात्रा या लंबे अनुष्ठान में हो सकते हैं');
-    return choose('keep normal appointments and the consumables used by booked services ready; do not assume a festival rush without enquiries', 'नियमित अपॉइंटमेंट और बुक सेवाओं की सामग्री तैयार रखें; पूछताछ बिना त्योहार की भीड़ न मानें');
+    return choose(fallbackEn, fallbackHi);
   }
   if (id.includes('karwa-chauth')) return choose('prioritise blouse/saree finishing, falls and urgent alterations for confirmed festive outfits', 'पक्के त्योहार कपड़ों के लिए ब्लाउज़/साड़ी फिनिशिंग, फॉल और जल्दी फिटिंग को प्राथमिकता दें');
   if (id.includes('navratri')) return choose('take regional garba or festive-wear fittings only where customers wear them, and confirm collection slots', 'जहाँ गरबा/त्योहार कपड़े पहने जाते हों वहाँ ही फिटिंग लें और पिकअप स्लॉट पक्का करें');
@@ -405,7 +405,7 @@ function getFestivalServiceProducts(
   if (id.includes('ganesh-chaturthi')) return choose('confirm traditional outfit alterations and delivery dates around installation/immersion days', 'स्थापना/विसर्जन के आसपास पारंपरिक कपड़ों की फिटिंग और डिलीवरी पक्की करें');
   if (id.includes('chhath-puja')) return choose('agree on collection dates before ritual days and avoid promising unachievable urgent work', 'पूजा के दिनों से पहले पिकअप तारीख़ तय करें और ऐसा जल्दी काम न लें जिसे समय पर पूरा न कर सकें');
   if (id.includes('vasant-panchami')) return choose('take yellow or school/family-event outfit alterations only when customers ask', 'पीले कपड़ों या स्कूल/परिवार आयोजन की फिटिंग केवल ग्राहक की माँग पर लें');
-  return choose('keep confirmed alterations, fitting appointments and customer-approved garments organised; avoid unconfirmed seasonal work', 'पक्की फिटिंग, अपॉइंटमेंट और ग्राहक के तय कपड़े व्यवस्थित रखें; बिना पक्के ऑर्डर मौसमी काम न लें');
+  return choose(fallbackEn, fallbackHi);
 }
 
 export function getFestivalShopAdvice(
