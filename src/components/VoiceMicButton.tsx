@@ -79,12 +79,19 @@ export function VoiceMicButton({
 
   useEffect(() => {
     return () => {
-      try {
-        recognitionRef.current?.abort();
-      } catch {
-        // The browser may already have closed the recognizer.
-      }
+      const recognition = recognitionRef.current;
       recognitionRef.current = null;
+      if (recognition) {
+        recognition.onstart = null;
+        recognition.onresult = null;
+        recognition.onerror = null;
+        recognition.onend = null;
+        try {
+          recognition.abort();
+        } catch {
+          // The browser may already have closed the recognizer.
+        }
+      }
     };
   }, []);
 
