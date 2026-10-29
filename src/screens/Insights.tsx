@@ -283,7 +283,7 @@ export function InsightsScreen() {
     ? [weeklyInsight]
     : [
         weeklyInsight,
-        ...(monthlyInsight.title === weeklyInsight.title && monthlyInsight.description === weeklyInsight.description
+        ...(monthlyInsight.title === weeklyInsight.title
           ? []
           : [monthlyInsight]),
       ].slice(0, 2);
