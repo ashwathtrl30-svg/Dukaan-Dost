@@ -50,9 +50,9 @@ function getInsightCards(
   month: PeriodMetrics,
   lang: Language,
   hasAnyEntries: boolean,
-  hasOverdueCredit: boolean,
+  hasBusinessRisk: boolean,
 ): BusinessInsight[] {
-  const celebrateWeek = !hasOverdueCredit &&
+  const celebrateWeek = !hasBusinessRisk &&
     week.profit > 0 &&
     week.profitMargin !== null &&
     week.profitMargin >= 20 &&
@@ -666,14 +666,11 @@ export function InsightsScreen() {
   const dashboard = getInsightsDashboard(state.sales, state.expenses);
   const hasAnyEntries = state.sales.length > 0 || state.expenses.length > 0;
 
-  const today = getToday();
-  const hasOverdueCredit = state.udhaar.some(entry =>
-    !entry.paid && typeof entry.dueDate === 'string' && entry.dueDate < today
-  );
-  const insights = hasAnyEntries
-    ? getInsightCards(dashboard.week, dashboard.month, lang, hasAnyEntries, hasOverdueCredit)
-    : [];
   const advice = getMyAdvice(dashboard.week, dashboard.month, state.sales, state.udhaar, lang);
+  const hasBusinessRisk = advice.some(item => item.tone !== 'positive');
+  const insights = hasAnyEntries
+    ? getInsightCards(dashboard.week, dashboard.month, lang, hasAnyEntries, hasBusinessRisk)
+    : [];
 
   return (
     <div className="h-full flex flex-col bg-bg">
