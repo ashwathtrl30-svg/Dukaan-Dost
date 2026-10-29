@@ -83,3 +83,29 @@ test('classifies saaman as stock and saaman bhejne as transport', () => {
   assert.equal(shipping.error, undefined);
   assert.equal(shipping.transactions[0]?.expenseCategory, 'transport');
 });
+
+
+test('keeps sales and expenses separate in one confirmed voice batch', () => {
+  const parsed = parseVoiceTransactions(
+    'aloo ki bikri 100 rupaye, bijli bill ka kharch 2000 rupaye, kaanda ki bikri 250 rupaye add karo',
+  );
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(
+    parsed.transactions.map(({ type, itemName, amount, expenseCategory }) => ({
+      type, itemName, amount, expenseCategory,
+    })),
+    [
+      { type: 'sale', itemName: 'aloo ki', amount: 100, expenseCategory: undefined },
+      { type: 'expense', itemName: undefined, amount: 2000, expenseCategory: 'electricity' },
+      { type: 'sale', itemName: 'kaanda ki', amount: 250, expenseCategory: undefined },
+    ],
+  );
+});
+
+test('allows five entries but never silently partially accepts six', () => {
+  const five = parseVoiceTransactions(
+    '100 rupees rent, 200 rupees electricity, 300 rupees salary, 400 rupees transport, 500 rupees packing expenses add',
+  );
+  assert.equal(five.error, undefined);
+  assert.equal(five.transactions.length, 5);
+});
