@@ -12,11 +12,8 @@ import {
 } from 'lucide-react';
 import { useStore, formatRupee } from '../store';
 import { t } from '../i18n';
-import {
-  formatInsightsDateRange,
-  getInsightsDashboard,
-  PeriodMetrics,
-} from '../insights/analytics';
+import { formatInsightsDateRange, getInsightsDashboard } from '../insights/analytics';
+import type { PeriodMetrics } from '../insights/analytics';
 
 type Language = 'en' | 'hi';
 type InsightTone = 'warning' | 'positive' | 'info';
