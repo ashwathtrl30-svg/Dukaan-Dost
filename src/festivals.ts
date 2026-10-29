@@ -19,8 +19,10 @@ export interface FestivalShopAdvice {
 const FESTIVAL_CALENDAR: UpcomingFestival[] = [
   { id: 'karwa-chauth', date: '2026-10-29', nameEn: 'Karwa Chauth', nameHi: 'करवा चौथ', emoji: '🌙' },
   { id: 'ahoi-ashtami', date: '2026-11-01', nameEn: 'Ahoi Ashtami', nameHi: 'अहोई अष्टमी', emoji: '🙏' },
+  { id: 'govatsa-dwadashi', date: '2026-11-05', nameEn: 'Govatsa Dwadashi / Vasu Baras', nameHi: 'गोवत्स द्वादशी / वसु बारस', emoji: '🐄' },
   { id: 'dhanteras', date: '2026-11-06', nameEn: 'Dhanteras', nameHi: 'धनतेरस', emoji: '🪔' },
   { id: 'diwali', date: '2026-11-08', nameEn: 'Diwali (Lakshmi Puja)', nameHi: 'दिवाली (लक्ष्मी पूजा)', emoji: '🪔' },
+  { id: 'govardhan-puja-2026', date: '2026-11-10', nameEn: 'Govardhan Puja', nameHi: 'गोवर्धन पूजा', emoji: '🙏' },
   { id: 'bhai-dooj', date: '2026-11-11', nameEn: 'Bhai Dooj', nameHi: 'भाई दूज', emoji: '🎁' },
   { id: 'chhath-puja', date: '2026-11-15', nameEn: 'Chhath Puja', nameHi: 'छठ पूजा', emoji: '🌅' },
   { id: 'tulsi-vivah', date: '2026-11-21', nameEn: 'Tulsi Vivah', nameHi: 'तुलसी विवाह', emoji: '🌿' },
