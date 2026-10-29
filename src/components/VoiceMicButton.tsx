@@ -267,7 +267,7 @@ export function VoiceMicButton({
       : listening ? 'Stop listening' : 'Use voice');
 
   return (
-    <div className="flex flex-col items-stretch gap-2 w-full min-w-0">
+    <div className={"flex flex-col items-stretch gap-2 min-w-0 " + (shape === 'circle' ? 'w-[220px] max-w-full' : 'w-full')}>
       <div className="flex items-center gap-2">
         <button
           type="button"
