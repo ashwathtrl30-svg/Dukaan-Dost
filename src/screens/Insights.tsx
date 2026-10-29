@@ -45,162 +45,245 @@ function changePhrase(change: number, lang: Language, subject: 'sales' | 'expens
   return change > 0 ? `expenses are up ${amount}%` : change < 0 ? `expenses are down ${amount}%` : 'expenses are unchanged';
 }
 
-function bestInsight(metrics: PeriodMetrics, lang: Language, hasAnyEntries: boolean): BusinessInsight {
-  const period = metrics.period;
-  const label = periodName(period, lang);
-  const topExpense = metrics.topExpenses[0];
+function getInsightCards(
+  week: PeriodMetrics,
+  month: PeriodMetrics,
+  lang: Language,
+  hasAnyEntries: boolean,
+): BusinessInsight[] {
+  const make = (
+    period: 'week' | 'month',
+    tone: InsightTone,
+    title: string,
+    description: string,
+  ): BusinessInsight => ({ period, tone, title, description, priority: 0 });
 
-  if (!metrics.hasEntries) {
-    return {
-      period,
-      tone: 'info',
-      title: lang === 'hi' ? `${label} अभी कोई एंट्री नहीं` : `No entries recorded ${period === 'week' ? 'this week' : 'this month'}`,
-      description: hasAnyEntries
-        ? (lang === 'hi'
-          ? 'इस अवधि की बिक्री और खर्च डालें, ताकि सही तुलना और सलाह मिल सके।'
-          : 'Add sales and expenses for this period to get accurate comparisons and useful advice.')
-        : (lang === 'hi'
-          ? 'बिक्री और खर्च डालना शुरू करें। आपकी सलाह इन्हीं रिकॉर्ड पर आधारित होगी।'
-          : 'Start recording sales and expenses. Your insights will be based on your own entries.'),
-      priority: 10,
-    };
-  }
-
-  const candidates: BusinessInsight[] = [];
-
-  if (metrics.profit < 0) {
-    candidates.push({
-      period,
-      tone: 'warning',
-      title: lang === 'hi' ? `${label} खर्च बिक्री से ज़्यादा है` : `Recorded expenses exceed sales`,
-      description: lang === 'hi'
-        ? `दर्ज खर्च बिक्री से ${formatRupee(Math.abs(metrics.profit))} ज़्यादा हैं। खर्च और छूटी हुई बिक्री की एंट्री जाँचें।`
-        : `Recorded expenses are ${formatRupee(Math.abs(metrics.profit))} above recorded sales. Review expenses and check that all sales were entered.`,
-      priority: 100,
-    });
-  }
-
-  if (
-    metrics.salesChange !== null &&
-    metrics.expensesChange !== null &&
-    metrics.expensesChange > metrics.salesChange + 5 &&
-    metrics.expenses > metrics.previousExpenses
-  ) {
-    candidates.push({
-      period,
-      tone: 'warning',
-      title: lang === 'hi' ? 'खर्च बिक्री से तेज़ बढ़ रहे हैं' : 'Expenses are growing faster than sales',
-      description: lang === 'hi'
-        ? `तुलना वाली अवधि में ${changePhrase(metrics.expensesChange, lang, 'expenses')} जबकि ${changePhrase(metrics.salesChange, lang, 'sales')}। सबसे बड़े खर्च की समीक्षा करें।`
-        : `Against the comparable period, ${changePhrase(metrics.expensesChange, lang, 'expenses')} while ${changePhrase(metrics.salesChange, lang, 'sales')}. Review the largest expense before your next purchase.`,
-      priority: 92,
-    });
-  }
-
-  if (metrics.previousProfitMargin !== null && metrics.profitMargin !== null) {
-    const marginDrop = metrics.previousProfitMargin - metrics.profitMargin;
-    if (marginDrop >= 5) {
-      candidates.push({
+  const performanceSummary = (metrics: PeriodMetrics): BusinessInsight => {
+    const period = metrics.period;
+    if (!metrics.hasEntries) {
+      return make(
         period,
-        tone: 'warning',
-        title: lang === 'hi' ? 'मुनाफ़े का प्रतिशत घटा है' : 'Profit margin has narrowed',
-        description: lang === 'hi'
-          ? `दर्ज बिक्री में खर्च के बाद बचने वाला प्रतिशत ${marginDrop} अंक घटा है। कीमतों और खर्चों की समीक्षा करें।`
-          : `The share left after recorded expenses is down ${marginDrop} percentage points. Review pricing and costs.`,
-        priority: 88,
-      });
+        'info',
+        lang === 'hi' ? `${periodName(period, lang)} कोई रिकॉर्ड नहीं` : `No records for ${periodName(period, lang).toLowerCase()}`,
+        hasAnyEntries
+          ? (lang === 'hi'
+              ? 'इस अवधि की बिक्री और खर्च दर्ज नहीं हैं। यहाँ सही जानकारी दिखाने के लिए इस अवधि की एंट्री चाहिए।'
+              : 'No sales or expenses are recorded in this date range. Add entries for this period to see its performance.')
+          : (lang === 'hi'
+              ? 'बिक्री और खर्च की एंट्री डालें। जानकारी आपके अपने रिकॉर्ड पर आधारित होगी।'
+              : 'Record sales and expenses to see a business snapshot based on your own entries.'),
+      );
     }
-  }
 
-  if (metrics.salesChange !== null && metrics.salesChange <= -10) {
-    candidates.push({
-      period,
-      tone: 'warning',
-      title: lang === 'hi' ? 'बिक्री में गिरावट' : 'Sales are down',
-      description: lang === 'hi'
-        ? `पिछली समान अवधि के मुकाबले ${Math.abs(metrics.salesChange)}% कम बिक्री दर्ज हुई है। दिनों के हिसाब से बिक्री देखें।`
-        : `Recorded sales are down ${Math.abs(metrics.salesChange)}% versus the comparable period. Check which days contributed to the drop.`,
-      priority: 84,
-    });
-  } else if (metrics.salesChange !== null && metrics.salesChange >= 10) {
-    candidates.push({
-      period,
-      tone: 'positive',
-      title: lang === 'hi' ? 'बिक्री बढ़ रही है' : 'Sales are improving',
-      description: lang === 'hi'
-        ? `पिछली समान अवधि के मुकाबले बिक्री ${metrics.salesChange}% बढ़ी है। जिन दिनों में बिक्री अच्छी रही, उन पर ध्यान दें।`
-        : `Recorded sales are up ${metrics.salesChange}% versus the comparable period. Look for what worked on stronger sales days.`,
-      priority: 72,
-    });
-  }
+    const marginText = metrics.profitMargin === null
+      ? (lang === 'hi' ? 'बिक्री शून्य होने के कारण मुनाफ़ा प्रतिशत उपलब्ध नहीं है' : 'profit margin is unavailable because recorded sales are zero')
+      : (lang === 'hi' ? `मुनाफ़ा प्रतिशत ${metrics.profitMargin}% है` : `profit margin is ${metrics.profitMargin}%`);
 
-  if (topExpense && topExpense.share >= 35) {
-    const categoryName = t(`ec_${topExpense.category}` as any, lang);
-    candidates.push({
+    return make(
       period,
-      tone: 'info',
-      title: lang === 'hi' ? 'सबसे बड़ा खर्च' : 'Largest expense category',
-      description: lang === 'hi'
-        ? `${categoryName} पर ${formatRupee(topExpense.amount)} खर्च हुए — इस अवधि के दर्ज खर्च का ${topExpense.share}%। अगली खरीद से पहले स्टॉक और ज़रूरत जाँचें।`
-        : `${categoryName} accounts for ${formatRupee(topExpense.amount)}, or ${topExpense.share}% of recorded expenses for this period. Review need and stock movement before the next order.`,
-      priority: 58,
-    });
-  }
+      metrics.profit < 0 ? 'warning' : metrics.profit > 0 ? 'positive' : 'info',
+      lang === 'hi' ? `${periodName(period, lang)} का हिसाब` : `${periodName(period, lang)} at a glance`,
+      lang === 'hi'
+        ? `दर्ज बिक्री ${formatRupee(metrics.sales)}, खर्च ${formatRupee(metrics.expenses)} और खर्च के बाद ${metrics.profit < 0 ? 'घाटा' : 'मुनाफ़ा'} ${formatRupee(Math.abs(metrics.profit))} है; ${marginText}।`
+        : `Recorded sales are ${formatRupee(metrics.sales)} and expenses are ${formatRupee(metrics.expenses)}, leaving ${metrics.profit < 0 ? 'a shortfall' : 'profit'} of ${formatRupee(Math.abs(metrics.profit))}; ${marginText}.`,
+    );
+  };
 
-  if (metrics.salesDaysCount >= 2 && metrics.bestSalesDay) {
-    const dayDate = new Date(`${metrics.bestSalesDay.date}T12:00:00`);
-    const dayName = dayDate.toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { weekday: 'long' });
-    candidates.push({
-      period,
-      tone: 'info',
-      title: lang === 'hi' ? 'सबसे अच्छी बिक्री वाला दिन' : 'Your strongest sales day',
-      description: lang === 'hi'
-        ? `${dayName} को सबसे ज़्यादा बिक्री दर्ज हुई: ${formatRupee(metrics.bestSalesDay.amount)}।`
-        : `${dayName} had the highest recorded sales in this period: ${formatRupee(metrics.bestSalesDay.amount)}.`,
-      priority: 40,
-    });
-  }
+  const salesTrendInsight = (metrics: PeriodMetrics): BusinessInsight => {
+    const label = periodName(metrics.period, lang);
+    if (metrics.salesChange === null) {
+      return make(
+        metrics.period,
+        'info',
+        lang === 'hi' ? 'बिक्री की तुलना अभी उपलब्ध नहीं' : `${label} sales comparison unavailable`,
+        lang === 'hi'
+          ? 'पिछली समान अवधि में दर्ज बिक्री का आधार नहीं है, इसलिए प्रतिशत बदलाव बताना सही नहीं होगा। नियमित एंट्री जारी रखें।'
+          : 'There is no recorded-sales baseline in the previous comparable period, so a percentage change would be misleading. Keep recording sales to establish a reliable trend.',
+      );
+    }
 
-  if (candidates.length === 0) {
-    candidates.push({
-      period,
-      tone: 'info',
-      title: lang === 'hi' ? 'रिकॉर्ड नियमित रखें' : 'Keep your records up to date',
-      description: metrics.previousHasEntries
+    const change = metrics.salesChange;
+    const tone: InsightTone = change < 0 ? 'warning' : change > 0 ? 'positive' : 'info';
+    const description = change > 0
+      ? (lang === 'hi'
+          ? `पिछली समान अवधि के मुकाबले बिक्री ${change}% बढ़ी है। तारीख़वार बिक्री देखें कि किन दिनों ने योगदान दिया।`
+          : `Recorded sales are up ${change}% versus the equivalent previous period. Review daily totals to see which dates contributed to the increase.`)
+      : change < 0
         ? (lang === 'hi'
-          ? 'अभी कोई बड़ा बदलाव स्पष्ट नहीं है। नियमित एंट्री से तुलना भरोसेमंद बनेगी।'
-          : 'No major change stands out from the recorded numbers. Regular entries make comparisons more reliable.')
+            ? `पिछली समान अवधि के मुकाबले बिक्री ${Math.abs(change)}% घटी है। एंट्री पूरी हैं या नहीं, और किन दिनों में बिक्री कम थी, जाँचें।`
+            : `Recorded sales are down ${Math.abs(change)}% versus the equivalent previous period. Check entry completeness and identify the dates with lower sales.`)
         : (lang === 'hi'
-          ? 'अभी पिछली अवधि से तुलना करने के लिए पर्याप्त रिकॉर्ड नहीं हैं। एंट्री जारी रखें।'
-          : 'There is not enough previous-period data for a reliable comparison yet. Keep recording entries.'),
-      priority: 15,
-    });
-  }
+            ? 'पिछली समान अवधि के मुकाबले दर्ज बिक्री में बदलाव नहीं है। बिक्री बढ़ाने के लिए ग्राहक की माँग और धीमे दिनों को देखें।'
+            : 'Recorded sales are unchanged versus the equivalent previous period. Review customer demand and slower days for possible improvements.');
+    return make(
+      metrics.period,
+      tone,
+      lang === 'hi' ? `${label} बिक्री का ट्रेंड` : `${label} sales trend`,
+      description,
+    );
+  };
 
-  return candidates.sort((a, b) => b.priority - a.priority)[0];
+  const expenseInsight = (metrics: PeriodMetrics): BusinessInsight => {
+    const label = periodName(metrics.period, lang);
+    const topExpense = metrics.topExpenses[0];
+    if (!topExpense || metrics.expenses <= 0) {
+      return make(
+        metrics.period,
+        'info',
+        lang === 'hi' ? `${label} खर्च का रिकॉर्ड नहीं` : `${label} expense pattern`,
+        lang === 'hi'
+          ? 'इस अवधि में कोई सकारात्मक खर्च एंट्री नहीं है, इसलिए खर्च की श्रेणियों की तुलना अभी नहीं हो सकती।'
+          : 'No positive expense entries are recorded in this period, so expense categories cannot be analysed yet. Add expenses as they occur.',
+      );
+    }
+
+    const categoryName = t(`ec_${topExpense.category}` as any, lang);
+    return make(
+      metrics.period,
+      topExpense.share >= 40 ? 'warning' : 'info',
+      lang === 'hi' ? `${label} सबसे बड़ा खर्च` : `${label} largest expense`,
+      lang === 'hi'
+        ? `${categoryName} पर ${formatRupee(topExpense.amount)} खर्च हुए, जो दर्ज खर्च का लगभग ${topExpense.share}% है। अगली बार खर्च डालते समय श्रेणी और ज़रूरत जाँचें।`
+        : `${categoryName} is the largest recorded category at ${formatRupee(topExpense.amount)} (about ${topExpense.share}% of expenses). Review whether the entries are expected and planned before trying to reduce costs.`,
+    );
+  };
+
+  const strongestDayInsight = (metrics: PeriodMetrics): BusinessInsight => {
+    const label = periodName(metrics.period, lang);
+    if (metrics.bestSalesDay && metrics.salesDaysCount >= 2) {
+      const dayDate = new Date(`${metrics.bestSalesDay.date}T12:00:00`);
+      const formattedDate = dayDate.toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      });
+      return make(
+        metrics.period,
+        'positive',
+        lang === 'hi' ? 'सबसे ज़्यादा बिक्री वाला दिन' : `${label} strongest sales day`,
+        lang === 'hi'
+          ? `${formattedDate} को ${formatRupee(metrics.bestSalesDay.amount)} की सबसे अधिक बिक्री दर्ज हुई। इसे एक संकेत मानें; कई हफ़्तों का डेटा मिलने पर ही नियमित पैटर्न का भरोसा होगा।`
+          : `${formattedDate} had the highest recorded sales at ${formatRupee(metrics.bestSalesDay.amount)}. Treat this as a single-period signal; several weeks of data are needed to confirm a recurring pattern.`,
+      );
+    }
+
+    return make(
+      metrics.period,
+      'info',
+      lang === 'hi' ? 'दैनिक बिक्री का पैटर्न बन रहा है' : `${label} daily sales pattern`,
+      lang === 'hi'
+        ? 'अलग-अलग दिनों की बिक्री दर्ज करते रहें। कई दिनों का रिकॉर्ड होने पर ही सबसे अच्छा दिन पहचानना उपयोगी होगा।'
+        : 'Record sales across more days. A comparison across multiple dates is needed before identifying a meaningful strongest day.',
+    );
+  };
+
+  const monthlyExpenseTrend = (): BusinessInsight => {
+    if (month.expensesChange === null) {
+      return make(
+        'month',
+        'info',
+        lang === 'hi' ? 'मासिक खर्च की तुलना उपलब्ध नहीं' : 'Monthly expense comparison unavailable',
+        lang === 'hi'
+          ? 'पिछली समान अवधि में दर्ज खर्च का आधार नहीं है। खर्च दर्ज करते रहें ताकि अगले महीने सही तुलना हो सके।'
+          : 'There is no expense baseline in the previous comparable period. Keep recording costs so next month’s comparison is meaningful.',
+      );
+    }
+
+    const change = month.expensesChange;
+    const tone: InsightTone = change > 0 ? 'warning' : change < 0 ? 'positive' : 'info';
+    return make(
+      'month',
+      tone,
+      lang === 'hi' ? 'मासिक खर्च का ट्रेंड' : 'Monthly expense trend',
+      change > 0
+        ? (lang === 'hi'
+            ? `पिछली समान अवधि से खर्च ${change}% बढ़ा है। देखें कि यह नियोजित खरीद है या कोई खर्च अनावश्यक रूप से बढ़ा है।`
+            : `Recorded expenses are up ${change}% versus the same elapsed dates last month. Check whether this reflects planned purchases or costs that have risen unexpectedly.`)
+        : change < 0
+          ? (lang === 'hi'
+              ? `पिछली समान अवधि से खर्च ${Math.abs(change)}% कम है। एंट्री पूरी हैं या नहीं, यह भी जाँचें।`
+              : `Recorded expenses are down ${Math.abs(change)}% versus the same elapsed dates last month. Confirm that all expenses have been entered before concluding that costs improved.`)
+          : (lang === 'hi'
+              ? 'पिछली समान अवधि से दर्ज खर्च लगभग समान हैं। बड़ी श्रेणियों पर नज़र रखें।'
+              : 'Recorded expenses are unchanged versus the same elapsed dates last month. Keep an eye on the largest categories.'),
+    );
+  };
+
+  const monthlyMarginInsight = (): BusinessInsight => {
+    if (!month.hasEntries) {
+      return make(
+        'month',
+        'info',
+        lang === 'hi' ? 'मासिक मुनाफ़ा अभी उपलब्ध नहीं' : 'Monthly profit insight unavailable',
+        lang === 'hi'
+          ? 'इस महीने बिक्री और खर्च की एंट्री नहीं है। रिकॉर्ड होने पर ही मुनाफ़ा और उसका प्रतिशत समझा जा सकेगा।'
+          : 'There are no entries for this month yet. Record sales and expenses to calculate profit and margin for the current month.',
+      );
+    }
+
+    if (month.sales <= 0 || month.profitMargin === null) {
+      return make(
+        'month',
+        'warning',
+        lang === 'hi' ? 'मुनाफ़ा प्रतिशत की गणना नहीं हो सकती' : 'Profit margin cannot be calculated yet',
+        lang === 'hi'
+          ? `इस महीने दर्ज बिक्री ${formatRupee(month.sales)} है। बिक्री दर्ज होने पर ही बिक्री में से खर्च घटाकर मुनाफ़ा प्रतिशत निकलेगा।`
+          : `Recorded sales this month are ${formatRupee(month.sales)}. A profit margin needs recorded sales; verify that all sales have been entered.`,
+      );
+    }
+
+    if (month.previousProfitMargin === null) {
+      return make(
+        'month',
+        'info',
+        lang === 'hi' ? 'मासिक मुनाफ़ा प्रतिशत' : 'Monthly profit margin',
+        lang === 'hi'
+          ? `दर्ज खर्च के बाद मुनाफ़ा प्रतिशत ${month.profitMargin}% है। पिछली समान अवधि का आधार उपलब्ध न होने से यह बताना संभव नहीं कि प्रतिशत बढ़ा या घटा।`
+          : `Profit after recorded expenses is ${month.profitMargin}% of sales. There is no previous-period margin baseline yet, so we cannot say whether it improved.`,
+      );
+    }
+
+    const difference = month.profitMargin - month.previousProfitMargin;
+    const changeDescription = difference >= 5
+      ? (lang === 'hi' ? `मुनाफ़ा प्रतिशत ${difference} अंक बढ़ा है` : `margin is up ${difference} percentage points`)
+      : difference <= -5
+        ? (lang === 'hi' ? `मुनाफ़ा प्रतिशत ${Math.abs(difference)} अंक घटा है` : `margin is down ${Math.abs(difference)} percentage points`)
+        : (lang === 'hi' ? 'मुनाफ़ा प्रतिशत लगभग स्थिर है' : 'margin is broadly stable');
+    return make(
+      'month',
+      difference <= -5 ? 'warning' : difference >= 5 ? 'positive' : 'info',
+      lang === 'hi' ? 'मासिक मुनाफ़े का ट्रेंड' : 'Monthly profit margin trend',
+      lang === 'hi'
+        ? `इस महीने मुनाफ़ा प्रतिशत ${month.profitMargin}% है; ${changeDescription}। बदलाव का कारण समझने के लिए बिक्री और खर्च की एंट्री देखें।`
+        : `This month’s recorded profit margin is ${month.profitMargin}%; ${changeDescription}. Review sales and expense entries to understand what contributed to the change.`,
+    );
+  };
+
+  // Seven compact cards: four weekly signals and three monthly signals.
+  // Even when a comparison is unavailable, its card explains the data limitation
+  // instead of inventing a percentage or hiding the business question.
+  return [
+    performanceSummary(week),
+    salesTrendInsight(week),
+    expenseInsight(week),
+    strongestDayInsight(week),
+    salesTrendInsight(month),
+    monthlyExpenseTrend(),
+    monthlyMarginInsight(),
+  ];
 }
 
 function ChangeIndicator({
-  current,
-  previous,
   change,
   lang,
   kind,
 }: {
-  current: number;
-  previous: number;
   change: number | null;
   lang: Language;
   kind: 'sales' | 'expenses';
 }) {
+  // A missing comparison baseline is shown as a neutral dash.
   if (change === null) {
-    if (current > 0 && previous <= 0) {
-      return (
-        <span className="text-[11px] font-medium text-text-secondary">
-          {lang === 'hi' ? 'नई एंट्री' : 'New activity'}
-        </span>
-      );
-    }
     return <span className="text-[11px] text-text-secondary">—</span>;
   }
 
@@ -242,7 +325,7 @@ function PeriodSummary({ metrics, lang }: { metrics: PeriodMetrics; lang: Langua
             <p className="text-small text-text-secondary">{lang === 'hi' ? 'बिक्री' : 'Sales'}</p>
             <p className="text-lg font-bold text-positive leading-tight">{formatRupee(metrics.sales)}</p>
           </div>
-          <ChangeIndicator current={metrics.sales} previous={metrics.previousSales} change={salesChange} lang={lang} kind="sales" />
+          <ChangeIndicator change={salesChange} lang={lang} kind="sales" />
         </div>
 
         <div className="flex items-center justify-between gap-3">
@@ -250,7 +333,7 @@ function PeriodSummary({ metrics, lang }: { metrics: PeriodMetrics; lang: Langua
             <p className="text-small text-text-secondary">{lang === 'hi' ? 'खर्च' : 'Expenses'}</p>
             <p className="text-lg font-bold text-problem leading-tight">{formatRupee(metrics.expenses)}</p>
           </div>
-          <ChangeIndicator current={metrics.expenses} previous={metrics.previousExpenses} change={expensesChange} lang={lang} kind="expenses" />
+          <ChangeIndicator change={expensesChange} lang={lang} kind="expenses" />
         </div>
 
         <div className="border-t border-border pt-3 flex items-end justify-between gap-3">
@@ -274,16 +357,9 @@ export function InsightsScreen() {
   const dashboard = getInsightsDashboard(state.sales, state.expenses);
   const hasAnyEntries = state.sales.length > 0 || state.expenses.length > 0;
 
-  const weeklyInsight = bestInsight(dashboard.week, lang, hasAnyEntries);
-  const monthlyInsight = bestInsight(dashboard.month, lang, hasAnyEntries);
-  const insights = !hasAnyEntries || (!dashboard.week.hasEntries && !dashboard.month.hasEntries)
-    ? [weeklyInsight]
-    : [
-        weeklyInsight,
-        ...(monthlyInsight.title === weeklyInsight.title
-          ? []
-          : [monthlyInsight]),
-      ].slice(0, 2);
+  const insights = hasAnyEntries
+    ? getInsightCards(dashboard.week, dashboard.month, lang, hasAnyEntries)
+    : [];
 
   return (
     <div className="h-full flex flex-col bg-bg">
@@ -292,7 +368,7 @@ export function InsightsScreen() {
       </div>
 
       <div className="flex-1 scroll-area px-5 pb-6">
-        {/* Insights come first: concise, data-backed and limited to two. */}
+        {/* Insights come first: seven compact, data-backed signals. */}
         <section className="mb-5">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={18} className="text-primary" />
