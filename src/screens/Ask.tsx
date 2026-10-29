@@ -273,7 +273,7 @@ function generateResponse(question: string, state: any, lang: string): string {
     return lang === 'hi' ? 'आपका स्वागत है! 😊 और कुछ पूछना हो तो बेझिझक पूछें।' : 'You\'re welcome! 😊 Feel free to ask anything else.';
   }
   
-  const mentionsFestival = /festival|diwali|dhanteras|govardhan|bhai dooj|chhath|tulsi vivah|vivah panchami|gita jayanti|dattatreya|guru nanak|christmas|karwa chauth|karva chauth|karwa|karva|ahoi|makar sankranti|pongal|vasant panchami|shivratri|holi|gudi padwa|ram navami|raksha bandhan|janmashtami|ganesh chaturthi|onam|navratri|dussehra|त्योहार|दिवाली|धनतेरस|गोवर्धन|भाई दूज|छठ|तुलसी विवाह|विवाह पंचमी|गीता जयंती|दत्तात्रेय|गुरु नानक|क्रिसमस|करवा चौथ|अहोई|मकर संक्रांति|पोंगल|बसंत पंचमी|महाशिवरात्रि|होली|गुड़ी पड़वा|राम नवमी|रक्षा बंधन|जन्माष्टमी|गणेश चतुर्थी|ओणम|नवरात्रि|दशहरा/u.test(q);
+  const mentionsFestival = /festival|diwali|dhanteras|govatsa|vasu baras|govardhan|bhai dooj|chhath|tulsi vivah|vivah panchami|gita jayanti|dattatreya|guru nanak|christmas|karwa chauth|karva chauth|karwa|karva|ahoi|makar sankranti|pongal|vasant panchami|shivratri|holi|gudi padwa|ram navami|raksha bandhan|janmashtami|ganesh chaturthi|onam|navratri|dussehra|त्योहार|दिवाली|धनतेरस|गोवत्स द्वादशी|वसु बारस|गोवर्धन|भाई दूज|छठ|तुलसी विवाह|विवाह पंचमी|गीता जयंती|दत्तात्रेय|गुरु नानक|क्रिसमस|करवा चौथ|अहोई|मकर संक्रांति|पोंगल|बसंत पंचमी|महाशिवरात्रि|होली|गुड़ी पड़वा|राम नवमी|रक्षा बंधन|जन्माष्टमी|गणेश चतुर्थी|ओणम|नवरात्रि|दशहरा/u.test(q);
   const wantsFestivalPlan = mentionsFestival && (
     intent === 'planning' ||
     /\b(?:what should|what to|which items|what items|buy|keep ready|prepare|stock|festival plan|planning|tips|advice)\b|क्या रखें|क्या खरीदें|क्या खरीदना|तैयारी|कौन-सा सामान/u.test(q)
@@ -284,6 +284,7 @@ function generateResponse(question: string, state: any, lang: string): string {
       { idPart: 'karwa-chauth', pattern: /karwa|karva|करवा चौथ/u },
       { idPart: 'ahoi-ashtami', pattern: /ahoi|अहोई/u },
       { idPart: 'dhanteras', pattern: /dhanteras|धनतेरस/u },
+      { idPart: 'govatsa-dwadashi', pattern: /govatsa|vasu baras|गोवत्स द्वादशी|वसु बारस/u },
       { idPart: 'diwali', pattern: /diwali|deepavali|दिवाली|दीपावली/u },
       { idPart: 'govardhan-puja', pattern: /govardhan|गोवर्धन/u },
       { idPart: 'bhai-dooj', pattern: /bhai dooj|bhaiya dooj|भाई दूज/u },
