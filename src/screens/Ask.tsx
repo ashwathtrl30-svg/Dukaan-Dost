@@ -805,6 +805,7 @@ export function AskScreen() {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [voiceNotice, setVoiceNotice] = useState('');
+  const [voiceListening, setVoiceListening] = useState(false);
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [audioErrorMessageId, setAudioErrorMessageId] = useState<string | null>(null);
   const speechRequestIdRef = useRef(0);
@@ -830,11 +831,11 @@ export function AskScreen() {
     }
   }, [messages, isSending]);
   
-  const handleSend = async (text?: string, fromVoice = false) => {
+  const handleSend = async (text?: string) => {
     const message = (text || input.trim()).trim();
-    if (!message || isSending) return;
+    if (!message || isSending || voiceListening) return;
 
-    const responseLang = fromVoice ? detectVoiceLanguage(message, lang) : lang;
+    const responseLang = detectVoiceLanguage(message, lang);
 
     const userMsg: ChatMessage = {
       id: generateId(),
@@ -1178,24 +1179,26 @@ export function AskScreen() {
             placeholder={t('askPlaceholder', lang)}
             className="input-field flex-1 text-body"
           />
-          <button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || isSending}
-            className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
-          >
-            <Send size={20} />
-          </button>
           <VoiceMicButton
             language={lang}
             shape="rounded"
             disabled={isSending}
-            label={lang === 'hi' ? 'आवाज़ से सवाल पूछें' : 'Ask by voice'}
-            onTranscript={(transcript) => {
-              setInput(transcript);
-              void handleSend(transcript, true);
-            }}
+            label={voiceListening
+              ? (lang === 'hi' ? 'रिकॉर्डिंग रोकें' : 'Stop recording')
+              : (lang === 'hi' ? 'आवाज़ से सवाल पूछें' : 'Ask by voice')}
+            onTranscript={(transcript) => setInput(transcript)}
+            onRecordingChange={setVoiceListening}
             onStatus={setVoiceNotice}
           />
+          <button
+            onClick={() => handleSend()}
+            disabled={!input.trim() || isSending || voiceListening}
+            aria-label={lang === 'hi' ? 'सवाल भेजें' : 'Send question'}
+            title={lang === 'hi' ? 'सवाल भेजें' : 'Send question'}
+            className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
+          >
+            <Send size={20} />
+          </button>
         </div>
         {voiceNotice && (
           <p className="mt-2 text-xs leading-snug text-text-secondary" role="status" aria-live="polite">
