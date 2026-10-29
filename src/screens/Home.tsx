@@ -268,7 +268,7 @@ export function HomeScreen() {
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-body font-medium text-text">
-                        {entry.entryType === 'sale' ? t('sale', lang) : t(`ec_${(entry as any).category || 'other'}` as any, lang)}
+                        {entry.entryType === 'sale' ? (entry.itemName?.trim() || t('sale', lang)) : t(`ec_${(entry as any).category || 'other'}` as any, lang)}
                       </p>
                       <p className="text-small text-text-secondary">
                         {new Date(entry.date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' })}
@@ -368,7 +368,7 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
   };
 
   const getEntryTitle = (entry: DisplayEntry) => {
-    if (entry.entryType === 'sale') return t('sale', lang);
+    if (entry.entryType === 'sale') return entry.itemName?.trim() || t('sale', lang);
     if (entry.entryType === 'expense') {
       return t(`ec_${entry.category || 'other'}` as any, lang);
     }
@@ -601,6 +601,7 @@ function UdhaarList({ onClose }: { onClose: () => void }) {
 function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
   const { state, dispatch } = useStore();
   const lang = state.language!;
+  const [itemName, setItemName] = useState('');
   const [amount, setAmount] = useState('');
   const [paymentType, setPaymentType] = useState<PaymentType>('cash');
   const [expenseCategory, setExpenseCategory] = useState('stock');
@@ -625,14 +626,15 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
   
   const handleSave = () => {
     const numAmount = parseInt(amount) || 0;
-    if (numAmount <= 0) return;
+    const cleanedItemName = itemName.trim();
+    if (numAmount <= 0 || (isSale && !cleanedItemName)) return;
     
     const id = generateId();
     const today = getToday();
     
     if (isSale) {
       const entry: SaleEntry = {
-        id, date: today, amount: numAmount, paymentType, createdAt: Date.now()
+        id, date: today, amount: numAmount, itemName: cleanedItemName, paymentType, createdAt: Date.now()
       };
       dispatch({ type: 'ADD_SALE', payload: entry });
     } else if (isExpense) {
@@ -662,6 +664,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
     }
     
     setAmount('');
+    setItemName('');
     setCustomerName('');
   };
   
@@ -697,6 +700,47 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
         </div>
         
         <div className="flex-1 scroll-area px-5 py-4">
+          {isSale && (
+            <div className="mb-4">
+              <label className="text-small font-medium text-text-secondary block mb-2">
+                {lang === 'hi' ? 'सामान या सेवा का नाम' : 'Item or service name'}
+              </label>
+              <input
+                type="text"
+                value={itemName}
+                onChange={(e) => setItemName(e.target.value.slice(0, 80))}
+                placeholder={(() => {
+                  const type = state.shopProfile.shopType;
+                  if (lang === 'hi') {
+                    if (type === 'salon') return 'जैसे: हेयरकट, हेयर कलर';
+                    if (type === 'tailor') return 'जैसे: ब्लाउज़ सिलाई, अल्टरेशन';
+                    if (type === 'medical') return 'जैसे: थर्मामीटर, फर्स्ट-एड किट';
+                    if (type === 'restaurant') return 'जैसे: थाली, चाय';
+                    if (type === 'bakery') return 'जैसे: केक, कुकीज़';
+                    if (type === 'sweet') return 'जैसे: लड्डू, मिठाई बॉक्स';
+                    if (type === 'mobile') return 'जैसे: चार्जर, फोन कवर';
+                    if (type === 'hardware') return 'जैसे: बल्ब, स्क्रू';
+                    if (type === 'vegetable') return 'जैसे: टमाटर, सेब';
+                    if (type === 'tea') return 'जैसे: चाय, समोसा';
+                    return 'जैसे: चावल, तेल';
+                  }
+                  if (type === 'salon') return 'e.g., Haircut, Hair colour';
+                  if (type === 'tailor') return 'e.g., Blouse stitching, Alteration';
+                  if (type === 'medical') return 'e.g., Thermometer, First-aid kit';
+                  if (type === 'restaurant') return 'e.g., Thali, Tea';
+                  if (type === 'bakery') return 'e.g., Cake, Cookies';
+                  if (type === 'sweet') return 'e.g., Laddoo, Sweet box';
+                  if (type === 'mobile') return 'e.g., Charger, Phone case';
+                  if (type === 'hardware') return 'e.g., Bulb, Screws';
+                  if (type === 'vegetable') return 'e.g., Tomatoes, Apples';
+                  if (type === 'tea') return 'e.g., Tea, Samosa';
+                  return 'e.g., Rice, Cooking oil';
+                })()}
+                className="input-field"
+                maxLength={80}
+              />
+            </div>
+          )}
           <div className="text-center mb-4">
             <p className="text-small text-text-secondary mb-2">{t('enterAmount', lang)}</p>
             <p className="text-hero text-text whitespace-nowrap overflow-hidden">
@@ -760,7 +804,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
         <div className="px-5 py-4 safe-bottom">
           <button
             onClick={handleSave}
-            disabled={!amount || parseInt(amount) <= 0}
+            disabled={!amount || parseInt(amount) <= 0 || (isSale && !itemName.trim())}
             className="btn-primary text-body-lg"
           >
             <Check size={20} /> {t('save', lang)}
@@ -784,6 +828,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
 function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void }) {
   const { state, dispatch } = useStore();
   const lang = state.language!;
+  const [itemName, setItemName] = useState(String(entry.itemName || ''));
   const [amount, setAmount] = useState(String(entry.amount));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
@@ -792,7 +837,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
   
   const handleSave = () => {
     const numAmount = parseInt(amount) || 0;
-    if (numAmount <= 0) return;
+    if (numAmount <= 0 || (isSale && !itemName.trim())) return;
     
     // Delete old entry
     dispatch({ type: 'DELETE_ENTRY', payload: { type: entry.entryType, id: entry.id } });
@@ -801,6 +846,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
     const newEntry = {
       ...entry,
       amount: numAmount,
+      ...(isSale ? { itemName: itemName.trim() } : {}),
       createdAt: Date.now(),
     };
     
@@ -847,6 +893,20 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
         </div>
         
         <div className="flex-1 scroll-area px-5 py-4">
+          {isSale && (
+            <div className="mb-4">
+              <label className="text-small font-medium text-text-secondary block mb-2">
+                {lang === 'hi' ? 'सामान या सेवा का नाम' : 'Item or service name'}
+              </label>
+              <input
+                type="text"
+                value={itemName}
+                onChange={(e) => setItemName(e.target.value.slice(0, 80))}
+                className="input-field"
+                maxLength={80}
+              />
+            </div>
+          )}
           <div className="text-center mb-4">
             <p className="text-small text-text-secondary mb-2">{t('enterAmount', lang)}</p>
             <p className="text-hero text-text whitespace-nowrap overflow-hidden">
