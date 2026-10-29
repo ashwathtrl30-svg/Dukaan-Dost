@@ -391,15 +391,20 @@ function StockReorderTool() {
     sale.date >= startKey &&
     sale.date <= todayKey,
   );
-  const totals = new Map<string, { name: string; amount: number; quantity: number; entries: number; lastSold: string }>();
+  const totals = new Map<string, { name: string; amount: number; quantity: number; quantityEntries: number; untrackedQuantityEntries: number; entries: number; lastSold: string }>();
   namedSales.forEach((sale) => {
     const name = sale.itemName!.trim().replace(/\s+/g, ' ');
     const key = name.toLocaleLowerCase();
-    const current = totals.get(key) || { name, amount: 0, quantity: 0, entries: 0, lastSold: sale.date };
+    const current = totals.get(key) || { name, amount: 0, quantity: 0, quantityEntries: 0, untrackedQuantityEntries: 0, entries: 0, lastSold: sale.date };
     current.amount += Number(sale.amount) || 0;
     const recordedQuantity = Number(sale.quantity);
-    // Legacy records did not store quantity; use one estimated unit and explain that limitation below.
-    current.quantity += Number.isFinite(recordedQuantity) && recordedQuantity > 0 ? recordedQuantity : 1;
+    if (Number.isFinite(recordedQuantity) && recordedQuantity > 0) {
+      current.quantity += recordedQuantity;
+      current.quantityEntries += 1;
+    } else {
+      // Older sales have no quantity; don't invent a unit count for them.
+      current.untrackedQuantityEntries += 1;
+    }
     current.entries += 1;
     if (sale.date > current.lastSold) current.lastSold = sale.date;
     totals.set(key, current);
@@ -436,7 +441,7 @@ function StockReorderTool() {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-text break-words">{item.name}</p>
                 <p className="text-small text-text-secondary">
-                  {Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} {lang === 'hi' ? 'यूनिट' : (item.quantity === 1 ? 'unit' : 'units')} · {item.entries} {lang === 'hi' ? 'एंट्री' : (item.entries === 1 ? 'entry' : 'entries')}
+                  {item.quantityEntries > 0 ? `${Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} ${lang === 'hi' ? 'यूनिट दर्ज' : (item.quantity === 1 ? 'unit recorded' : 'units recorded')}` : (lang === 'hi' ? 'मात्रा दर्ज नहीं' : 'quantity not recorded')} · {item.entries} {lang === 'hi' ? 'एंट्री' : (item.entries === 1 ? 'entry' : 'entries')}{item.untrackedQuantityEntries > 0 ? ` · ${item.untrackedQuantityEntries} ${lang === 'hi' ? 'पुरानी बिना मात्रा' : 'older without quantity'}` : ''}
                 </p>
               </div>
               <p className="font-bold text-positive whitespace-nowrap">{formatRupee(item.amount)}</p>
@@ -469,8 +474,8 @@ function StockReorderTool() {
               ? 'ऊपर दी गई सेवाओं की माँग देखकर अपॉइंटमेंट स्लॉट और ज़रूरी कंज़्यूमेबल्स की योजना बनाएँ। रिकॉर्ड अपने-आप यह नहीं बताता कि कितना सामान बचा है।'
               : 'Use these service trends to plan appointment capacity and the consumables each service needs. Sales records do not show how much supply is left.')
             : (lang === 'hi'
-              ? 'ऊपर के तेज़ बिकने वाले सामान का मौजूदा स्टॉक गिनें। जो कम बचा है, उसी की मात्रा तय करें। दर्ज मात्रा माँग का संकेत देती है, लेकिन ऑर्डर से पहले बचा हुआ स्टॉक गिनें। पुराने रिकॉर्ड में मात्रा नहीं थी, इसलिए उन्हें अनुमान के लिए एक यूनिट माना गया है।'
-              : 'Count current stock for the items at the top, then decide what needs replenishing. Recorded quantities help estimate demand, but count stock on hand before ordering. Older records without quantities are estimated as one unit; sales history cannot tell you how much stock remains.')}
+              ? 'ऊपर के तेज़ बिकने वाले सामान का मौजूदा स्टॉक गिनें। जो कम बचा है, उसी की मात्रा तय करें। दर्ज मात्रा माँग का संकेत देती है, लेकिन ऑर्डर से पहले बचा हुआ स्टॉक गिनें। पुराने रिकॉर्ड में मात्रा दर्ज नहीं थी, इसलिए यूनिट की कुल मात्रा में केवल स्पष्ट रूप से दर्ज मात्रा शामिल है।'
+              : 'Count current stock for the items at the top, then decide what needs replenishing. Recorded quantities help estimate demand, but count stock on hand before ordering. Older entries have no quantity data, so only explicitly recorded quantities appear in the unit total; sales history cannot tell you how much stock remains.')}
         </p>
       </div>
     </div>
