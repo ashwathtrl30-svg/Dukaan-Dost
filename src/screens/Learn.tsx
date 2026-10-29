@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../store';
 import { t } from '../i18n';
-import { Play, CheckCircle, ChevronRight, RefreshCw, Store, ClipboardCheck } from 'lucide-react';
+import { CheckCircle, ChevronRight, Store, ClipboardCheck } from 'lucide-react';
 
 interface LessonData {
   id: string;
@@ -296,12 +296,11 @@ function getLocalDateKey(date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
-// The daily set changes by calendar day. The refresh button also moves to another
-// set immediately, so a shopkeeper is never stuck seeing the same five lessons.
-function getDailyLessons(dateKey: string, refreshCount: number): LessonData[] {
+// Rotate the five-lesson set by local calendar day. Adjacent days show different sets.
+function getDailyLessons(dateKey: string): LessonData[] {
   const [year, month, day] = dateKey.split('-').map(Number);
   const dayNumber = Math.floor(Date.UTC(year, month - 1, day) / 86400000);
-  const start = ((dayNumber * 5 + refreshCount * 5) % allLessons.length + allLessons.length) % allLessons.length;
+  const start = ((dayNumber * 5) % allLessons.length + allLessons.length) % allLessons.length;
   return Array.from({ length: Math.min(5, allLessons.length) }, (_, index) =>
     allLessons[(start + index) % allLessons.length],
   );
@@ -347,10 +346,8 @@ export function LearnScreen() {
   const lang = state.language!;
   const [selectedLesson, setSelectedLesson] = useState<string | null>(null);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
-  const [plannedLessons, setPlannedLessons] = useState<string[]>([]);
-  const [refreshCount, setRefreshCount] = useState(0);
   const [todayKey, setTodayKey] = useState(() => getLocalDateKey());
-  const dailyLessons = useMemo(() => getDailyLessons(todayKey, refreshCount), [todayKey, refreshCount]);
+  const dailyLessons = useMemo(() => getDailyLessons(todayKey), [todayKey]);
 
   useEffect(() => {
     const refreshDate = () => {
@@ -418,29 +415,17 @@ export function LearnScreen() {
             <LessonCopy content={lang === 'hi' ? lesson.contentHi : lesson.contentEn} />
           </div>
           
-          <div className="space-y-3">
-            <button
-              onClick={() => {
-                if (!completedLessons.includes(lesson.id)) {
-                  setCompletedLessons([...completedLessons, lesson.id]);
-                }
-                setSelectedLesson(null);
-              }}
-              className="btn-primary"
-            >
-              <CheckCircle size={20} /> {t('done', lang)}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setPlannedLessons(previous => previous.includes(lesson.id) ? previous : [...previous, lesson.id]);
-                setSelectedLesson(null);
-              }}
-              className="btn-secondary"
-            >
-              <Play size={20} /> {t('tryInShop', lang)}
-            </button>
-          </div>
+          <button
+            onClick={() => {
+              if (!completedLessons.includes(lesson.id)) {
+                setCompletedLessons([...completedLessons, lesson.id]);
+              }
+              setSelectedLesson(null);
+            }}
+            className="btn-primary"
+          >
+            <CheckCircle size={20} /> {t('done', lang)}
+          </button>
         </div>
       </div>
     );
@@ -451,20 +436,8 @@ export function LearnScreen() {
   
   return (
     <div className="h-full min-h-0 flex flex-col bg-bg">
-      <div className="px-5 pt-4 pb-2 flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-section-title text-text">{t('learnTitle', lang)}</h1>
-        </div>
-        <button
-          type="button"
-          onClick={() => setRefreshCount(count => count + 1)}
-          className="btn-secondary shrink-0"
-          style={{ width: 44, minWidth: 44, height: 44, padding: 0, flex: '0 0 44px' }}
-          aria-label={lang === 'hi' ? 'नई सीख दिखाएँ' : 'Refresh lessons'}
-          title={lang === 'hi' ? 'नई सीख दिखाएँ' : 'Refresh lessons'}
-        >
-          <RefreshCw size={18} />
-        </button>
+      <div className="px-5 pt-4 pb-2">
+        <h1 className="text-section-title text-text">{t('learnTitle', lang)}</h1>
       </div>
       
       <div className="flex-1 min-h-0 scroll-area px-5 pb-6">
@@ -499,15 +472,11 @@ export function LearnScreen() {
                   <p className="text-body font-semibold text-text leading-snug break-words">{lang === 'hi' ? lesson.titleHi : lesson.titleEn}</p>
                   <p className="text-small text-text-secondary leading-snug break-words mt-1">{lang === 'hi' ? lesson.descHi : lesson.descEn}</p>
                   <p className="text-small text-text-secondary mt-1">
-                    {plannedLessons.includes(lesson.id)
-                      ? (lang === 'hi' ? 'आज आज़माने के लिए चुना' : 'Planned to try')
-                      : `${lesson.duration} ${t('minutes', lang)}`}
+                    {`${lesson.duration} ${t('minutes', lang)}`}
                   </p>
                 </div>
                 {isCompleted ? (
                   <CheckCircle size={24} className="text-positive flex-shrink-0" />
-                ) : plannedLessons.includes(lesson.id) ? (
-                  <ClipboardCheck size={21} className="text-primary flex-shrink-0" />
                 ) : (
                   <ChevronRight size={20} className="text-text-secondary flex-shrink-0" />
                 )}
