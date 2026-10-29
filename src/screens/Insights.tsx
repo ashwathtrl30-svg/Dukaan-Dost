@@ -770,7 +770,7 @@ export function InsightsScreen() {
     const quantity = Number(sale.quantity);
     // Older sales have no stored quantity and must not be treated as measured units.
     if (!Number.isFinite(quantity) || quantity <= 0) return;
-    const name = sale.itemName.trim().replace(/\\s+/g, ' ');
+    const name = sale.itemName.trim().replace(/\s+/g, ' ');
     const key = name.toLocaleLowerCase();
     const current = quantitiesByItem.get(key) || { name, quantity: 0 };
     current.quantity += quantity;
