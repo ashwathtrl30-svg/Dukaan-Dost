@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useStore, formatRupee, getTodaySales, getTodayExpenses, getTotalUdhaar, generateId, getWeekSales, getWeekExpenses } from '../store';
 import { t } from '../i18n';
 import { ChatMessage, ChatSession } from '../types';
-import { Send, MoreVertical, Plus, ArrowLeft, Trash2, MessageCircle, Clock } from 'lucide-react';
+import { Send, MoreVertical, Plus, ArrowLeft, Trash2, MessageCircle, Clock, Volume2, Square } from 'lucide-react';
 import { findKnowledgeEntry } from '../knowledgeBase';
 import { VoiceMicButton } from '../components/VoiceMicButton';
 import { detectVoiceLanguage, speakText } from '../voice/speech';
@@ -601,6 +601,9 @@ export function AskScreen() {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [voiceNotice, setVoiceNotice] = useState('');
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
+  const [audioErrorMessageId, setAudioErrorMessageId] = useState<string | null>(null);
+  const speechRequestIdRef = useRef(0);
   const [showHistory, setShowHistory] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -622,11 +625,11 @@ export function AskScreen() {
     }
   }, [messages]);
   
-  const handleSend = async (text?: string, speakReply = false) => {
+  const handleSend = async (text?: string, fromVoice = false) => {
     const message = (text || input.trim()).trim();
     if (!message || isSending) return;
 
-    const responseLang = speakReply ? detectVoiceLanguage(message, lang) : lang;
+    const responseLang = fromVoice ? detectVoiceLanguage(message, lang) : lang;
 
     const userMsg: ChatMessage = {
       id: generateId(),
@@ -648,7 +651,7 @@ export function AskScreen() {
 
       if (intent === 'data_query') {
         response = generateResponse(message, state, responseLang);
-      } else if (speakReply && mentionsLedgerData && !asksForAdvice) {
+      } else if (fromVoice && mentionsLedgerData && !asksForAdvice) {
         response = responseLang === 'hi'
           ? 'इस सवाल का भरोसेमंद जवाब देने के लिए ज़रूरी दुकान डेटा नहीं मिला। कृपया सवाल को स्पष्ट करें या संबंधित एंट्री पहले जोड़ें।'
           : 'I do not have enough matching shop data to answer that reliably. Please clarify the question or add the relevant entries first.';
@@ -692,19 +695,42 @@ export function AskScreen() {
       role: 'assistant',
       content: response,
       timestamp: Date.now(),
+      language: responseLang,
     };
     dispatch({ type: 'ADD_CHAT_MESSAGE', payload: assistantMsg });
 
-    if (speakReply) {
-      setVoiceNotice(responseLang === 'hi' ? 'जवाब बोलकर सुना रहा हूँ…' : 'Reading the answer aloud…');
-      speakText(
-        response,
-        responseLang,
-        () => setVoiceNotice(''),
-        () => setVoiceNotice(responseLang === 'hi'
-          ? 'आवाज़ नहीं चला पाए। जवाब स्क्रीन पर उपलब्ध है।'
-          : 'Audio playback failed. The answer is still available on screen.')
-      );
+  };
+
+  const handleReadAloud = (msg: ChatMessage) => {
+    if (speakingMessageId === msg.id) {
+      speechRequestIdRef.current += 1;
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      setSpeakingMessageId(null);
+      return;
+    }
+
+    const requestId = ++speechRequestIdRef.current;
+    setVoiceNotice('');
+    setAudioErrorMessageId(null);
+    setSpeakingMessageId(msg.id);
+
+    const started = speakText(
+      msg.content,
+      msg.language || lang,
+      () => {
+        if (speechRequestIdRef.current === requestId) setSpeakingMessageId(null);
+      },
+      () => {
+        if (speechRequestIdRef.current === requestId) {
+          setSpeakingMessageId(null);
+          setAudioErrorMessageId(msg.id);
+        }
+      }
+    );
+
+    if (!started && speechRequestIdRef.current === requestId) {
+      setSpeakingMessageId(null);
+      setAudioErrorMessageId(msg.id);
     }
   };
 
@@ -901,6 +927,26 @@ export function AskScreen() {
                 <div className="card">
                   <p className="text-text whitespace-pre-line text-body leading-relaxed">{msg.content}</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => handleReadAloud(msg)}
+                  aria-label={speakingMessageId === msg.id
+                    ? (lang === 'hi' ? 'पढ़ना बंद करें' : 'Stop reading aloud')
+                    : (lang === 'hi' ? 'जवाब ज़ोर से सुनें' : 'Read answer aloud')}
+                  className="mt-2 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+                >
+                  {speakingMessageId === msg.id ? <Square size={16} /> : <Volume2 size={16} />}
+                  {speakingMessageId === msg.id
+                    ? (lang === 'hi' ? 'बोलना बंद करें' : 'Stop reading')
+                    : (lang === 'hi' ? 'ज़ोर से सुनें' : 'Read aloud')}
+                </button>
+                {audioErrorMessageId === msg.id && (
+                  <p className="mt-1 text-xs text-text-secondary" role="status">
+                    {lang === 'hi'
+                      ? 'आवाज़ नहीं चला पाए। ब्राउज़र की ऑडियो सेटिंग जाँचें।'
+                      : 'Audio playback failed. Check your browser audio settings.'}
+                  </p>
+                )}
               </div>
             )}
           </div>
