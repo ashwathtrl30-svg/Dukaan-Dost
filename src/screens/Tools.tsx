@@ -391,17 +391,25 @@ function StockReorderTool() {
     sale.date >= startKey &&
     sale.date <= todayKey,
   );
-  const totals = new Map<string, { name: string; amount: number; entries: number; lastSold: string }>();
+  const totals = new Map<string, { name: string; amount: number; quantity: number; quantityEntries: number; untrackedQuantityEntries: number; entries: number; lastSold: string }>();
   namedSales.forEach((sale) => {
     const name = sale.itemName!.trim().replace(/\s+/g, ' ');
     const key = name.toLocaleLowerCase();
-    const current = totals.get(key) || { name, amount: 0, entries: 0, lastSold: sale.date };
+    const current = totals.get(key) || { name, amount: 0, quantity: 0, quantityEntries: 0, untrackedQuantityEntries: 0, entries: 0, lastSold: sale.date };
     current.amount += Number(sale.amount) || 0;
+    const recordedQuantity = Number(sale.quantity);
+    if (Number.isFinite(recordedQuantity) && recordedQuantity > 0) {
+      current.quantity += recordedQuantity;
+      current.quantityEntries += 1;
+    } else {
+      // Older sales have no quantity; don't invent a unit count for them.
+      current.untrackedQuantityEntries += 1;
+    }
     current.entries += 1;
     if (sale.date > current.lastSold) current.lastSold = sale.date;
     totals.set(key, current);
   });
-  const ranked = [...totals.values()].sort((a, b) => b.amount - a.amount).slice(0, 6);
+  const ranked = [...totals.values()].sort((a, b) => b.quantity - a.quantity || b.amount - a.amount).slice(0, 6);
 
   return (
     <div className="animate-fade-in space-y-4">
@@ -415,11 +423,11 @@ function StockReorderTool() {
         <p className="text-small text-text-secondary mt-2">
           {serviceBusiness
             ? (lang === 'hi'
-              ? 'सर्विस का नाम लिखकर बिक्री दर्ज करें। यह सूची बताती है कि किन सेवाओं से सबसे ज़्यादा दर्ज बिक्री आई।'
-              : 'Name each service when recording a sale. This list shows which services have the highest recorded sales value.')
+              ? 'सर्विस का नाम और मात्रा लिखकर बिक्री दर्ज करें। यह सूची दर्ज सर्विस की संख्या के आधार पर क्रम दिखाती है।'
+              : 'Name each service and quantity when recording a sale. This list ranks recorded service count first, then sales value.')
             : (lang === 'hi'
-              ? 'हर बिक्री में सामान का नाम लिखें। यह सूची दर्ज बिक्री के आधार पर दिखाती है कि किन सामानों से सबसे ज़्यादा बिक्री आई।'
-              : 'Name each item when recording a sale. This list ranks items by recorded sales value, not by units sold or shelf stock.')}
+              ? 'हर बिक्री में सामान का नाम और मात्रा लिखें। यह सूची पहले दर्ज मात्रा, फिर बिक्री मूल्य के आधार पर क्रम दिखाती है।'
+              : 'Name each item and enter its quantity. This list ranks items by quantity sold, then sales value; it does not know current shelf stock.')}
         </p>
       </div>
 
@@ -433,7 +441,7 @@ function StockReorderTool() {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-text break-words">{item.name}</p>
                 <p className="text-small text-text-secondary">
-                  {item.entries} {lang === 'hi' ? 'बिक्री एंट्री' : (item.entries === 1 ? 'sale entry' : 'sales entries')}
+                  {item.quantityEntries > 0 ? `${Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} ${lang === 'hi' ? 'यूनिट दर्ज' : (item.quantity === 1 ? 'unit recorded' : 'units recorded')}` : (lang === 'hi' ? 'मात्रा दर्ज नहीं' : 'quantity not recorded')} · {item.entries} {lang === 'hi' ? 'एंट्री' : (item.entries === 1 ? 'entry' : 'entries')}{item.untrackedQuantityEntries > 0 ? ` · ${item.untrackedQuantityEntries} ${lang === 'hi' ? 'पुरानी बिना मात्रा' : 'older without quantity'}` : ''}
                 </p>
               </div>
               <p className="font-bold text-positive whitespace-nowrap">{formatRupee(item.amount)}</p>
@@ -448,8 +456,8 @@ function StockReorderTool() {
           </p>
           <p className="text-text-secondary text-small">
             {lang === 'hi'
-              ? 'होम पर बिक्री जोड़ते समय सामान या सेवा का नाम और रकम दर्ज करें।'
-              : 'When adding a sale on Home, enter the item or service name and amount.'}
+              ? 'होम पर बिक्री जोड़ते समय सामान/सेवा का नाम, मात्रा और कुल रकम दर्ज करें।'
+              : 'When adding a sale on Home, enter the item or service name, quantity, and total sale amount.'}
           </p>
         </div>
       )}
@@ -466,8 +474,8 @@ function StockReorderTool() {
               ? 'ऊपर दी गई सेवाओं की माँग देखकर अपॉइंटमेंट स्लॉट और ज़रूरी कंज़्यूमेबल्स की योजना बनाएँ। रिकॉर्ड अपने-आप यह नहीं बताता कि कितना सामान बचा है।'
               : 'Use these service trends to plan appointment capacity and the consumables each service needs. Sales records do not show how much supply is left.')
             : (lang === 'hi'
-              ? 'ऊपर के तेज़ बिकने वाले सामान का मौजूदा स्टॉक गिनें। जो कम बचा है, उसी की मात्रा तय करें। बिक्री का मूल्य माँग का संकेत है—यह अपने-आप मौजूदा स्टॉक या पीस की संख्या नहीं बताता।'
-              : 'Count current stock for the items at the top, then decide what needs replenishing. Recorded sales value is a demand signal; it does not tell us units sold or how much stock remains.')}
+              ? 'ऊपर के तेज़ बिकने वाले सामान का मौजूदा स्टॉक गिनें। जो कम बचा है, उसी की मात्रा तय करें। दर्ज मात्रा माँग का संकेत देती है, लेकिन ऑर्डर से पहले बचा हुआ स्टॉक गिनें। पुराने रिकॉर्ड में मात्रा दर्ज नहीं थी, इसलिए यूनिट की कुल मात्रा में केवल स्पष्ट रूप से दर्ज मात्रा शामिल है।'
+              : 'Count current stock for the items at the top, then decide what needs replenishing. Recorded quantities help estimate demand, but count stock on hand before ordering. Older entries have no quantity data, so only explicitly recorded quantities appear in the unit total; sales history cannot tell you how much stock remains.')}
         </p>
       </div>
     </div>
