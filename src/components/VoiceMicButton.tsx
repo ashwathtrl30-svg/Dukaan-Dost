@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic } from 'lucide-react';
+import { ArrowUp, Mic, X } from 'lucide-react';
 
 type RecognitionAlternative = { transcript?: string };
 type RecognitionResult = {
@@ -74,8 +74,19 @@ export function VoiceMicButton({
   label,
 }: VoiceMicButtonProps) {
   const [listening, setListening] = useState(false);
+  const [draftTranscript, setDraftTranscript] = useState('');
   const recognitionRef = useRef<RecognitionLike | null>(null);
   const handledRef = useRef(false);
+  const transcriptRef = useRef('');
+  const baseTranscriptRef = useRef('');
+  const finalSessionTranscriptRef = useRef('');
+  const interimSessionTranscriptRef = useRef('');
+
+  const updateDraft = (value: string) => {
+    const cleaned = value.replace(/\s+/g, ' ').trim();
+    transcriptRef.current = cleaned;
+    setDraftTranscript(cleaned);
+  };
 
   useEffect(() => {
     return () => {
@@ -127,50 +138,80 @@ export function VoiceMicButton({
     }
 
     handledRef.current = false;
+    baseTranscriptRef.current = transcriptRef.current;
+    finalSessionTranscriptRef.current = '';
+    interimSessionTranscriptRef.current = '';
     recognition.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 3;
     recognitionRef.current = recognition;
 
     recognition.onstart = () => {
       setListening(true);
-      onStatus?.(language === 'hi' ? 'सुन रहा हूँ… बोलिए।' : 'Listening… speak now.');
+      onStatus?.(
+        language === 'hi'
+          ? 'सुन रहा हूँ… बोलिए। पूरा होने पर नीचे टिक दबाएँ।'
+          : 'Listening… speak naturally. Tap the arrow when you finish.'
+      );
     };
 
     recognition.onresult = (event) => {
       if (handledRef.current) return;
-      const phrases: string[] = [];
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      const finals: string[] = [];
+      const interims: string[] = [];
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
-        if (result?.isFinal && result[0]?.transcript) phrases.push(result[0].transcript);
+        const transcript = result?.[0]?.transcript?.trim();
+        if (!transcript) continue;
+        if (result.isFinal) finals.push(transcript);
+        else interims.push(transcript);
       }
-      const transcript = phrases.join(' ').trim();
-      if (!transcript) return;
-
-      handledRef.current = true;
-      onStatus?.(language === 'hi' ? 'समझ रहा हूँ…' : 'Processing speech…');
-      onTranscript(transcript);
-      try {
-        recognition.stop();
-      } catch {
-        // The recognition session may already have stopped.
+      finalSessionTranscriptRef.current = finals.join(' ').trim();
+      interimSessionTranscriptRef.current = interims.join(' ').trim();
+      updateDraft([
+        baseTranscriptRef.current,
+        finalSessionTranscriptRef.current,
+        interimSessionTranscriptRef.current,
+      ].filter(Boolean).join(' '));
+      if (transcriptRef.current) {
+        onStatus?.(
+          language === 'hi'
+            ? 'बात सही दिख रही है या नहीं जाँचें। भेजने के लिए टिक दबाएँ।'
+            : 'Review the recognised words. Tap the arrow to send.'
+        );
       }
     };
 
     recognition.onerror = (event) => {
       setListening(false);
-      if (!handledRef.current) onStatus?.(speechStatus(event.error, language));
+      if (!handledRef.current && !transcriptRef.current) {
+        onStatus?.(speechStatus(event.error, language));
+      } else if (!handledRef.current && transcriptRef.current) {
+        onStatus?.(
+          language === 'hi'
+            ? 'आवाज़ रुक गई। लिखे हुए शब्द जाँचें या माइक्रोफ़ोन से आगे बोलें।'
+            : 'Listening paused. Review the text or tap the microphone to continue.'
+        );
+      }
     };
 
     recognition.onend = () => {
       setListening(false);
       if (!handledRef.current) {
-        onStatus?.(
-          language === 'hi'
-            ? 'आवाज़ नहीं मिली। माइक्रोफ़ोन दबाकर फिर बोलें।'
-            : 'No voice input was captured. Tap the microphone and try again.'
-        );
+        if (transcriptRef.current) {
+          onStatus?.(
+            language === 'hi'
+              ? 'आवाज़ रुक गई। शब्द जाँचें, आगे बोलने के लिए माइक्रोफ़ोन दबाएँ, या भेजने के लिए टिक दबाएँ।'
+              : 'Listening paused. Review the text, tap the microphone to continue, or use the arrow to send.'
+          );
+        } else {
+          onStatus?.(
+            language === 'hi'
+              ? 'आवाज़ सुनाई नहीं दी। माइक्रोफ़ोन दबाकर फिर बोलें।'
+              : 'We did not hear you clearly. Tap the microphone and try again.'
+          );
+        }
       }
       recognitionRef.current = null;
     };
@@ -184,31 +225,114 @@ export function VoiceMicButton({
     }
   };
 
+  const sendTranscript = () => {
+    const transcript = transcriptRef.current.trim();
+    if (!transcript || disabled || handledRef.current) return;
+    handledRef.current = true;
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      // Recognition may already have stopped.
+    }
+    recognitionRef.current = null;
+    setListening(false);
+    updateDraft('');
+    baseTranscriptRef.current = '';
+    finalSessionTranscriptRef.current = '';
+    interimSessionTranscriptRef.current = '';
+    onStatus?.(language === 'hi' ? 'भेज रहे हैं…' : 'Sending…');
+    onTranscript(transcript);
+  };
+
+  const clearTranscript = () => {
+    handledRef.current = true;
+    try {
+      recognitionRef.current?.abort();
+    } catch {
+      // Recognition may already have stopped.
+    }
+    recognitionRef.current = null;
+    setListening(false);
+    updateDraft('');
+    baseTranscriptRef.current = '';
+    finalSessionTranscriptRef.current = '';
+    interimSessionTranscriptRef.current = '';
+    onStatus?.(language === 'hi' ? 'लिखे हुए शब्द हटा दिए।' : 'Voice draft cleared.');
+  };
+
   const buttonLabel =
     label ||
     (language === 'hi'
-      ? listening
-        ? 'आवाज़ रोकें'
-        : 'आवाज़ से पूछें'
-      : listening
-        ? 'Stop listening'
-        : 'Use voice');
+      ? listening ? 'आवाज़ रोकें' : 'आवाज़ से पूछें'
+      : listening ? 'Stop listening' : 'Use voice');
 
   return (
-    <button
-      type="button"
-      onClick={startListening}
-      disabled={disabled}
-      aria-label={buttonLabel}
-      aria-pressed={listening}
-      title={buttonLabel}
-      className={
-        'w-12 h-12 flex-shrink-0 flex items-center justify-center transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ' +
-        (shape === 'circle' ? 'rounded-full ' : 'rounded-2xl ') +
-        (listening ? 'bg-red-600 text-white ring-2 ring-red-200' : 'bg-primary/10 text-primary')
-      }
-    >
-      <Mic size={20} strokeWidth={2.2} />
-    </button>
+    <div className="flex flex-col items-stretch gap-2 w-full min-w-0">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={startListening}
+          disabled={disabled}
+          aria-label={buttonLabel}
+          aria-pressed={listening}
+          title={buttonLabel}
+          className={
+            'w-12 h-12 flex-shrink-0 flex items-center justify-center transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ' +
+            (shape === 'circle' ? 'rounded-full ' : 'rounded-2xl ') +
+            (listening ? 'bg-red-600 text-white ring-2 ring-red-200' : 'bg-primary/10 text-primary')
+          }
+        >
+          <Mic size={20} strokeWidth={2.2} />
+        </button>
+        {listening && (
+          <span className="text-xs text-text-secondary animate-pulse">
+            {language === 'hi' ? 'सुन रहा है…' : 'Listening…'}
+          </span>
+        )}
+      </div>
+
+      {draftTranscript && (
+        <div className="w-full rounded-2xl border border-border bg-card p-3">
+          <label className="text-xs font-semibold text-text-secondary block mb-2">
+            {language === 'hi' ? 'भेजने से पहले जाँचें' : 'Review before sending'}
+          </label>
+          <textarea
+            value={draftTranscript}
+            onChange={(event) => {
+              handledRef.current = false;
+              baseTranscriptRef.current = event.target.value;
+              finalSessionTranscriptRef.current = '';
+              interimSessionTranscriptRef.current = '';
+              updateDraft(event.target.value);
+            }}
+            rows={3}
+            className="input-field w-full resize-y text-sm"
+            aria-label={language === 'hi' ? 'पहचाने गए शब्द' : 'Recognised speech'}
+          />
+          <div className="flex items-center justify-end gap-2 mt-2">
+            <button
+              type="button"
+              onClick={clearTranscript}
+              disabled={disabled}
+              aria-label={language === 'hi' ? 'आवाज़ का ड्राफ़्ट मिटाएँ' : 'Clear voice draft'}
+              title={language === 'hi' ? 'मिटाएँ' : 'Clear'}
+              className="w-10 h-10 rounded-full border border-border text-text-secondary flex items-center justify-center disabled:opacity-40"
+            >
+              <X size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={sendTranscript}
+              disabled={disabled || !draftTranscript.trim()}
+              aria-label={language === 'hi' ? 'संदेश भेजें' : 'Send voice message'}
+              title={language === 'hi' ? 'भेजें' : 'Send'}
+              className="w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center disabled:opacity-40"
+            >
+              <ArrowUp size={21} strokeWidth={2.6} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
