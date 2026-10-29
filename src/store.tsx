@@ -302,7 +302,13 @@ export function formatRupee(amount: number): string {
 }
 
 export function getToday(): string {
-  return new Date().toISOString().split('T')[0];
+  // Entry dates are shop-local calendar dates, not UTC dates. Using UTC here
+  // can assign an entry to yesterday during the first hours after midnight in India.
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function generateId(): string {
