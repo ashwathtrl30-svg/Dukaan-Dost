@@ -1,4 +1,4 @@
-import { ExpenseEntry, SaleEntry } from '../types';
+import type { ExpenseEntry, SaleEntry } from '../types';
 
 export type InsightsPeriod = 'week' | 'month';
 
