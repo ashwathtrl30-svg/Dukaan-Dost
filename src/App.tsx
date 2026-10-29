@@ -10,7 +10,7 @@ import { AskScreen } from './screens/Ask';
 import { ToolsScreen } from './screens/Tools';
 import { LearnScreen } from './screens/Learn';
 import { ProfileScreen } from './screens/Profile';
-import { Home, BarChart3, MessageCircle, Wrench, BookOpen, User, WifiOff, Check, X, Send } from 'lucide-react';
+import { Home, BarChart3, MessageCircle, Wrench, BookOpen, User, WifiOff, Check, X } from 'lucide-react';
 
 type Tab = 'home' | 'insights' | 'ask' | 'tools' | 'learn';
 
