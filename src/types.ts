@@ -61,6 +61,14 @@ export interface UdhaarEntry {
   createdAt: number;
 }
 
+export interface NotebookNote {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -105,6 +113,7 @@ export interface AppState {
   sales: SaleEntry[];
   expenses: ExpenseEntry[];
   udhaar: UdhaarEntry[];
+  notebookNotes: NotebookNote[];
   chatSessions: ChatSession[];
   activeSessionId: string | null;
   insights: Insight[];
