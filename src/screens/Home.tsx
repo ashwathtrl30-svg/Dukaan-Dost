@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useStore, formatRupee, getTodaySales, getTodayExpenses, getLast7DaysData, getWeekSales, getTotalUdhaar, generateId, getToday } from '../store';
 import { t } from '../i18n';
+import { NotebookScreen } from './NotebookScreen';
 import { SaleEntry, ExpenseEntry, UdhaarEntry, PaymentType } from '../types';
 import { Plus, ArrowLeft, X, Check, TrendingUp, TrendingDown, Edit2, MoreVertical, ClipboardList, CalendarDays } from 'lucide-react';
 
@@ -16,6 +17,7 @@ export function HomeScreen() {
   const [entryType, setEntryType] = useState<string | null>(null);
   const [showEntriesMenu, setShowEntriesMenu] = useState(false);
   const [showAllEntries, setShowAllEntries] = useState(false);
+  const [showNotebook, setShowNotebook] = useState(false);
   const [showUdhaarMenu, setShowUdhaarMenu] = useState(false);
   const [showUdhaarList, setShowUdhaarList] = useState(false);
   const [editingEntry, setEditingEntry] = useState<any>(null);
@@ -295,6 +297,25 @@ export function HomeScreen() {
           )}
         </div>
         
+        {/* Shopkeeper's saved reminders notebook */}
+        <div className="px-5 py-2">
+          <button
+            type="button"
+            onClick={() => setShowNotebook(true)}
+            className="card w-full flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+            aria-label={lang === 'hi' ? 'दुकान की नोटबुक खोलें' : 'Open shop notebook'}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl flex-shrink-0">📝</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-body font-semibold text-text">{lang === 'hi' ? 'दुकान की नोटबुक' : 'Shop notebook'}</p>
+              <p className="text-small text-text-secondary">
+                {lang === 'hi' ? 'ज़रूरी बातें और याद रखने वाली चीज़ें सेव करें' : 'Save reminders, stock to buy, and anything to remember'}
+              </p>
+            </div>
+            <ClipboardList size={20} className="text-primary flex-shrink-0" />
+          </button>
+        </div>
+
         <div className="h-24" />
       </div>
       
@@ -321,6 +342,10 @@ export function HomeScreen() {
       {/* All Entries */}
       {showAllEntries && (
         <AllEntriesModal onClose={() => setShowAllEntries(false)} />
+      )}
+
+      {showNotebook && (
+        <NotebookScreen onClose={() => setShowNotebook(false)} />
       )}
     </div>
   );
