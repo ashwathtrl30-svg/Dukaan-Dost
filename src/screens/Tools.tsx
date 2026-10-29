@@ -391,16 +391,17 @@ function StockReorderTool() {
     sale.date >= startKey &&
     sale.date <= todayKey,
   );
-  const totals = new Map<string, { name: string; unit: string; amount: number; quantity: number; quantityEntries: number; untrackedQuantityEntries: number; entries: number; lastSold: string }>();
+  const totals = new Map<string, { name: string; unit: string; amount: number; quantity: number; quantityRevenue: number; quantityEntries: number; untrackedQuantityEntries: number; entries: number; lastSold: string }>();
   namedSales.forEach((sale) => {
     const name = sale.itemName!.trim().replace(/\s+/g, ' ');
     const unit = String(sale.quantityUnit || 'unit').trim() || 'unit';
     const key = name.toLocaleLowerCase() + '|' + unit.toLocaleLowerCase();
-    const current = totals.get(key) || { name, unit, amount: 0, quantity: 0, quantityEntries: 0, untrackedQuantityEntries: 0, entries: 0, lastSold: sale.date };
+    const current = totals.get(key) || { name, unit, amount: 0, quantity: 0, quantityRevenue: 0, quantityEntries: 0, untrackedQuantityEntries: 0, entries: 0, lastSold: sale.date };
     current.amount += Number(sale.amount) || 0;
     const recordedQuantity = Number(sale.quantity);
     if (Number.isFinite(recordedQuantity) && recordedQuantity > 0) {
       current.quantity += recordedQuantity;
+      current.quantityRevenue += Number(sale.amount) || 0;
       current.quantityEntries += 1;
     } else {
       // Older sales have no quantity; don't invent a unit count for them.
@@ -445,7 +446,14 @@ function StockReorderTool() {
                   {item.quantityEntries > 0 ? `${Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} ${item.unit} ${lang === 'hi' ? 'दर्ज' : 'recorded'}` : (lang === 'hi' ? 'मात्रा दर्ज नहीं' : 'quantity not recorded')} · {item.entries} {lang === 'hi' ? 'एंट्री' : (item.entries === 1 ? 'entry' : 'entries')}{item.untrackedQuantityEntries > 0 ? ` · ${item.untrackedQuantityEntries} ${lang === 'hi' ? 'पुरानी बिना मात्रा' : 'older without quantity'}` : ''}
                 </p>
               </div>
-              <p className="font-bold text-positive whitespace-nowrap">{formatRupee(item.amount)}</p>
+              <div className="flex flex-col items-end gap-1">
+                <p className="font-bold text-positive whitespace-nowrap">{formatRupee(item.amount)}</p>
+                {item.quantityEntries > 0 && item.quantity > 0 && (
+                  <p className="text-[10px] text-text-secondary whitespace-nowrap">
+                    {lang === 'hi' ? 'औसत' : 'Avg'} {formatRupee(item.quantityRevenue / item.quantity)} / {item.unit}
+                  </p>
+                )}
+              </div>
             </div>
           ))}
         </div>
