@@ -759,6 +759,23 @@ export function InsightsScreen() {
   const lang: Language = state.language === 'hi' ? 'hi' : 'en';
   const dashboard = getInsightsDashboard(state.sales, state.expenses);
   const hasAnyEntries = state.sales.length > 0 || state.expenses.length > 0;
+  const quantityToday = getToday();
+  const quantityWeekStartDate = new Date(quantityToday + 'T12:00:00');
+  quantityWeekStartDate.setDate(quantityWeekStartDate.getDate() - 6);
+  const quantityWeekStart = quantityWeekStartDate.getFullYear() + '-' + String(quantityWeekStartDate.getMonth() + 1).padStart(2, '0') + '-' + String(quantityWeekStartDate.getDate()).padStart(2, '0');
+  const quantitiesByItem = new Map<string, { name: string; quantity: number }>();
+  state.sales.forEach((sale) => {
+    if (!sale.itemName?.trim() || sale.date < quantityWeekStart || sale.date > quantityToday) return;
+    const quantity = Number(sale.quantity);
+    // Older sales have no stored quantity and must not be treated as measured units.
+    if (!Number.isFinite(quantity) || quantity <= 0) return;
+    const name = sale.itemName.trim().replace(/\\s+/g, ' ');
+    const key = name.toLocaleLowerCase();
+    const current = quantitiesByItem.get(key) || { name, quantity: 0 };
+    current.quantity += quantity;
+    quantitiesByItem.set(key, current);
+  });
+  const topQuantityItems = [...quantitiesByItem.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 3);
 
   const advice = getMyAdvice(dashboard.week, dashboard.month, state.sales, state.udhaar, lang, state.shopProfile.shopType);
   const hasBusinessRisk = advice.some(item => item.tone !== 'positive');
@@ -822,6 +839,31 @@ export function InsightsScreen() {
                   </div>
                 );
               })}
+              {topQuantityItems.length > 0 && (
+                <div className="card p-3.5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Package size={17} className="text-primary" />
+                    <p className="text-body font-semibold text-text">
+                      {lang === 'hi' ? 'पिछले 7 दिनों में सबसे ज़्यादा दर्ज मात्रा' : 'Top recorded quantities · last 7 days'}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    {topQuantityItems.map((item) => (
+                      <div key={item.name.toLocaleLowerCase()} className="flex items-center justify-between gap-3 text-small">
+                        <span className="text-text-secondary break-words">{item.name}</span>
+                        <span className="font-semibold text-text shrink-0">
+                          {Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} {lang === 'hi' ? 'यूनिट' : (item.quantity === 1 ? 'unit' : 'units')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-text-secondary mt-2 leading-relaxed">
+                    {lang === 'hi'
+                      ? 'यह केवल उन बिक्री को गिनता है जिनमें मात्रा दर्ज है। पुराने रिकॉर्ड की मात्रा उपलब्ध नहीं है।'
+                      : 'Only sales with a recorded quantity are counted. Older entries do not contain quantity data.'}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </section>
