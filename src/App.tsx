@@ -31,19 +31,38 @@ function AppContent() {
   };
 
   const handleHomeVoiceTranscript = (transcript: string) => {
+    // This callback only runs after the user reviews the transcript and taps the arrow.
+    setVoiceUndoEntries([]);
     const parsed = parseVoiceTransactions(transcript);
-    if (!parsed.transactions.length) {
+    if (!parsed.transactions.length || parsed.transactions.length > 5) {
+      const error = parsed.transactions.length > 5 ? 'too_many_entries' : parsed.error;
       const message = lang === 'hi'
-        ? parsed.error === 'no_type'
-          ? 'बताइए कि बिक्री, खर्च या उधार में क्या जोड़ना है।'
-          : parsed.error === 'missing_amount'
-            ? 'हर एंट्री की रकम समझ नहीं आई। कुछ नहीं जोड़ा गया; रकम और प्रकार दोबारा बोलें।'
-            : 'कोई एंट्री नहीं जोड़ी। कहें: “दो सौ रुपये की बिक्री जोड़ो।”'
-        : parsed.error === 'no_type'
-          ? 'Say whether to add sales, expenses, or udhaar.'
-          : parsed.error === 'missing_amount'
-            ? 'I could not match an amount to every entry. Nothing was added; please repeat the amounts and types.'
-            : 'Nothing was added. Try “Add 200 rupees sales” or “Add 200 sales and 300 expenses”.';
+        ? error === 'too_many_entries'
+          ? 'एक बार में अधिकतम 5 एंट्री जोड़ सकता हूँ। कुछ भी नहीं जोड़ा गया। कृपया 5 या उससे कम एंट्री बोलें।'
+          : error === 'missing_amount'
+            ? 'रकम साफ़ सुनाई नहीं दी। कुछ नहीं जोड़ा गया। कृपया रकम और सामान/खर्च/उधार साफ़ बोलें।'
+            : error === 'missing_item'
+              ? 'सामान या सेवा का नाम साफ़ नहीं समझ आया। कुछ नहीं जोड़ा गया। कृपया नाम और मात्रा के साथ दोबारा बोलें।'
+              : error === 'missing_customer'
+                ? 'उधार के ग्राहक का नाम साफ़ नहीं समझ आया। कुछ नहीं जोड़ा गया। ग्राहक का नाम और रकम दोबारा बोलें।'
+                : error === 'ambiguous_amount' || error === 'unclear_entry'
+                  ? 'हम आपकी बात साफ़ नहीं सुन पाए या एंट्री अलग नहीं कर पाए। कुछ नहीं जोड़ा गया। कृपया हर एंट्री के बीच थोड़ा रुककर साफ़ बोलें।'
+                  : error === 'no_type'
+                    ? 'बताइए कि बिक्री, खर्च या उधार में क्या जोड़ना है।'
+                    : 'हम आपकी बात साफ़ नहीं सुन पाए। कुछ नहीं जोड़ा गया। कृपया फिर से साफ़ बोलें।'
+        : error === 'too_many_entries'
+          ? 'I can add a maximum of 5 entries at once. Nothing was added; please say 5 or fewer.'
+          : error === 'missing_amount'
+            ? 'I could not hear a clear amount. Nothing was added. Please repeat the amount and whether it is a sale, expense or udhaar.'
+            : error === 'missing_item'
+              ? 'I could not clearly identify the item or service name. Nothing was added; please repeat the name and quantity.'
+              : error === 'missing_customer'
+                ? 'I could not clearly identify the udhaar customer. Nothing was added; please repeat the customer name and amount.'
+                : error === 'ambiguous_amount' || error === 'unclear_entry'
+                  ? 'I could not confidently separate or understand the entries. Nothing was added. Please pause briefly between each entry and speak clearly.'
+                  : error === 'no_type'
+                    ? 'Say whether to add sales, expenses, or udhaar.'
+                    : 'We did not hear that clearly. Nothing was added; please try again.';
       showTemporaryVoiceStatus(message);
       return;
     }
@@ -52,35 +71,68 @@ function AppContent() {
     const created: Array<{ type: 'sale' | 'expense' | 'udhaar'; id: string }> = [];
     const summaries: string[] = [];
 
+    // Reject a batch in full if any parsed item is incomplete.
+    if (parsed.transactions.some((transaction) =>
+      !Number.isFinite(transaction.amount) || transaction.amount <= 0 ||
+      (transaction.type === 'sale' && (!transaction.itemName?.trim() ||
+        !Number.isFinite(transaction.quantity) || (transaction.quantity || 0) <= 0)) ||
+      (transaction.type === 'udhaar' && !transaction.customerName?.trim())
+    )) {
+      showTemporaryVoiceStatus(lang === 'hi'
+        ? 'एक या अधिक एंट्री साफ़ नहीं समझ आईं। कुछ नहीं जोड़ा गया। कृपया फिर से साफ़ बोलें।'
+        : 'One or more entries were unclear. Nothing was added; please repeat the batch clearly.');
+      return;
+    }
+
     for (const transaction of parsed.transactions) {
       const id = generateId();
       if (transaction.type === 'sale') {
+        const saleName = transaction.itemName!.trim();
+        const saleQuantity = transaction.quantity ?? 1;
+        const saleUnit = transaction.quantityUnit || 'unit';
         dispatch({
           type: 'ADD_SALE',
-          payload: { id, date: today, amount: transaction.amount, paymentType: 'cash', createdAt: Date.now() },
+          payload: {
+            id,
+            date: today,
+            amount: transaction.amount,
+            itemName: saleName,
+            quantity: saleQuantity,
+            quantityUnit: saleUnit,
+            paymentType: 'cash',
+            createdAt: Date.now(),
+          },
         });
-        summaries.push(formatRupee(transaction.amount) + (lang === 'hi' ? ' बिक्री' : ' sales'));
+        summaries.push(saleName + ' · ' + saleQuantity + ' ' + saleUnit + ' · ' + formatRupee(transaction.amount));
         created.push({ type: 'sale', id });
       } else if (transaction.type === 'expense') {
         dispatch({
           type: 'ADD_EXPENSE',
-          payload: { id, date: today, amount: transaction.amount, category: transaction.expenseCategory || 'other', createdAt: Date.now() },
+          payload: {
+            id,
+            date: today,
+            amount: transaction.amount,
+            category: transaction.expenseCategory || 'other',
+            note: transaction.note,
+            createdAt: Date.now(),
+          },
         });
-        summaries.push(formatRupee(transaction.amount) + (lang === 'hi' ? ' खर्च' : ' expenses'));
+        summaries.push((transaction.note || (lang === 'hi' ? 'खर्च' : 'Expense')) + ' · ' + formatRupee(transaction.amount));
         created.push({ type: 'expense', id });
       } else {
+        const customerName = transaction.customerName!;
         dispatch({
           type: 'ADD_UDHAAR',
           payload: {
             id,
-            customerName: transaction.customerName || (lang === 'hi' ? 'अज्ञात' : 'Unknown'),
+            customerName,
             amount: transaction.amount,
             date: today,
             paid: false,
             createdAt: Date.now(),
           },
         });
-        summaries.push(formatRupee(transaction.amount) + (lang === 'hi' ? ' उधार' : ' udhaar'));
+        summaries.push(customerName + ' · ' + formatRupee(transaction.amount) + (lang === 'hi' ? ' उधार' : ' udhaar'));
         created.push({ type: 'udhaar', id });
       }
     }
@@ -95,7 +147,7 @@ function AppContent() {
 
     setVoiceUndoEntries(created);
     const message = (lang === 'hi' ? 'जोड़ दिया: ' : 'Added: ') +
-      summaries.join(lang === 'hi' ? ' और ' : ', ') + '.';
+      summaries.join(lang === 'hi' ? ' | ' : ' · ') + '.';
     showTemporaryVoiceStatus(message);
   };
 
