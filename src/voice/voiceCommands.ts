@@ -4,6 +4,7 @@ export interface VoiceTransaction {
   type: VoiceTransactionType;
   amount: number;
   customerName?: string;
+  expenseCategory?: string;
 }
 
 export interface VoiceParseResult {
@@ -207,6 +208,67 @@ function getCustomerName(text: string): string | undefined {
   return undefined;
 }
 
+interface ExpenseCategoryMatch {
+  category: string;
+  start: number;
+  end: number;
+}
+
+function findExpenseCategoryMatches(text: string): ExpenseCategoryMatch[] {
+  const patterns: Array<{ category: string; pattern: RegExp }> = [
+    {
+      category: 'rent',
+      pattern: /\b(?:rent|rental|kiraya|kiraye|kirayaa)\b|किराया|किराए|किराये/iu,
+    },
+    {
+      category: 'electricity',
+      pattern: /\b(?:electricity|electric|bijli|light bill|electric bill|power bill)\b|बिजली(?:\s+का)?\s*बिल?|लाइट\s*बिल/iu,
+    },
+    {
+      category: 'salary',
+      pattern: /\b(?:salary|salaries|wage|wages|payroll|staff payment|staff salary|employee payment|mazdoori|majduri|tankhwa|tankh्वाह|vetan)\b|तनख़्वाह|तनख्वाह|वेतन|मजदूरी|मज़दूरी/iu,
+    },
+    {
+      category: 'transport',
+      pattern: /\b(?:transport|delivery|fuel|petrol|diesel|shipping|courier|freight|vehicle expense|travel expense|transportation)\b|ढुलाई|पेट्रोल|डीजल|डीज़ल|ईंधन|डिलीवरी|यातायात|ट्रांसपोर्ट/iu,
+    },
+    {
+      category: 'packaging',
+      pattern: /\b(?:packaging|packing|packing material|carry bags|package)\b|पैकिंग|पैकेजिंग|थैली|पैकिंग का सामान/iu,
+    },
+    {
+      category: 'maintenance',
+      pattern: /\b(?:maintenance|repair|repairs|repairing|servicing|service charge|plumbing)\b|मरम्मत|रिपेयर|मेंटेनेंस|सर्विसिंग/iu,
+    },
+    {
+      category: 'stock',
+      pattern: /\b(?:stock purchase|stock|inventory|goods purchase|purchase of goods|items purchase|purchase|goods|maal|samaan|saman)\b|स्टॉक|सामान|माल|खरीदारी|माल खरीद/iu,
+    },
+  ];
+
+  return patterns.flatMap(({ category, pattern }) => {
+    const match = pattern.exec(text);
+    return match ? [{ category, start: match.index, end: match.index + match[0].length }] : [];
+  });
+}
+
+function detectExpenseCategory(text: string, marker?: Span): string {
+  const matches = findExpenseCategoryMatches(text);
+  if (!matches.length) return 'other';
+
+  if (!marker) {
+    return matches.sort((a, b) => a.start - b.start)[0].category;
+  }
+
+  const distance = (match: ExpenseCategoryMatch) => {
+    if (match.end <= marker.start) return marker.start - match.end;
+    if (match.start >= marker.end) return match.start - marker.end;
+    return 0;
+  };
+  const closest = matches.sort((a, b) => distance(a) - distance(b))[0];
+  return distance(closest) <= 80 ? closest.category : 'other';
+}
+
 export function parseVoiceTransactions(input: string): VoiceParseResult {
   const text = input.trim().replace(/\s+/g, ' ');
   if (!text) return { transactions: [], error: 'not_command' };
@@ -221,6 +283,12 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
   }
 
   const markers = findMarkers(text);
+  const mentionedExpenseCategory = detectExpenseCategory(text);
+  // If the user names an expense category directly ("add 250 for rent"),
+  // treat that as an expense even when they did not say the word "expense".
+  if (!markers.length && mentionedExpenseCategory !== 'other') {
+    markers.push({ type: 'expense', start: text.length, end: text.length });
+  }
   if (!markers.length) return { transactions: [], error: 'no_type' };
 
   const amounts = findAmountSpans(text);
@@ -292,6 +360,7 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
       type: marker.type,
       amount: amount.amount,
       customerName: marker.type === 'udhaar' ? getCustomerName(text) : undefined,
+      expenseCategory: marker.type === 'expense' ? detectExpenseCategory(text, marker) : undefined,
     });
   }
 
