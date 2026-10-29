@@ -432,7 +432,7 @@ export function getFestivalShopAdvice(
             ? getMobileFestivalProducts(id, lang)
             : (lang === 'hi' ? plan.goodsHi : plan.goodsEn);
   const productLabel = lang === 'hi' ? 'तैयार रखें' : 'Keep ready';
-  const keepReady = productLabel + ': ' + products + '. ' + base.keepReady;
+  const keepReady = productLabel + ': ' + products + '.';
   const restock = (lang === 'hi' ? plan.restockHi : plan.restockEn) + ' ' + base.restock;
   const insight = (lang === 'hi' ? plan.insightHi : plan.insightEn) + ' ' + base.insight;
   return { keepReady, restock, insight };
