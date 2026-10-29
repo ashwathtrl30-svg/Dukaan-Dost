@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useStore, formatRupee, getTodaySales, getTodayExpenses, getTotalUdhaar, generateId, getWeekSales } from '../store';
+import { useStore, formatRupee, getTodaySales, getTodayExpenses, getTotalUdhaar, generateId, getWeekSales, getWeekExpenses } from '../store';
 import { t } from '../i18n';
 import { ChatMessage, ChatSession } from '../types';
 import { Send, MoreVertical, Plus, ArrowLeft, Trash2, MessageCircle, Clock } from 'lucide-react';
@@ -434,44 +434,73 @@ function generateResponse(question: string, state: any, lang: string): string {
       return `Total udhaar pending: **₹${fmt(totalUdhaar)}**\n\n• Pending customers: ${unpaid.length}\n• Total entries: ${state.udhaar.length}`;
     }
     
-    // Week sales
+    // Week sales: respect the exact period the user asked for.
     if (isWeekQuestion(q) && isSalesQuestion(q)) {
-      const thisWeekSales = getWeekSales(state.sales, 0);
-      if (thisWeekSales === 0) {
-        return lang === 'hi' ? 'इस हफ़्ते की कोई बिक्री नहीं डाली गई।' : 'No sales added for this week yet.';
+      const wantsLastWeek = /\b(?:last week|previous week|past week|pichle hafte|pichhle hafte|पिछले हफ्ते|पिछले हफ़्ते|पिछले सप्ताह|पिछले हफ्ते)\b|पिछले हफ़्ते|पिछले सप्ताह/.test(q);
+      const requestedSales = getWeekSales(state.sales, wantsLastWeek ? 1 : 0);
+      if (requestedSales === 0) {
+        return lang === 'hi'
+          ? (wantsLastWeek ? 'पिछले हफ़्ते की कोई बिक्री दर्ज नहीं है।' : 'इस हफ़्ते की कोई बिक्री दर्ज नहीं है।')
+          : (wantsLastWeek ? 'No sales were recorded last week.' : 'No sales were recorded this week.');
       }
-      const lastWeekSales = getWeekSales(state.sales, 1);
-      const diff = thisWeekSales - lastWeekSales;
-      if (lang === 'hi') {
-        let response = `इस हफ़्ते की कुल बिक्री: **₹${fmt(thisWeekSales)}**`;
-        if (lastWeekSales > 0) {
-          response += `\n\nपिछले हफ़्ते: ₹${fmt(lastWeekSales)}`;
-          response += diff >= 0 ? `\n📈 इस हफ़्ते ₹${fmt(diff)} ज़्यादा` : `\n📉 इस हफ़्ते ₹${fmt(Math.abs(diff))} कम`;
-        }
-        return response;
-      }
-      let response = `This week's total sales: **₹${fmt(thisWeekSales)}**`;
-      if (lastWeekSales > 0) {
-        response += `\n\nLast week: ₹${fmt(lastWeekSales)}`;
-        response += diff >= 0 ? `\n📈 ₹${fmt(diff)} more this week` : `\n📉 ₹${fmt(Math.abs(diff))} less this week`;
+      const comparisonSales = getWeekSales(state.sales, wantsLastWeek ? 0 : 1);
+      const periodLabel = wantsLastWeek
+        ? (lang === 'hi' ? 'पिछले हफ़्ते' : 'Last week')
+        : (lang === 'hi' ? 'इस हफ़्ते' : 'This week');
+      let response = lang === 'hi'
+        ? periodLabel + ' की कुल बिक्री: ₹' + fmt(requestedSales)
+        : periodLabel + "'s total sales: ₹" + fmt(requestedSales);
+      if (comparisonSales > 0) {
+        const comparisonLabel = wantsLastWeek
+          ? (lang === 'hi' ? 'इस हफ़्ते' : 'This week')
+          : (lang === 'hi' ? 'पिछले हफ़्ते' : 'Last week');
+        response += '\n\n' + comparisonLabel + ': ₹' + fmt(comparisonSales);
       }
       return response;
     }
-    
-    // Month sales
-    if (isMonthQuestion(q) && isSalesQuestion(q)) {
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-      const monthSales = state.sales.filter((s: any) => s.date >= monthStart).reduce((sum: number, s: any) => sum + s.amount, 0);
-      if (monthSales === 0) {
-        return lang === 'hi' ? 'इस महीने की कोई बिक्री नहीं डाली गई।' : 'No sales added for this month yet.';
+
+    if (isWeekQuestion(q) && isExpenseQuestion(q)) {
+      const wantsLastWeek = /\b(?:last week|previous week|past week|pichle hafte|pichhle hafte)\b|पिछले हफ़्ते|पिछले हफ्ते|पिछले सप्ताह/.test(q);
+      const requestedExpenses = getWeekExpenses(state.expenses, wantsLastWeek ? 1 : 0);
+      if (requestedExpenses === 0) {
+        return lang === 'hi'
+          ? (wantsLastWeek ? 'पिछले हफ़्ते का कोई खर्च दर्ज नहीं है।' : 'इस हफ़्ते का कोई खर्च दर्ज नहीं है।')
+          : (wantsLastWeek ? 'No expenses were recorded last week.' : 'No expenses were recorded this week.');
       }
-      if (lang === 'hi') {
-        return `इस महीने की कुल बिक्री: **₹${fmt(monthSales)}**`;
-      }
-      return `This month's total sales: **₹${fmt(monthSales)}**`;
+      return lang === 'hi'
+        ? (wantsLastWeek ? 'पिछले हफ़्ते का कुल खर्च: ₹' : 'इस हफ़्ते का कुल खर्च: ₹') + fmt(requestedExpenses)
+        : (wantsLastWeek ? "Last week's total expenses: ₹" : "This week's total expenses: ₹") + fmt(requestedExpenses);
     }
-    
+
+    // Calendar-month totals use exclusive date boundaries so last month cannot
+    // accidentally include this month's entries.
+    if (isMonthQuestion(q) && (isSalesQuestion(q) || isExpenseQuestion(q))) {
+      const now = new Date();
+      const wantsLastMonth = /\b(?:last month|previous month|past month|pichle mahine|pichhle mahine)\b|पिछले महीने|पिछले माह/.test(q);
+      const monthOffset = wantsLastMonth ? -1 : 0;
+      const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + monthOffset, 1)).toISOString().split('T')[0];
+      const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + monthOffset + 1, 1)).toISOString().split('T')[0];
+      const periodSales = state.sales.filter((entry: any) => entry.date >= monthStart && entry.date < monthEnd);
+      const periodExpenses = state.expenses.filter((entry: any) => entry.date >= monthStart && entry.date < monthEnd);
+      const isSales = isSalesQuestion(q);
+      const entries = isSales ? periodSales : periodExpenses;
+      const amount = entries.reduce((sum: number, entry: any) => sum + entry.amount, 0);
+      const period = wantsLastMonth
+        ? (lang === 'hi' ? 'पिछले महीने' : 'Last month')
+        : (lang === 'hi' ? 'इस महीने' : 'This month');
+      const typeLabel = isSales
+        ? (lang === 'hi' ? 'बिक्री' : 'sales')
+        : (lang === 'hi' ? 'खर्च' : 'expenses');
+      if (!entries.length) {
+        return lang === 'hi'
+          ? period + ' की कोई ' + typeLabel + ' एंट्री दर्ज नहीं है।'
+          : 'No ' + typeLabel + ' entries were recorded for ' + period.toLowerCase() + '.';
+      }
+      return lang === 'hi'
+        ? period + ' की कुल ' + typeLabel + ': ₹' + fmt(amount)
+        : period + "'s total " + typeLabel + ': ₹' + fmt(amount);
+    }
+
     // General profit question
     if (isProfitQuestion(q)) {
       if (state.sales.length === 0) {
