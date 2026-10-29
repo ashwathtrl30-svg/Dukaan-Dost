@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useStore, formatRupee, getTodaySales, getTodayExpenses, getTotalUdhaar, generateId, getWeekSales } from '../store';
+import { useStore, formatRupee, getTodaySales, getTodayExpenses, getTotalUdhaar, generateId, getWeekSales, getWeekExpenses } from '../store';
 import { t } from '../i18n';
 import { ChatMessage, ChatSession } from '../types';
-import { Send, MoreVertical, Plus, ArrowLeft, Trash2, MessageCircle, Clock } from 'lucide-react';
+import { Send, MoreVertical, Plus, ArrowLeft, Trash2, MessageCircle, Clock, Volume2, Square } from 'lucide-react';
 import { findKnowledgeEntry } from '../knowledgeBase';
+import { VoiceMicButton } from '../components/VoiceMicButton';
+import { detectVoiceLanguage, speakText } from '../voice/speech';
 
 // Helper: get today's date string
 function getTodayStr(): string {
@@ -18,6 +20,16 @@ function fmt(n: number): string {
 // Helper: detect if question is about TODAY
 function isTodayQuestion(q: string): boolean {
   return /today|aaj|आज|आजका|आज का|आजकी|आज की/.test(q);
+}
+
+// Hindi "kal" is treated as yesterday for historical shop-ledger questions.
+function isYesterdayQuestion(q: string): boolean {
+  return /yesterday|yesterday's|last day|kal|कल|बीते कल|पिछले दिन/.test(q);
+}
+
+function getYesterdayStr(): string {
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  return yesterday.toISOString().split('T')[0];
 }
 
 // Helper: detect if question is about this week
@@ -229,6 +241,51 @@ function generateResponse(question: string, state: any, lang: string): string {
   
   // ===== DATA QUERIES - Answer with actual data =====
   if (intent === 'data_query') {
+    // Yesterday's entries are calculated from the exact ledger date, not an AI guess.
+    if (isYesterdayQuestion(q)) {
+      const yesterday = getYesterdayStr();
+      const yesterdaySales = state.sales.filter((entry: any) => entry.date === yesterday);
+      const yesterdayExpenses = state.expenses.filter((entry: any) => entry.date === yesterday);
+      const yesterdayUdhaar = state.udhaar.filter((entry: any) => entry.date === yesterday);
+      const salesTotal = yesterdaySales.reduce((sum: number, entry: any) => sum + entry.amount, 0);
+      const expenseTotal = yesterdayExpenses.reduce((sum: number, entry: any) => sum + entry.amount, 0);
+
+      if (isSalesQuestion(q)) {
+        return yesterdaySales.length
+          ? (lang === 'hi'
+            ? 'कल की कुल बिक्री: ₹' + fmt(salesTotal) + ' (' + yesterdaySales.length + ' एंट्री)'
+            : "Yesterday's total sales: ₹" + fmt(salesTotal) + ' (' + yesterdaySales.length + ' ' + (yesterdaySales.length === 1 ? 'entry' : 'entries') + ')')
+          : (lang === 'hi' ? 'कल की कोई बिक्री दर्ज नहीं है। मैं अनुमान नहीं लगाऊँगा।' : 'No sales entries were recorded yesterday, so I cannot report a sales total.');
+      }
+
+      if (isExpenseQuestion(q)) {
+        return yesterdayExpenses.length
+          ? (lang === 'hi'
+            ? 'कल का कुल खर्च: ₹' + fmt(expenseTotal) + ' (' + yesterdayExpenses.length + ' एंट्री)'
+            : "Yesterday's total expenses: ₹" + fmt(expenseTotal) + ' (' + yesterdayExpenses.length + ' ' + (yesterdayExpenses.length === 1 ? 'entry' : 'entries') + ')')
+          : (lang === 'hi' ? 'कल का कोई खर्च दर्ज नहीं है। मैं अनुमान नहीं लगाऊँगा।' : 'No expense entries were recorded yesterday, so I cannot report an expense total.');
+      }
+
+      if (isProfitQuestion(q)) {
+        if (!yesterdaySales.length || !yesterdayExpenses.length) {
+          return lang === 'hi'
+            ? 'कल का सही मुनाफ़ा निकालने के लिए बिक्री और खर्च—दोनों की एंट्री चाहिए। उपलब्ध डेटा अधूरा है, इसलिए मैं अनुमान नहीं लगाऊँगा।'
+            : 'I need both sales and expense entries for yesterday to calculate profit reliably. The available data is incomplete, so I will not guess.';
+        }
+        return lang === 'hi'
+          ? 'कल का दर्ज मुनाफ़ा: ₹' + fmt(salesTotal - expenseTotal) + ' (बिक्री ₹' + fmt(salesTotal) + ', खर्च ₹' + fmt(expenseTotal) + ')'
+          : "Yesterday's recorded profit: ₹" + fmt(salesTotal - expenseTotal) + ' (sales ₹' + fmt(salesTotal) + ', expenses ₹' + fmt(expenseTotal) + ')';
+      }
+
+      if (isUdhaarQuestion(q)) {
+        const total = yesterdayUdhaar.reduce((sum: number, entry: any) => sum + entry.amount, 0);
+        return yesterdayUdhaar.length
+          ? (lang === 'hi'
+            ? 'कल दर्ज उधार: ₹' + fmt(total) + ' (' + yesterdayUdhaar.length + ' एंट्री)'
+            : "Udhaar recorded yesterday: ₹" + fmt(total) + ' (' + yesterdayUdhaar.length + ' ' + (yesterdayUdhaar.length === 1 ? 'entry' : 'entries') + ')')
+          : (lang === 'hi' ? 'कल कोई उधार एंट्री दर्ज नहीं है।' : 'No udhaar entries were recorded yesterday.');
+      }
+    }
     // Today's sales
     if (isTodayQuestion(q) && isSalesQuestion(q)) {
       const todaySaleEntries = state.sales.filter((s: any) => s.date === today);
@@ -377,44 +434,73 @@ function generateResponse(question: string, state: any, lang: string): string {
       return `Total udhaar pending: **₹${fmt(totalUdhaar)}**\n\n• Pending customers: ${unpaid.length}\n• Total entries: ${state.udhaar.length}`;
     }
     
-    // Week sales
+    // Week sales: respect the exact period the user asked for.
     if (isWeekQuestion(q) && isSalesQuestion(q)) {
-      const thisWeekSales = getWeekSales(state.sales, 0);
-      if (thisWeekSales === 0) {
-        return lang === 'hi' ? 'इस हफ़्ते की कोई बिक्री नहीं डाली गई।' : 'No sales added for this week yet.';
+      const wantsLastWeek = /\b(?:last week|previous week|past week|pichle hafte|pichhle hafte|पिछले हफ्ते|पिछले हफ़्ते|पिछले सप्ताह|पिछले हफ्ते)\b|पिछले हफ़्ते|पिछले सप्ताह/.test(q);
+      const requestedSales = getWeekSales(state.sales, wantsLastWeek ? 1 : 0);
+      if (requestedSales === 0) {
+        return lang === 'hi'
+          ? (wantsLastWeek ? 'पिछले हफ़्ते की कोई बिक्री दर्ज नहीं है।' : 'इस हफ़्ते की कोई बिक्री दर्ज नहीं है।')
+          : (wantsLastWeek ? 'No sales were recorded last week.' : 'No sales were recorded this week.');
       }
-      const lastWeekSales = getWeekSales(state.sales, 1);
-      const diff = thisWeekSales - lastWeekSales;
-      if (lang === 'hi') {
-        let response = `इस हफ़्ते की कुल बिक्री: **₹${fmt(thisWeekSales)}**`;
-        if (lastWeekSales > 0) {
-          response += `\n\nपिछले हफ़्ते: ₹${fmt(lastWeekSales)}`;
-          response += diff >= 0 ? `\n📈 इस हफ़्ते ₹${fmt(diff)} ज़्यादा` : `\n📉 इस हफ़्ते ₹${fmt(Math.abs(diff))} कम`;
-        }
-        return response;
-      }
-      let response = `This week's total sales: **₹${fmt(thisWeekSales)}**`;
-      if (lastWeekSales > 0) {
-        response += `\n\nLast week: ₹${fmt(lastWeekSales)}`;
-        response += diff >= 0 ? `\n📈 ₹${fmt(diff)} more this week` : `\n📉 ₹${fmt(Math.abs(diff))} less this week`;
+      const comparisonSales = getWeekSales(state.sales, wantsLastWeek ? 0 : 1);
+      const periodLabel = wantsLastWeek
+        ? (lang === 'hi' ? 'पिछले हफ़्ते' : 'Last week')
+        : (lang === 'hi' ? 'इस हफ़्ते' : 'This week');
+      let response = lang === 'hi'
+        ? periodLabel + ' की कुल बिक्री: ₹' + fmt(requestedSales)
+        : periodLabel + "'s total sales: ₹" + fmt(requestedSales);
+      if (comparisonSales > 0) {
+        const comparisonLabel = wantsLastWeek
+          ? (lang === 'hi' ? 'इस हफ़्ते' : 'This week')
+          : (lang === 'hi' ? 'पिछले हफ़्ते' : 'Last week');
+        response += '\n\n' + comparisonLabel + ': ₹' + fmt(comparisonSales);
       }
       return response;
     }
-    
-    // Month sales
-    if (isMonthQuestion(q) && isSalesQuestion(q)) {
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-      const monthSales = state.sales.filter((s: any) => s.date >= monthStart).reduce((sum: number, s: any) => sum + s.amount, 0);
-      if (monthSales === 0) {
-        return lang === 'hi' ? 'इस महीने की कोई बिक्री नहीं डाली गई।' : 'No sales added for this month yet.';
+
+    if (isWeekQuestion(q) && isExpenseQuestion(q)) {
+      const wantsLastWeek = /\b(?:last week|previous week|past week|pichle hafte|pichhle hafte)\b|पिछले हफ़्ते|पिछले हफ्ते|पिछले सप्ताह/.test(q);
+      const requestedExpenses = getWeekExpenses(state.expenses, wantsLastWeek ? 1 : 0);
+      if (requestedExpenses === 0) {
+        return lang === 'hi'
+          ? (wantsLastWeek ? 'पिछले हफ़्ते का कोई खर्च दर्ज नहीं है।' : 'इस हफ़्ते का कोई खर्च दर्ज नहीं है।')
+          : (wantsLastWeek ? 'No expenses were recorded last week.' : 'No expenses were recorded this week.');
       }
-      if (lang === 'hi') {
-        return `इस महीने की कुल बिक्री: **₹${fmt(monthSales)}**`;
-      }
-      return `This month's total sales: **₹${fmt(monthSales)}**`;
+      return lang === 'hi'
+        ? (wantsLastWeek ? 'पिछले हफ़्ते का कुल खर्च: ₹' : 'इस हफ़्ते का कुल खर्च: ₹') + fmt(requestedExpenses)
+        : (wantsLastWeek ? "Last week's total expenses: ₹" : "This week's total expenses: ₹") + fmt(requestedExpenses);
     }
-    
+
+    // Calendar-month totals use exclusive date boundaries so last month cannot
+    // accidentally include this month's entries.
+    if (isMonthQuestion(q) && (isSalesQuestion(q) || isExpenseQuestion(q))) {
+      const now = new Date();
+      const wantsLastMonth = /\b(?:last month|previous month|past month|pichle mahine|pichhle mahine)\b|पिछले महीने|पिछले माह/.test(q);
+      const monthOffset = wantsLastMonth ? -1 : 0;
+      const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + monthOffset, 1)).toISOString().split('T')[0];
+      const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + monthOffset + 1, 1)).toISOString().split('T')[0];
+      const periodSales = state.sales.filter((entry: any) => entry.date >= monthStart && entry.date < monthEnd);
+      const periodExpenses = state.expenses.filter((entry: any) => entry.date >= monthStart && entry.date < monthEnd);
+      const isSales = isSalesQuestion(q);
+      const entries = isSales ? periodSales : periodExpenses;
+      const amount = entries.reduce((sum: number, entry: any) => sum + entry.amount, 0);
+      const period = wantsLastMonth
+        ? (lang === 'hi' ? 'पिछले महीने' : 'Last month')
+        : (lang === 'hi' ? 'इस महीने' : 'This month');
+      const typeLabel = isSales
+        ? (lang === 'hi' ? 'बिक्री' : 'sales')
+        : (lang === 'hi' ? 'खर्च' : 'expenses');
+      if (!entries.length) {
+        return lang === 'hi'
+          ? period + ' की कोई ' + typeLabel + ' एंट्री दर्ज नहीं है।'
+          : 'No ' + typeLabel + ' entries were recorded for ' + period.toLowerCase() + '.';
+      }
+      return lang === 'hi'
+        ? period + ' की कुल ' + typeLabel + ': ₹' + fmt(amount)
+        : period + "'s total " + typeLabel + ': ₹' + fmt(amount);
+    }
+
     // General profit question
     if (isProfitQuestion(q)) {
       if (state.sales.length === 0) {
@@ -514,6 +600,10 @@ export function AskScreen() {
   const lang = state.language!;
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [voiceNotice, setVoiceNotice] = useState('');
+  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
+  const [audioErrorMessageId, setAudioErrorMessageId] = useState<string | null>(null);
+  const speechRequestIdRef = useRef(0);
   const [showHistory, setShowHistory] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -535,11 +625,12 @@ export function AskScreen() {
     }
   }, [messages]);
   
-  const handleSend = async (text?: string) => {
-    const message = text || input.trim();
+  const handleSend = async (text?: string, fromVoice = false) => {
+    const message = (text || input.trim()).trim();
     if (!message || isSending) return;
 
-    // Add user message immediately.
+    const responseLang = fromVoice ? detectVoiceLanguage(message, lang) : lang;
+
     const userMsg: ChatMessage = {
       id: generateId(),
       role: 'user',
@@ -552,19 +643,25 @@ export function AskScreen() {
 
     let response = '';
     try {
-      // Keep factual shop-ledger calculations local. Use the LLM for advice,
-      // planning, explanations, and questions the local rules cannot understand.
+      // Shop-ledger figures must come from local entries, never an AI guess.
       const intent = classifyIntent(message.toLowerCase().trim());
+      const mentionsLedgerData =
+        /\b(?:sales?|sold|revenue|turnover|expenses?|expense|profit|udhaar|udhar|credit|bikri|bika|becha|kharch|kharcha|munafa)\b|बिक्री|खर्च|उधार|मुनाफ़ा|मुनाफा/u.test(message);
+      const asksForAdvice = isAdviceQuestion(message.toLowerCase().trim());
 
       if (intent === 'data_query') {
-        response = generateResponse(message, state, lang);
+        response = generateResponse(message, state, responseLang);
+      } else if (fromVoice && mentionsLedgerData && !asksForAdvice) {
+        response = responseLang === 'hi'
+          ? 'इस सवाल का भरोसेमंद जवाब देने के लिए ज़रूरी दुकान डेटा नहीं मिला। कृपया सवाल को स्पष्ट करें या संबंधित एंट्री पहले जोड़ें।'
+          : 'I do not have enough matching shop data to answer that reliably. Please clarify the question or add the relevant entries first.';
       } else {
         const apiResponse = await fetch('/api/ask', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             question: message,
-            language: lang === 'hi' ? 'Hindi' : 'English',
+            language: responseLang === 'hi' ? 'Hindi' : 'English',
             shopContext: buildAIShopContext(state),
           }),
         });
@@ -586,7 +683,7 @@ export function AskScreen() {
     } catch (error) {
       response = error instanceof Error && error.message !== 'Failed to fetch'
         ? error.message
-        : (lang === 'hi'
+        : (responseLang === 'hi'
           ? 'अभी AI सलाह उपलब्ध नहीं है। कृपया थोड़ी देर बाद फिर कोशिश करें।'
           : 'The AI advisor is unavailable right now. Please try again shortly.');
     } finally {
@@ -598,10 +695,45 @@ export function AskScreen() {
       role: 'assistant',
       content: response,
       timestamp: Date.now(),
+      language: responseLang,
     };
     dispatch({ type: 'ADD_CHAT_MESSAGE', payload: assistantMsg });
+
   };
-  
+
+  const handleReadAloud = (msg: ChatMessage) => {
+    if (speakingMessageId === msg.id) {
+      speechRequestIdRef.current += 1;
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      setSpeakingMessageId(null);
+      return;
+    }
+
+    const requestId = ++speechRequestIdRef.current;
+    setVoiceNotice('');
+    setAudioErrorMessageId(null);
+    setSpeakingMessageId(msg.id);
+
+    const started = speakText(
+      msg.content,
+      msg.language || lang,
+      () => {
+        if (speechRequestIdRef.current === requestId) setSpeakingMessageId(null);
+      },
+      () => {
+        if (speechRequestIdRef.current === requestId) {
+          setSpeakingMessageId(null);
+          setAudioErrorMessageId(msg.id);
+        }
+      }
+    );
+
+    if (!started && speechRequestIdRef.current === requestId) {
+      setSpeakingMessageId(null);
+      setAudioErrorMessageId(msg.id);
+    }
+  };
+
   const handleNewChat = () => {
     dispatch({ type: 'CREATE_NEW_CHAT' });
     setShowHistory(false);
@@ -795,6 +927,26 @@ export function AskScreen() {
                 <div className="card">
                   <p className="text-text whitespace-pre-line text-body leading-relaxed">{msg.content}</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => handleReadAloud(msg)}
+                  aria-label={speakingMessageId === msg.id
+                    ? (lang === 'hi' ? 'पढ़ना बंद करें' : 'Stop reading aloud')
+                    : (lang === 'hi' ? 'जवाब ज़ोर से सुनें' : 'Read answer aloud')}
+                  className="mt-2 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+                >
+                  {speakingMessageId === msg.id ? <Square size={16} /> : <Volume2 size={16} />}
+                  {speakingMessageId === msg.id
+                    ? (lang === 'hi' ? 'बोलना बंद करें' : 'Stop reading')
+                    : (lang === 'hi' ? 'ज़ोर से सुनें' : 'Read aloud')}
+                </button>
+                {audioErrorMessageId === msg.id && (
+                  <p className="mt-1 text-xs text-text-secondary" role="status">
+                    {lang === 'hi'
+                      ? 'आवाज़ नहीं चला पाए। ब्राउज़र की ऑडियो सेटिंग जाँचें।'
+                      : 'Audio playback failed. Check your browser audio settings.'}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -819,7 +971,23 @@ export function AskScreen() {
           >
             <Send size={20} />
           </button>
+          <VoiceMicButton
+            language={lang}
+            shape="rounded"
+            disabled={isSending}
+            label={lang === 'hi' ? 'आवाज़ से सवाल पूछें' : 'Ask by voice'}
+            onTranscript={(transcript) => {
+              setInput(transcript);
+              void handleSend(transcript, true);
+            }}
+            onStatus={setVoiceNotice}
+          />
         </div>
+        {voiceNotice && (
+          <p className="mt-2 text-xs leading-snug text-text-secondary" role="status" aria-live="polite">
+            {voiceNotice}
+          </p>
+        )}
       </div>
     </div>
   );
