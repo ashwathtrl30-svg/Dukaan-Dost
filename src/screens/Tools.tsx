@@ -482,6 +482,11 @@ function FestivalTool() {
   const referenceDate = new Date(todayKey + 'T12:00:00');
   const festivals = getUpcomingFestivals(referenceDate, 2);
   const shopType = state.shopProfile.shopType;
+  const diwali = festivals.find((festival) => festival.id.includes('diwali'));
+  const diwaliDaysUntil = diwali
+    ? Math.max(0, Math.round((new Date(diwali.date + 'T12:00:00').getTime() - referenceDate.getTime()) / 86400000))
+    : null;
+  const showDiwaliBanner = diwali !== undefined && diwaliDaysUntil !== null && diwaliDaysUntil <= 14;
 
   if (festivals.length === 0) {
     return (
@@ -501,6 +506,23 @@ function FestivalTool() {
 
   return (
     <div className="space-y-4 animate-fade-in">
+      {showDiwaliBanner && diwali && diwaliDaysUntil !== null && (
+        <div className="card p-4 border border-primary/20 flex items-start gap-3">
+          <span className="text-2xl leading-none flex-shrink-0">🪔</span>
+          <div className="min-w-0">
+            <p className="font-semibold text-text">
+              {lang === 'hi'
+                ? (diwaliDaysUntil === 0 ? 'दिवाली आज है' : `दिवाली पास है — ${diwaliDaysUntil} दिन बाकी`)
+                : (diwaliDaysUntil === 0 ? 'Diwali is today' : `Diwali is near — ${diwaliDaysUntil} ${diwaliDaysUntil === 1 ? 'day' : 'days'} to go`)}
+            </p>
+            <p className="text-small text-text-secondary mt-1">
+              {lang === 'hi'
+                ? 'नीचे दी गई तैयारी आपकी दुकान के प्रकार के अनुसार है। खरीदने से पहले हाल की बिक्री और मौजूद स्टॉक देखें।'
+                : 'The guidance below is tailored to your shop type. Check recent sales and current stock before buying.'}
+            </p>
+          </div>
+        </div>
+      )}
       <p className="text-small text-text-secondary">
         {lang === 'hi'
           ? 'अगले 2 महीनों के त्योहार। तैयारी आपके कारोबार के प्रकार के हिसाब से है; खरीदने से पहले अपना स्टॉक और स्थानीय माँग जाँचें। कुछ त्योहारों की तारीख़ क्षेत्र के अनुसार बदल सकती है, इसलिए ऑर्डर से पहले स्थानीय तारीख़ की पुष्टि करें।'
