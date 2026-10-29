@@ -10,7 +10,7 @@ import { AskScreen } from './screens/Ask';
 import { ToolsScreen } from './screens/Tools';
 import { LearnScreen } from './screens/Learn';
 import { ProfileScreen } from './screens/Profile';
-import { Home, BarChart3, MessageCircle, Wrench, BookOpen, User, WifiOff } from 'lucide-react';
+import { Home, BarChart3, MessageCircle, Wrench, BookOpen, User, WifiOff, Check, X, Send } from 'lucide-react';
 
 type Tab = 'home' | 'insights' | 'ask' | 'tools' | 'learn';
 
@@ -20,6 +20,8 @@ function AppContent() {
   const [showProfile, setShowProfile] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [homeVoiceStatus, setHomeVoiceStatus] = useState('');
+  const [homeVoiceDraft, setHomeVoiceDraft] = useState('');
+  const [homeVoiceListening, setHomeVoiceListening] = useState(false);
   const [voiceUndoEntries, setVoiceUndoEntries] = useState<Array<{ type: 'sale' | 'expense' | 'udhaar'; id: string }>>([]);
   const lang = state.language || 'en';
 
@@ -31,20 +33,36 @@ function AppContent() {
   };
 
   const handleHomeVoiceTranscript = (transcript: string) => {
-    const parsed = parseVoiceTransactions(transcript);
-    if (!parsed.transactions.length) {
-      const message = lang === 'hi'
-        ? parsed.error === 'no_type'
-          ? 'बताइए कि बिक्री, खर्च या उधार में क्या जोड़ना है।'
-          : parsed.error === 'missing_amount'
-            ? 'हर एंट्री की रकम समझ नहीं आई। कुछ नहीं जोड़ा गया; रकम और प्रकार दोबारा बोलें।'
-            : 'कोई एंट्री नहीं जोड़ी। कहें: “दो सौ रुपये की बिक्री जोड़ो।”'
-        : parsed.error === 'no_type'
-          ? 'Say whether to add sales, expenses, or udhaar.'
-          : parsed.error === 'missing_amount'
-            ? 'I could not match an amount to every entry. Nothing was added; please repeat the amounts and types.'
-            : 'Nothing was added. Try “Add 200 rupees sales” or “Add 200 sales and 300 expenses”.';
-      showTemporaryVoiceStatus(message);
+    setHomeVoiceDraft(transcript);
+  };
+
+  const voiceErrorMessage = (error: string | undefined): string => {
+    if (lang === 'hi') {
+      if (error === 'too_many_entries') return 'एक बार में अधिकतम 5 एंट्री जोड़ सकता हूँ। कुछ भी नहीं जोड़ा गया। कृपया 5 या उससे कम एंट्री बोलें।';
+      if (error === 'amount_out_of_range') return 'अधिकतम रकम ₹1 करोड़ तक हो सकती है। कुछ भी नहीं जोड़ा गया। रकम फिर से बोलें।';
+      if (error === 'missing_item') return 'किस सामान या सेवा की बिक्री हुई, वह साफ़ नहीं समझ आया। कुछ भी नहीं जोड़ा गया। सामान का नाम साफ़ बोलें।';
+      if (error === 'missing_customer') return 'उधार के लिए ग्राहक का नाम साफ़ नहीं समझ आया। कुछ भी नहीं जोड़ा गया। ग्राहक का नाम और रकम फिर से बोलें।';
+      if (error === 'missing_amount' || error === 'ambiguous_amount') return 'हम आपकी बात साफ़ नहीं समझ पाए। कुछ भी नहीं जोड़ा गया। हर सामान/खर्च/उधार का नाम और रकम साफ़-साफ़ बोलें।';
+      if (error === 'no_type') return 'बताइए कि बिक्री, खर्च या उधार में क्या जोड़ना है। कुछ भी नहीं जोड़ा गया।';
+      return 'हम आपकी बात साफ़ नहीं सुन पाए। कृपया धीरे और साफ़ बोलकर फिर कोशिश करें।';
+    }
+    if (error === 'too_many_entries') return 'I can add a maximum of 5 entries at once. Nothing was added. Please split this into batches of 5 or fewer.';
+    if (error === 'amount_out_of_range') return 'The maximum supported amount is ₹1 crore. Nothing was added; please say the amount again.';
+    if (error === 'missing_item') return 'I could not clearly identify a product or service for every sale. Nothing was added; please say each item name clearly.';
+    if (error === 'missing_customer') return 'I could not clearly identify the customer for an udhaar entry. Nothing was added; say each customer name and amount clearly.';
+    if (error === 'missing_amount' || error === 'ambiguous_amount') return 'We did not hear you clearly. Nothing was added. Please say each item/customer, amount, and transaction type clearly.';
+    if (error === 'no_type') return 'Say whether these entries are sales, expenses, or udhaar. Nothing was added.';
+    return 'We did not hear you clearly. Nothing was added. Please speak clearly and try again.';
+  };
+
+  const handleHomeVoiceConfirm = () => {
+    const parsed = parseVoiceTransactions(homeVoiceDraft);
+    if (!parsed.transactions.length || parsed.error) {
+      showTemporaryVoiceStatus(voiceErrorMessage(parsed.error));
+      return;
+    }
+    if (parsed.transactions.length > 5) {
+      showTemporaryVoiceStatus(voiceErrorMessage('too_many_entries'));
       return;
     }
 
@@ -55,32 +73,51 @@ function AppContent() {
     for (const transaction of parsed.transactions) {
       const id = generateId();
       if (transaction.type === 'sale') {
+        const quantity = Number(transaction.quantity ?? 1);
         dispatch({
           type: 'ADD_SALE',
-          payload: { id, date: today, amount: transaction.amount, paymentType: 'cash', createdAt: Date.now() },
+          payload: {
+            id,
+            date: today,
+            amount: transaction.amount,
+            itemName: transaction.itemName!.trim(),
+            quantity,
+            quantityUnit: transaction.quantityUnit || 'unit',
+            paymentType: 'cash',
+            createdAt: Date.now(),
+          },
         });
-        summaries.push(formatRupee(transaction.amount) + (lang === 'hi' ? ' बिक्री' : ' sales'));
+        summaries.push(
+          (transaction.itemName || 'Sale') + ' · ' + quantity + ' ' + (transaction.quantityUnit || 'unit') + ' · ' + formatRupee(transaction.amount),
+        );
         created.push({ type: 'sale', id });
       } else if (transaction.type === 'expense') {
         dispatch({
           type: 'ADD_EXPENSE',
-          payload: { id, date: today, amount: transaction.amount, category: transaction.expenseCategory || 'other', createdAt: Date.now() },
+          payload: {
+            id,
+            date: today,
+            amount: transaction.amount,
+            category: transaction.expenseCategory || 'other',
+            note: transaction.note,
+            createdAt: Date.now(),
+          },
         });
-        summaries.push(formatRupee(transaction.amount) + (lang === 'hi' ? ' खर्च' : ' expenses'));
+        summaries.push((transaction.note || transaction.expenseCategory || 'Expense') + ' · ' + formatRupee(transaction.amount));
         created.push({ type: 'expense', id });
       } else {
         dispatch({
           type: 'ADD_UDHAAR',
           payload: {
             id,
-            customerName: transaction.customerName || (lang === 'hi' ? 'अज्ञात' : 'Unknown'),
+            customerName: transaction.customerName!.trim(),
             amount: transaction.amount,
             date: today,
             paid: false,
             createdAt: Date.now(),
           },
         });
-        summaries.push(formatRupee(transaction.amount) + (lang === 'hi' ? ' उधार' : ' udhaar'));
+        summaries.push((transaction.customerName || 'Customer') + ' · ' + formatRupee(transaction.amount) + ' udhaar');
         created.push({ type: 'udhaar', id });
       }
     }
@@ -94,8 +131,8 @@ function AppContent() {
     }
 
     setVoiceUndoEntries(created);
-    const message = (lang === 'hi' ? 'जोड़ दिया: ' : 'Added: ') +
-      summaries.join(lang === 'hi' ? ' और ' : ', ') + '.';
+    setHomeVoiceDraft('');
+    const message = (lang === 'hi' ? 'जोड़ दिया: ' : 'Added: ') + summaries.join(lang === 'hi' ? ' · ' : ' | ') + '.';
     showTemporaryVoiceStatus(message);
   };
 
@@ -151,8 +188,11 @@ function AppContent() {
               <VoiceMicButton
                 language={lang}
                 shape="circle"
-                label={lang === 'hi' ? 'आवाज़ से एंट्री जोड़ें' : 'Add entries by voice'}
+                label={homeVoiceListening
+                  ? (lang === 'hi' ? 'रिकॉर्डिंग रोकें' : 'Stop recording')
+                  : (lang === 'hi' ? 'आवाज़ से एंट्री जोड़ें' : 'Add entries by voice')}
                 onTranscript={handleHomeVoiceTranscript}
+                onRecordingChange={setHomeVoiceListening}
                 onStatus={setHomeVoiceStatus}
               />
               {homeVoiceStatus && (
@@ -173,6 +213,69 @@ function AppContent() {
           )}
         </div>
       </div>
+
+      {activeTab === 'home' && homeVoiceDraft.trim() && !homeVoiceListening && (
+        <div className="mx-4 mt-3 p-4 rounded-2xl border border-primary/20 bg-card shadow-sm space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <p className="font-semibold text-text">{lang === 'hi' ? 'एंट्री जोड़ने से पहले जाँचें' : 'Review before adding entries'}</p>
+              <p className="text-xs text-text-secondary">{lang === 'hi' ? 'नीचे सुना गया टेक्स्ट ठीक करें। टिक दबाने पर ही एंट्री जोड़ी जाएगी।' : 'Correct the transcript if needed. Entries are added only after you press the checkmark.'}</p>
+            </div>
+            <button type="button" aria-label={lang === 'hi' ? 'रद्द करें' : 'Cancel voice entry'} onClick={() => setHomeVoiceDraft('')} className="w-9 h-9 rounded-full flex items-center justify-center bg-bg text-text-secondary"><X size={18}/></button>
+          </div>
+          <textarea
+            value={homeVoiceDraft}
+            onChange={(event) => setHomeVoiceDraft(event.target.value)}
+            rows={2}
+            className="input-field w-full text-sm"
+            aria-label={lang === 'hi' ? 'आवाज़ से पहचाना गया टेक्स्ट' : 'Recognized voice transcript'}
+          />
+          {(() => {
+            const parsed = parseVoiceTransactions(homeVoiceDraft);
+            const canAdd = !parsed.error && parsed.transactions.length > 0 && parsed.transactions.length <= 5;
+            return (
+              <>
+                {canAdd ? (
+                  <div className="rounded-xl bg-bg p-3 space-y-2">
+                    <p className="text-sm font-semibold text-text">
+                      {lang === 'hi' ? parsed.transactions.length + ' एंट्री तैयार हैं' : parsed.transactions.length + (parsed.transactions.length === 1 ? ' entry ready' : ' entries ready')}
+                    </p>
+                    {parsed.transactions.map((transaction, index) => (
+                      <div key={index} className="flex items-start justify-between gap-3 text-sm">
+                        <div className="min-w-0">
+                          <p className="text-text font-medium break-words">
+                            {transaction.type === 'sale'
+                              ? transaction.itemName
+                              : transaction.type === 'expense'
+                                ? (transaction.note || transaction.expenseCategory || 'Expense')
+                                : transaction.customerName}
+                          </p>
+                          {transaction.type === 'sale' && (
+                            <p className="text-xs text-text-secondary">
+                              {Number(transaction.quantity ?? 1)} {transaction.quantityUnit || 'unit'}
+                            </p>
+                          )}
+                        </div>
+                        <p className="text-text font-semibold whitespace-nowrap">{formatRupee(transaction.amount)}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-problem" role="alert">{voiceErrorMessage(parsed.error || 'unclear')}</p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleHomeVoiceConfirm}
+                  disabled={!canAdd}
+                  className="btn-primary flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Check size={18}/> {lang === 'hi' ? 'टिक करें और एंट्री जोड़ें' : '✓ Confirm and add entries'}
+                </button>
+              </>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Offline banner */}
       {!isOnline && (
