@@ -212,7 +212,7 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
   if (!text) return { transactions: [], error: 'not_command' };
 
   const actionPattern =
-    /\b(?:add|record|enter|log|save|put|jod|jodo|jodna|likho?|likh|daal|dalo|dal|darj|jama|karo|kar do)\b|जोड़|जोड़ो|जोड़ें|जोड़ना|डाल|डालो|दर्ज|लिख|जमा/iu;
+    /\b(?:add|record|enter|log|save|put|jod|jodo|jodna|likho?|likh|daal|dalo|dal|darj|jama|karo|kar do)\b|जोड़|जोड़ो|जोड़ें|जोड़ना|जोड़िए|डाल|डालो|डालिए|दर्ज|लिख|जमा|ऐड|एड|करो|करें|करना/iu;
   const questionPattern =
     /\b(?:what|when|where|why|how|can|should|tell|show|kitna|kitne|kitni|kya|kaise|kyun|batao)\b|कितना|कितनी|कितने|क्या|कैसे|क्यों|बताओ/iu;
 
