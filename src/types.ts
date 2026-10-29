@@ -32,6 +32,7 @@ export interface SaleEntry {
   id: string;
   date: string; // YYYY-MM-DD
   amount: number;
+  itemName?: string;
   category?: string;
   paymentType: PaymentType;
   note?: string;
