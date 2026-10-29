@@ -81,7 +81,8 @@ const NUMBER_WORDS: Record<string, number> = {
   'तीस': 30, 'चालीस': 40, 'पचास': 50, 'साठ': 60, 'सत्तर': 70, 'अस्सी': 80,
   'नब्बे': 90,
 
-  // Common Mumbai/Hinglish spellings and alternate transliterations. ikatees: 31, ekattis: 31, iktis: 31, baatis: 32, teintees: 33, chautis: 34, pantees: 35, chattis: 36, saintees: 37, adtees: 38, untaalis: 39, chaalis: 40, chalees: 40,
+  // Common Mumbai/Hinglish spellings and alternate transliterations.
+  ikatees: 31, ekattis: 31, iktis: 31, baatis: 32, teintees: 33, chautis: 34, pantees: 35, chattis: 36, saintees: 37, adtees: 38, untaalis: 39, chaalis: 40, chalees: 40,
   iktalis: 41, iktalees: 41, baalis: 42, taintalees: 43, chavalis: 44, paitalis: 45, paintaalis: 45, paitalees: 45, chhiyalis: 46, saintalees: 47, adtaalis: 48, unchas: 49, ikavan: 51, baavan: 52, tirpann: 53, chauwan: 54, pachpann: 55, chappan: 56, satavan: 57, atthavan: 58, unsaath: 59, iksathh: 61, ba-sath: 62, tirsaath: 63, chaunsathh: 64, pain-sath: 65, chiyasath: 66, sadsathh: 67, adsaath: 68, unahattar: 69, satttar: 70, ikattar: 71, bahttar: 72,
   chauhatar: 74, pachattar: 75,
   chhihatar: 76, satattar: 77,
