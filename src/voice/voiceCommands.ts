@@ -2,14 +2,35 @@ export type VoiceTransactionType = 'sale' | 'expense' | 'udhaar';
 
 export interface VoiceTransaction {
   type: VoiceTransactionType;
+  /** Total rupee value for a sale/expense/credit entry. */
   amount: number;
+  /** Product or service name, required for a voice sale. */
+  itemName?: string;
+  /** Quantity/pieces recorded in a single sale. */
+  quantity?: number;
+  /** Unit spoken by the shopkeeper, e.g. kg, litre, packet or unit. */
+  quantityUnit?: string;
+  /** Customer name for udhaar, required for a multi-entry voice credit. */
   customerName?: string;
   expenseCategory?: string;
+  /** Short expense description, such as electricity bill or delivery. */
+  note?: string;
 }
+
+export type VoiceParseError =
+  | 'not_command'
+  | 'no_type'
+  | 'missing_amount'
+  | 'ambiguous_amount'
+  | 'missing_item'
+  | 'missing_customer'
+  | 'too_many_entries'
+  | 'amount_out_of_range'
+  | 'unclear';
 
 export interface VoiceParseResult {
   transactions: VoiceTransaction[];
-  error?: 'not_command' | 'no_type' | 'missing_amount' | 'ambiguous_amount';
+  error?: VoiceParseError;
 }
 
 interface Span {
@@ -59,6 +80,66 @@ const NUMBER_WORDS: Record<string, number> = {
   'पच्चीस': 25, 'छब्बीस': 26, 'सत्ताईस': 27, 'अट्ठाईस': 28, 'उनतीस': 29,
   'तीस': 30, 'चालीस': 40, 'पचास': 50, 'साठ': 60, 'सत्तर': 70, 'अस्सी': 80,
   'नब्बे': 90,
+
+  // Common Mumbai/Hinglish spellings and alternate transliterations.
+  ikattis: 31, ikatees: 31, ekattis: 31, iktis: 31,
+  battis: 32, baatis: 32, taintis: 33, teintees: 33,
+  chauntis: 34, chautis: 34, paintis: 35, pantees: 35,
+  chhattis: 36, chattis: 36, saintis: 37, saintees: 37,
+  adtis: 38, adtees: 38, untalis: 39, untaalis: 39,
+  chalis: 40, chaalis: 40, chalees: 40,
+  iktalis: 41, iktalees: 41, bayalis: 42, baalis: 42,
+  taintalis: 43, taintalees: 43, chawalis: 44, chavalis: 44,
+  paintalis: 45, paitalis: 45, paintaalis: 45, paitalees: 45,
+  chiyalis: 46, chhiyalis: 46, saintalis: 47, saintalees: 47,
+  adtalis: 48, adtaalis: 48, unchaas: 49, unchas: 49,
+  pachaas: 50, pachhas: 50, ikyavan: 51, ikavan: 51,
+  bavan: 52, baavan: 52, tirpan: 53, tirpann: 53,
+  chauvan: 54, chauwan: 54, pachpan: 55, pachpann: 55,
+  chhappan: 56, chappan: 56, sattavan: 57, satavan: 57,
+  athavan: 58, atthavan: 58, unsath: 59, unsaath: 59,
+  saath: 60, sath: 60, iksath: 61, iksathh: 61,
+  basath: 62, ba-sath: 62, tirsath: 63, tirsaath: 63,
+  chaunsath: 64, chaunsathh: 64, painsath: 65, pain-sath: 65,
+  chhiyasath: 66, chiyasath: 66, sadsath: 67, sadsathh: 67,
+  adsath: 68, adsaath: 68, unhattar: 69, unahattar: 69,
+  sattar: 70, satttar: 70, ikahattar: 71, ikattar: 71,
+  bahattar: 72, bahttar: 72, tihattar: 73, chauhattar: 74,
+  chauhatar: 74, pachhattar: 75, pachattar: 75, chhihattar: 76,
+  chhihatar: 76, satahattar: 77, satattar: 77, athahattar: 78,
+  athattar: 78, unaasi: 79, unasi: 79,
+  assi: 80, asi: 80, ikyasi: 81, ikasi: 81, bayasi: 82,
+  baasi: 82, tirasi: 83, tiraasi: 83, chaurasi: 84,
+  choraasi: 84, pachasi: 85, pachaasi: 85, chhiyasi: 86,
+  chiyasi: 86, sattasi: 87, satasi: 87, athasi: 88,
+  atthasi: 88, navasi: 89, navaasi: 89, nabbe: 90,
+  nabay: 90, ikyanve: 91, ikyanaway: 91, baanve: 92,
+  banve: 92, tiranve: 93, tiraanve: 93, chauranve: 94,
+  chauranaway: 94, pachanve: 95, panchanve: 95, chhiyanve: 96,
+  chhiyanaway: 96, satyanve: 97, satyanaway: 97, athanve: 98,
+  athanaway: 98, ninyanve: 99, ninyaanve: 99,
+  'इकतीस': 31, 'इकत्तीस': 31, 'बत्तीस': 32, 'तैंतीस': 33, 'चौंतीस': 34,
+  'चौतीस': 34, 'पैंतीस': 35, 'छत्तीस': 36, 'सैंतीस': 37, 'सैंतीस': 37,
+  'अड़तीस': 38, 'अड़तीस': 38, 'उनतालीस': 39, 'उनचालीस': 39,
+  'चालीस': 40, 'इकतालीस': 41, 'इकतालिस': 41, 'बयालीस': 42, 'बयालिस': 42,
+  'तैंतालीस': 43, 'तैतालीस': 43, 'चवालीस': 44, 'चव्वालीस': 44,
+  'पैंतालीस': 45, 'पैतालीस': 45, 'छियालीस': 46, 'सैंतालीस': 47,
+  'अड़तालीस': 48, 'अड़तालीस': 48, 'उनचास': 49, 'पचास': 50,
+  'इक्यावन': 51, 'इक्यावन': 51, 'बावन': 52, 'तिरपन': 53, 'चौवन': 54,
+  'चौवन': 54, 'पचपन': 55, 'छप्पन': 56, 'सत्तावन': 57, 'अट्ठावन': 58,
+  'उनसठ': 59, 'उनसट': 59, 'साठ': 60, 'इकसठ': 61, 'बासठ': 62,
+  'तिरसठ': 63, 'चौंसठ': 64, 'चौंसठ': 64, 'पैंसठ': 65, 'छियासठ': 66,
+  'सड़सठ': 67, 'सड़सठ': 67, 'अड़सठ': 68, 'अड़सठ': 68, 'उनहत्तर': 69,
+  'सत्तर': 70, 'इकहत्तर': 71, 'बहत्तर': 72, 'तिहत्तर': 73, 'चौहत्तर': 74,
+  'पचहत्तर': 75, 'छिहत्तर': 76, 'सतहत्तर': 77, 'अठहत्तर': 78,
+  'उन्नासी': 79, 'अस्सी': 80, 'इक्यासी': 81, 'बयासी': 82,
+  'तिरासी': 83, 'चौरासी': 84, 'पचासी': 85, 'छियासी': 86,
+  'सतासी': 87, 'अट्ठासी': 88, 'नवासी': 89, 'नब्बे': 90,
+  'इक्यानवे': 91, 'इक्यानबे': 91, 'बानवे': 92, 'बानबे': 92,
+  'तिरानवे': 93, 'तिरानबे': 93, 'चौरानवे': 94, 'चौरानबे': 94,
+  'पचानवे': 95, 'पंचानवे': 95, 'छियानवे': 96, 'छियानबे': 96,
+  'सत्तानवे': 97, 'सत्तानबे': 97, 'अट्ठानवे': 98, 'अट्ठानबे': 98,
+  'निन्यानवे': 99, 'निन्यानबे': 99,
 };
 
 const HUNDRED_WORDS = new Set(['hundred', 'sau', 'सौ']);
