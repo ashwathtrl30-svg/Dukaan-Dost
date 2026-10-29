@@ -374,7 +374,7 @@ export function LearnScreen() {
     if (!lesson) return null;
     
     return (
-      <div className="h-full flex flex-col bg-bg">
+      <div className="h-full min-h-0 flex flex-col bg-bg">
         <div className="px-5 pt-4 pb-2 flex items-center gap-3">
           <button onClick={() => setSelectedLesson(null)} className="w-12 h-12 rounded-full flex items-center justify-center">
             <span className="text-body">←</span>
@@ -384,7 +384,7 @@ export function LearnScreen() {
           </h2>
         </div>
         
-        <div className="flex-1 scroll-area px-5 py-3">
+        <div className="flex-1 min-h-0 scroll-area px-5 py-3">
           <div className="text-5xl text-center mb-4">{lesson.emoji}</div>
           
           <div className="card p-4 mb-3">
@@ -450,26 +450,24 @@ export function LearnScreen() {
   const progressPercent = Math.round((completedCount / dailyLessons.length) * 100);
   
   return (
-    <div className="h-full flex flex-col bg-bg">
+    <div className="h-full min-h-0 flex flex-col bg-bg">
       <div className="px-5 pt-4 pb-2 flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-section-title text-text">{t('learnTitle', lang)}</h1>
-          <p className="text-small text-text-secondary mt-1">
-            {lang === 'hi' ? 'हर दिन नई सीख, दुकान की असली स्थितियों से' : 'Fresh daily lessons built around real shop situations'}
-          </p>
         </div>
         <button
           type="button"
           onClick={() => setRefreshCount(count => count + 1)}
-          className="btn-secondary shrink-0 flex items-center gap-2 px-3"
+          className="btn-secondary shrink-0"
+          style={{ width: 44, minWidth: 44, height: 44, padding: 0, flex: '0 0 44px' }}
           aria-label={lang === 'hi' ? 'नई सीख दिखाएँ' : 'Refresh lessons'}
+          title={lang === 'hi' ? 'नई सीख दिखाएँ' : 'Refresh lessons'}
         >
-          <RefreshCw size={16} />
-          <span className="text-small font-semibold">{lang === 'hi' ? 'नई सीख' : 'Refresh'}</span>
+          <RefreshCw size={18} />
         </button>
       </div>
       
-      <div className="flex-1 scroll-area px-5 pb-6">
+      <div className="flex-1 min-h-0 scroll-area px-5 pb-6">
         {/* Progress */}
         <div className="card mb-4">
           <div className="flex items-center justify-between mb-2">
@@ -494,12 +492,12 @@ export function LearnScreen() {
               <button
                 key={lesson.id}
                 onClick={() => setSelectedLesson(lesson.id)}
-                className="card w-full text-left flex items-center gap-3 h-20 px-4"
+                className="card w-full text-left flex items-center gap-3 min-h-[96px] h-auto px-4 py-3"
               >
-                <span className="text-3xl flex-shrink-0">{lesson.emoji}</span>
+                <span className="text-3xl flex-shrink-0 leading-none">{lesson.emoji}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-body font-semibold text-text truncate">{lang === 'hi' ? lesson.titleHi : lesson.titleEn}</p>
-                  <p className="text-small text-text-secondary truncate">{lang === 'hi' ? lesson.descHi : lesson.descEn}</p>
+                  <p className="text-body font-semibold text-text leading-snug break-words">{lang === 'hi' ? lesson.titleHi : lesson.titleEn}</p>
+                  <p className="text-small text-text-secondary leading-snug break-words mt-1">{lang === 'hi' ? lesson.descHi : lesson.descEn}</p>
                   <p className="text-small text-text-secondary mt-1">
                     {plannedLessons.includes(lesson.id)
                       ? (lang === 'hi' ? 'आज आज़माने के लिए चुना' : 'Planned to try')
