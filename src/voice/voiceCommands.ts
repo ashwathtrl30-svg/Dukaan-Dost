@@ -353,7 +353,7 @@ function currencySuffixEnd(span: AmountSpan, text: string): number {
 
 function closestExpenseCategory(text: string, span: AmountSpan): ExpenseCategoryMatch | undefined {
   const local = text.slice(Math.max(0, span.start - 65), Math.min(text.length, span.end + 90));
-  if (/(?:samaan|saman|maal)\s+(?:bhejne|bhejna|bhejane|bhejne\s+mein|bhejne\s+me)|सामान\s+भेजने|माल\s+भेजने|भेजने\s+में/iu.test(local)) {
+  if (/(?:saaman|samaan|saman|saamaan|maal)\s+(?:bhejne|bhejna|bhejane|bhejne\s+mein|bhejne\s+me)|सामान\s+भेजने|माल\s+भेजने|भेजने\s+में/iu.test(local)) {
     const match = /(?:samaan|saman|maal)\s+(?:bhejne|bhejna|bhejane|bhejne\s+mein|bhejne\s+me)|सामान\s+भेजने|माल\s+भेजने|भेजने\s+में/iu.exec(local);
     if (match) {
       const start = Math.max(0, span.start - 65) + (match.index || 0);
