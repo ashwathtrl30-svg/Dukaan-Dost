@@ -532,7 +532,7 @@ function getMyAdvice(
       lang === 'hi'
         ? `तुलना वाली अवधि में खर्च ${expenseGrowth}% बढ़ा, जबकि बिक्री ${salesGrowth}% बदली।${category ? ` ${category} सबसे बड़ा दर्ज खर्च है।` : ''}`
         : `Compared with the same elapsed period, expenses rose ${expenseGrowth}% while sales changed by ${salesGrowth}%. ${category ? `${category} is the largest recorded expense category.` : ''}`,
-      getShopAction(shopType, 'cost', lang),
+      getShopAction(shopType, topCategory?.category === 'stock' ? 'cost-stock' : 'cost', lang),
       96,
     );
   }
@@ -552,7 +552,7 @@ function getMyAdvice(
       lang === 'hi'
         ? `${name} इस अवधि के दर्ज खर्च का लगभग ${topCategory.share}% है। यह ज़रूरी खर्च हो सकता है, लेकिन इसकी पुष्टि करना सही रहेगा।`
         : `${name} makes up about ${topCategory.share}% of recorded expenses in this period. It may be necessary, but it is worth checking before committing more money.`,
-      getShopAction(shopType, 'cost', lang),
+      getShopAction(shopType, topCategory.category === 'stock' ? 'cost-stock' : 'cost', lang),
       70,
     );
   }
