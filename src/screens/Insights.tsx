@@ -4,11 +4,9 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Calendar,
-  Info,
   Lightbulb,
   Minus,
   Sparkles,
-  TrendingDown,
   TrendingUp,
   Wallet,
 } from 'lucide-react';
@@ -281,7 +279,7 @@ export function InsightsScreen() {
 
   const weeklyInsight = bestInsight(dashboard.week, lang, hasAnyEntries);
   const monthlyInsight = bestInsight(dashboard.month, lang, hasAnyEntries);
-  const insights = !hasAnyEntries
+  const insights = !hasAnyEntries || (!dashboard.week.hasEntries && !dashboard.month.hasEntries)
     ? [weeklyInsight]
     : [
         weeklyInsight,
