@@ -50,7 +50,19 @@ function getInsightCards(
   month: PeriodMetrics,
   lang: Language,
   hasAnyEntries: boolean,
+  hasOverdueCredit: boolean,
 ): BusinessInsight[] {
+  const celebrateWeek = !hasOverdueCredit &&
+    week.profit > 0 &&
+    week.profitMargin !== null &&
+    week.profitMargin >= 20 &&
+    week.salesChange !== null &&
+    week.salesChange >= 10 &&
+    week.expensesChange !== null &&
+    week.expensesChange <= week.salesChange &&
+    month.profit >= 0 &&
+    (month.salesChange === null || month.salesChange >= 0) &&
+    (month.expensesChange === null || month.salesChange === null || month.expensesChange <= month.salesChange + 5);
   const make = (
     period: 'week' | 'month',
     tone: InsightTone,
@@ -78,6 +90,17 @@ function getInsightCards(
     const marginText = metrics.profitMargin === null
       ? (lang === 'hi' ? 'बिक्री शून्य होने के कारण मुनाफ़ा प्रतिशत उपलब्ध नहीं है' : 'profit margin is unavailable because recorded sales are zero')
       : (lang === 'hi' ? `मुनाफ़ा प्रतिशत ${metrics.profitMargin}% है` : `profit margin is ${metrics.profitMargin}%`);
+
+    if (period === 'week' && celebrateWeek && metrics.profitMargin !== null && metrics.salesChange !== null) {
+      return make(
+        period,
+        'positive',
+        lang === 'hi' ? 'आपकी मेहनत का असर दिख रहा है!' : 'Your hard work is paying off!',
+        lang === 'hi'
+          ? `इस हफ़्ते बिक्री ${metrics.salesChange}% बढ़ी और दर्ज खर्च के बाद ${formatRupee(metrics.profit)} बचा। मुनाफ़ा प्रतिशत ${metrics.profitMargin}% है। यह अच्छी प्रगति है—तेज़ बिकने वाला सामान तैयार रखें और रोज़ का हिसाब जारी रखें।`
+          : `Sales are up ${metrics.salesChange}% this week, with ${formatRupee(metrics.profit)} left after recorded expenses and a ${metrics.profitMargin}% margin. That is real progress. Keep fast-selling items ready and continue your daily close routine to protect it.`,
+      );
+    }
 
     return make(
       period,
@@ -448,6 +471,21 @@ function getMyAdvice(
   }
 
   if (candidates.length === 0) {
+    const hasPeriodEntries = week.hasEntries || month.hasEntries;
+    if (!hasPeriodEntries) {
+      add(
+        'start-records',
+        'positive',
+        lang === 'hi' ? 'आज से सही हिसाब की शुरुआत करें' : 'Build a reliable picture of your shop',
+        lang === 'hi'
+          ? 'अभी इस हफ़्ते या महीने की बिक्री और खर्च की एंट्री नहीं मिली। इस हालत में खतरे या मुनाफ़े का सही अंदाज़ा नहीं लगाया जा सकता।'
+          : 'There are no sales or expense entries in the current week or month. Without records, it is not possible to tell whether the shop is doing well or facing a risk.',
+        lang === 'hi'
+          ? 'आज की हर बिक्री, खर्च और उधार लिखें। दुकान बंद करते समय नकद और UPI मिलाएँ—यही छोटी आदत आगे चलकर बड़ी गलती पकड़ सकती है।'
+          : 'Record each sale, expense and udhaar today. At closing, match cash and UPI against the entries. This simple habit can catch costly mistakes early.',
+        20,
+      );
+    } else {
     const strongWeek = week.profit > 0 && week.profitMargin !== null && week.profitMargin >= 15 &&
       (week.salesChange === null || week.salesChange >= 0) &&
       (week.expensesChange === null || week.salesChange === null || week.expensesChange <= week.salesChange + 3);
@@ -471,6 +509,7 @@ function getMyAdvice(
             : 'At closing today, check sales, expenses and udhaar together. Once a week, review the largest cost and slow-moving stock before committing more cash.'),
       20,
     );
+    }
   }
 
   // Priorities are ordered by urgency. Keep the section useful and compact.
@@ -599,8 +638,12 @@ export function InsightsScreen() {
   const dashboard = getInsightsDashboard(state.sales, state.expenses);
   const hasAnyEntries = state.sales.length > 0 || state.expenses.length > 0;
 
+  const today = getToday();
+  const hasOverdueCredit = state.udhaar.some(entry =>
+    !entry.paid && typeof entry.dueDate === 'string' && entry.dueDate < today
+  );
   const insights = hasAnyEntries
-    ? getInsightCards(dashboard.week, dashboard.month, lang, hasAnyEntries)
+    ? getInsightCards(dashboard.week, dashboard.month, lang, hasAnyEntries, hasOverdueCredit)
     : [];
   const advice = getMyAdvice(dashboard.week, dashboard.month, state.sales, state.udhaar, lang);
 
