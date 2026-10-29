@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useStore, formatRupee, getTodaySales, getTodayExpenses, getTotalUdhaar, generateId, getWeekSales, getWeekExpenses } from '../store';
+import { useStore, formatRupee, getToday, getTodaySales, getTodayExpenses, getTotalUdhaar, generateId, getWeekSales, getWeekExpenses } from '../store';
 import { t } from '../i18n';
 import { ChatMessage, ChatSession } from '../types';
 import { Send, MoreVertical, Plus, ArrowLeft, Trash2, MessageCircle, Clock, Volume2, Square } from 'lucide-react';
@@ -193,6 +193,33 @@ function getTimeContext(): string {
   return 'Regular season';
 }
 
+
+function getTrackedQuantitySummary(sales: any[], lang: string): string {
+  const today = getToday();
+  const startDate = new Date(today + 'T12:00:00');
+  startDate.setDate(startDate.getDate() - 6);
+  const start = startDate.getFullYear() + '-' + String(startDate.getMonth() + 1).padStart(2, '0') + '-' + String(startDate.getDate()).padStart(2, '0');
+  const byItem = new Map<string, { name: string; quantity: number }>();
+  sales.forEach((sale) => {
+    if (typeof sale.itemName !== 'string' || !sale.itemName.trim() || sale.date < start || sale.date > today) return;
+    const quantity = Number(sale.quantity);
+    // Older records do not contain quantity; do not invent it for this summary.
+    if (!Number.isFinite(quantity) || quantity <= 0) return;
+    const name = sale.itemName.trim().replace(/\s+/g, ' ');
+    const key = name.toLocaleLowerCase();
+    const item = byItem.get(key) || { name, quantity: 0 };
+    item.quantity += quantity;
+    byItem.set(key, item);
+  });
+  const ranked = [...byItem.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 3);
+  if (!ranked.length) return '';
+  const total = ranked.reduce((sum, item) => sum + item.quantity, 0);
+  const list = ranked.map(item => item.name + ': ' + (Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 3 }))).join(', ');
+  return lang === 'hi'
+    ? '\n\n**पिछले 7 दिनों की दर्ज मात्रा:** शीर्ष सामान/सेवाएँ — ' + list + '. इसमें केवल वही एंट्री शामिल हैं जिनमें मात्रा दर्ज है।'
+    : '\n\n**Tracked quantity, last 7 days:** top items/services — ' + list + '. This includes only entries where quantity was recorded.';
+}
+
 function getShopInventoryAdvice(shopType: string | null | undefined, lang: string): string {
   const hi = lang === 'hi';
   const advice: Record<string, { en: string; hi: string }> = {
@@ -333,7 +360,7 @@ function generateResponse(question: string, state: any, lang: string): string {
     const knowledgeEntry = findKnowledgeEntry(question);
     if (knowledgeEntry) {
       if (knowledgeEntry.category === 'inventory') {
-        return getShopInventoryAdvice(shopType, lang);
+        return getShopInventoryAdvice(shopType, lang) + getTrackedQuantitySummary(state.sales, lang);
       }
       const baseResponse = lang === 'hi' ? knowledgeEntry.responseHi : knowledgeEntry.responseEn;
       
@@ -707,10 +734,11 @@ function generateResponse(question: string, state: any, lang: string): string {
           : 'No sales data yet. Tap "Sale" on the home screen to start tracking.';
       }
       const totalSales = state.sales.reduce((sum: number, s: any) => sum + s.amount, 0);
+      const quantitySummary = getTrackedQuantitySummary(state.sales, lang);
       if (lang === 'hi') {
-        return `कुल बिक्री: **₹${fmt(totalSales)}** (${state.sales.length} एंट्री)`;
+        return `कुल बिक्री: **₹${fmt(totalSales)}** (${state.sales.length} एंट्री)` + quantitySummary;
       }
-      return `Total sales: **₹${fmt(totalSales)}** (${state.sales.length} ${state.sales.length === 1 ? 'entry' : 'entries'})`;
+      return `Total sales: **₹${fmt(totalSales)}** (${state.sales.length} ${state.sales.length === 1 ? 'entry' : 'entries'})` + quantitySummary;
     }
     
     // General expense question
