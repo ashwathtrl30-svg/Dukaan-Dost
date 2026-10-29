@@ -271,7 +271,7 @@ export function HomeScreen() {
                         {entry.entryType === 'sale' ? (entry.itemName?.trim() || t('sale', lang)) : t(`ec_${(entry as any).category || 'other'}` as any, lang)}
                       </p>
                       <p className="text-small text-text-secondary">
-                        {new Date(entry.date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' })}
+                        {entry.entryType === 'sale' ? `${lang === 'hi' ? 'मात्रा' : 'Qty'}: ${Number((entry as any).quantity ?? 1)} · ` : ''}{new Date(entry.date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' })}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -381,7 +381,8 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
     }
     if (entry.note?.trim()) return entry.note.trim();
     if (entry.entryType === 'sale') {
-      return lang === 'hi' ? 'बिक्री' : 'Sale entry';
+      const qtyLabel = lang === 'hi' ? 'मात्रा' : 'Qty';
+      return `${qtyLabel}: ${Number((entry as any).quantity ?? 1)}`;
     }
     return lang === 'hi' ? 'खर्च' : 'Expense entry';
   };
@@ -602,6 +603,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
   const { state, dispatch } = useStore();
   const lang = state.language!;
   const [itemName, setItemName] = useState('');
+  const [quantity, setQuantity] = useState('1');
   const [amount, setAmount] = useState('');
   const [paymentType, setPaymentType] = useState<PaymentType>('cash');
   const [expenseCategory, setExpenseCategory] = useState('stock');
@@ -625,16 +627,17 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
   ];
   
   const handleSave = () => {
-    const numAmount = parseInt(amount) || 0;
+    const numAmount = parseInt(amount, 10) || 0;
+    const numQuantity = Number(quantity);
     const cleanedItemName = itemName.trim();
-    if (numAmount <= 0 || (isSale && !cleanedItemName)) return;
+    if (numAmount <= 0 || (isSale && (!cleanedItemName || !Number.isFinite(numQuantity) || numQuantity <= 0))) return;
     
     const id = generateId();
     const today = getToday();
     
     if (isSale) {
       const entry: SaleEntry = {
-        id, date: today, amount: numAmount, itemName: cleanedItemName, paymentType, createdAt: Date.now()
+        id, date: today, amount: numAmount, itemName: cleanedItemName, quantity: numQuantity, paymentType, createdAt: Date.now()
       };
       dispatch({ type: 'ADD_SALE', payload: entry });
     } else if (isExpense) {
@@ -665,6 +668,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
     
     setAmount('');
     setItemName('');
+    setQuantity('1');
     setCustomerName('');
   };
   
@@ -741,11 +745,42 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
               />
             </div>
           )}
+          {isSale && (
+            <div className="mb-4">
+              <label className="text-small font-medium text-text-secondary block mb-2">
+                {lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
+              </label>
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                step="any"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                placeholder={lang === 'hi' ? 'जैसे 10' : 'e.g. 10'}
+                className="input-field"
+                aria-label={lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
+              />
+              <p className="text-small text-text-secondary mt-1">
+                {lang === 'hi' ? 'एक बार में कई पीस/यूनिट दर्ज करें।' : 'Record multiple pieces or units in one sale.'}
+              </p>
+            </div>
+          )}
           <div className="text-center mb-4">
             <p className="text-small text-text-secondary mb-2">{t('enterAmount', lang)}</p>
             <p className="text-hero text-text whitespace-nowrap overflow-hidden">
-              ₹{amount ? parseInt(amount).toLocaleString('en-IN') : '0'}
+              ₹{amount ? parseInt(amount, 10).toLocaleString('en-IN') : '0'}
             </p>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value.replace(/\\D/g, '').slice(0, 7))}
+              placeholder={lang === 'hi' ? 'रकम यहाँ टाइप करें' : 'Type amount here'}
+              className="input-field text-center mt-2"
+              aria-label={lang === 'hi' ? 'रकम' : 'Amount in rupees'}
+            />
           </div>
           
           {isExpense && (
@@ -786,6 +821,11 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
             />
           )}
           
+          {isSale && !itemName.trim() && (
+            <p className="text-small text-text-secondary text-center mb-3">
+              {lang === 'hi' ? 'सेव करने के लिए सामान या सेवा का नाम भरें।' : 'Enter the item or service name to save this sale.'}
+            </p>
+          )}
           <div className="grid grid-cols-3 gap-3 max-w-xs mx-auto">
             {['1','2','3','4','5','6','7','8','9','clear','0','del'].map(key => (
               <button
@@ -804,7 +844,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
         <div className="px-5 py-4 safe-bottom">
           <button
             onClick={handleSave}
-            disabled={!amount || parseInt(amount) <= 0 || (isSale && !itemName.trim())}
+            disabled={!amount || parseInt(amount, 10) <= 0 || (isSale && (!itemName.trim() || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0))}
             className="btn-primary text-body-lg"
           >
             <Check size={20} /> {t('save', lang)}
@@ -829,6 +869,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
   const { state, dispatch } = useStore();
   const lang = state.language!;
   const [itemName, setItemName] = useState(String(entry.itemName || ''));
+  const [quantity, setQuantity] = useState(String(entry.quantity ?? 1));
   const [amount, setAmount] = useState(String(entry.amount));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
@@ -836,8 +877,9 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
   const isExpense = entry.entryType === 'expense';
   
   const handleSave = () => {
-    const numAmount = parseInt(amount) || 0;
-    if (numAmount <= 0 || (isSale && !itemName.trim())) return;
+    const numAmount = parseInt(amount, 10) || 0;
+    const numQuantity = Number(quantity);
+    if (numAmount <= 0 || (isSale && (!itemName.trim() || !Number.isFinite(numQuantity) || numQuantity <= 0))) return;
     
     // Delete old entry
     dispatch({ type: 'DELETE_ENTRY', payload: { type: entry.entryType, id: entry.id } });
@@ -846,7 +888,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
     const newEntry = {
       ...entry,
       amount: numAmount,
-      ...(isSale ? { itemName: itemName.trim() } : {}),
+      ...(isSale ? { itemName: itemName.trim(), quantity: numQuantity } : {}),
       createdAt: Date.now(),
     };
     
@@ -907,11 +949,38 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
               />
             </div>
           )}
+          {isSale && (
+            <div className="mb-4">
+              <label className="text-small font-medium text-text-secondary block mb-2">
+                {lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
+              </label>
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0.01"
+                step="any"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className="input-field"
+                aria-label={lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
+              />
+            </div>
+          )}
           <div className="text-center mb-4">
             <p className="text-small text-text-secondary mb-2">{t('enterAmount', lang)}</p>
             <p className="text-hero text-text whitespace-nowrap overflow-hidden">
-              ₹{amount ? parseInt(amount).toLocaleString('en-IN') : '0'}
+              ₹{amount ? parseInt(amount, 10).toLocaleString('en-IN') : '0'}
             </p>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value.replace(/\\D/g, '').slice(0, 7))}
+              placeholder={lang === 'hi' ? 'रकम यहाँ टाइप करें' : 'Type amount here'}
+              className="input-field text-center mt-2"
+              aria-label={lang === 'hi' ? 'रकम' : 'Amount in rupees'}
+            />
           </div>
           
           {isExpense && (
@@ -940,7 +1009,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
         <div className="px-5 py-4 safe-bottom space-y-3">
           <button
             onClick={handleSave}
-            disabled={!amount || parseInt(amount) <= 0 || (isSale && !itemName.trim())}
+            disabled={!amount || parseInt(amount, 10) <= 0 || (isSale && (!itemName.trim() || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0))}
             className="btn-primary text-body-lg"
           >
             <Check size={20} /> {lang === 'hi' ? 'अपडेट करें' : 'Update'}
