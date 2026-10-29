@@ -17,6 +17,17 @@ function fmt(n: number): string {
   return n.toLocaleString('en-IN');
 }
 
+// Remove common LaTeX math wrappers so answers display as ordinary text.
+// In particular, "$56$" should render as "56", not look like USD.
+function normalizeAIAnswer(answer: string): string {
+  return answer
+    .replace(/\\$\\$([\\s\\S]+?)\\$\\$/g, '$1')
+    .replace(/\\$(\\s*[+-]?\\d+(?:,\\d{3})*(?:\\.\\d+)?\\s*)\\$/g, '$1')
+    .replace(/\\\\\\(([\\s\\S]+?)\\\\\\)/g, '$1')
+    .replace(/\\\\\\[([\\s\\S]+?)\\\\\\]/g, '$1')
+    .trim();
+}
+
 // Helper: detect if question is about TODAY
 function isTodayQuestion(q: string): boolean {
   return /today|aaj|आज|आजका|आज का|आजकी|आज की/.test(q);
@@ -611,6 +622,7 @@ export function AskScreen() {
   // Get active session
   const activeSession = state.chatSessions.find(s => s.id === state.activeSessionId);
   const messages = activeSession?.messages || [];
+  const savedSessions = state.chatSessions.filter(session => session.messages.length > 0);
   
   const suggestedQuestions = [
     lang === 'hi' ? 'आज की बिक्री कितनी हुई?' : 'What are today\'s sales?',
@@ -623,7 +635,7 @@ export function AskScreen() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, isSending]);
   
   const handleSend = async (text?: string, fromVoice = false) => {
     const message = (text || input.trim()).trim();
@@ -675,7 +687,7 @@ export function AskScreen() {
           );
         }
 
-        response = typeof result?.answer === 'string' ? result.answer.trim() : '';
+        response = typeof result?.answer === 'string' ? normalizeAIAnswer(result.answer.trim()) : '';
         if (!response) {
           throw new Error('The AI returned an empty answer. Please try again.');
         }
@@ -686,8 +698,6 @@ export function AskScreen() {
         : (responseLang === 'hi'
           ? 'अभी AI सलाह उपलब्ध नहीं है। कृपया थोड़ी देर बाद फिर कोशिश करें।'
           : 'The AI advisor is unavailable right now. Please try again shortly.');
-    } finally {
-      setIsSending(false);
     }
 
     const assistantMsg: ChatMessage = {
@@ -698,6 +708,7 @@ export function AskScreen() {
       language: responseLang,
     };
     dispatch({ type: 'ADD_CHAT_MESSAGE', payload: assistantMsg });
+    setIsSending(false);
 
   };
 
@@ -769,7 +780,7 @@ export function AskScreen() {
         </div>
         
         <div className="flex-1 scroll-area px-5 py-4">
-          {state.chatSessions.length === 0 ? (
+          {savedSessions.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">💬</div>
               <p className="text-body-lg text-text-secondary mb-2">
@@ -781,7 +792,7 @@ export function AskScreen() {
             </div>
           ) : (
             <div className="space-y-3">
-              {state.chatSessions.map((session) => (
+              {savedSessions.map((session) => (
                 <button
                   key={session.id}
                   onClick={() => handleSelectSession(session.id)}
@@ -868,7 +879,7 @@ export function AskScreen() {
                   <Plus size={20} className="text-text-secondary" />
                   {lang === 'hi' ? 'नई बातचीत' : 'New Chat'}
                 </button>
-                {state.chatSessions.length > 0 && (
+                {savedSessions.length > 0 && (
                   <button
                     onClick={() => {
                       if (confirm(lang === 'hi' ? 'सारी बातचीत मिटा दें?' : 'Clear all chat history?')) {
@@ -951,6 +962,16 @@ export function AskScreen() {
             )}
           </div>
         ))}
+        {isSending && (
+          <div className="mb-4 animate-fade-in" role="status" aria-live="polite">
+            <div className="card max-w-[90%]">
+              <div className="flex items-center gap-3 text-text-secondary">
+                <span className="h-2 w-2 rounded-full bg-primary animate-pulse flex-shrink-0" />
+                <p className="text-body">{lang === 'hi' ? 'सोच रहा हूँ…' : 'Thinking…'}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       
       {/* Input area */}
