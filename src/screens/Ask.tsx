@@ -216,8 +216,8 @@ function getTrackedQuantitySummary(sales: any[], lang: string): string {
   const total = ranked.reduce((sum, item) => sum + item.quantity, 0);
   const list = ranked.map(item => item.name + ': ' + (Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 3 }))).join(', ');
   return lang === 'hi'
-    ? '\n\n**पिछले 7 दिनों की दर्ज मात्रा:** शीर्ष सामान/सेवाएँ — ' + list + '. इसमें केवल वही एंट्री शामिल हैं जिनमें मात्रा दर्ज है।'
-    : '\n\n**Tracked quantity, last 7 days:** top items/services — ' + list + '. This includes only entries where quantity was recorded.';
+    ? '\n\n**पिछले 7 दिनों की दर्ज मात्रा (शीर्ष सामान/सेवाएँ):** ' + list + '। इन शीर्ष चीज़ों की कुल दर्ज मात्रा ' + total + ' यूनिट है। केवल मात्रा दर्ज वाली एंट्री शामिल हैं।'
+    : '\n\n**Tracked quantities, last 7 days (top items/services):** ' + list + '. Total for these top items is ' + total + ' units. Only entries with a recorded quantity are included.';
 }
 
 function getShopInventoryAdvice(shopType: string | null | undefined, lang: string): string {
