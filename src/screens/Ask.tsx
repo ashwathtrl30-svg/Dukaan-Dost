@@ -4,6 +4,8 @@ import { t } from '../i18n';
 import { ChatMessage, ChatSession } from '../types';
 import { Send, MoreVertical, Plus, ArrowLeft, Trash2, MessageCircle, Clock } from 'lucide-react';
 import { findKnowledgeEntry } from '../knowledgeBase';
+import { VoiceMicButton } from '../components/VoiceMicButton';
+import { detectVoiceLanguage, speakText } from '../voice/speech';
 
 // Helper: get today's date string
 function getTodayStr(): string {
@@ -514,6 +516,7 @@ export function AskScreen() {
   const lang = state.language!;
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [voiceNotice, setVoiceNotice] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -535,11 +538,12 @@ export function AskScreen() {
     }
   }, [messages]);
   
-  const handleSend = async (text?: string) => {
-    const message = text || input.trim();
+  const handleSend = async (text?: string, speakReply = false) => {
+    const message = (text || input.trim()).trim();
     if (!message || isSending) return;
 
-    // Add user message immediately.
+    const responseLang = speakReply ? detectVoiceLanguage(message, lang) : lang;
+
     const userMsg: ChatMessage = {
       id: generateId(),
       role: 'user',
@@ -552,19 +556,25 @@ export function AskScreen() {
 
     let response = '';
     try {
-      // Keep factual shop-ledger calculations local. Use the LLM for advice,
-      // planning, explanations, and questions the local rules cannot understand.
+      // Shop-ledger figures must come from local entries, never an AI guess.
       const intent = classifyIntent(message.toLowerCase().trim());
+      const mentionsLedgerData =
+        /\b(?:sales?|sold|revenue|turnover|expenses?|expense|profit|udhaar|udhar|credit|bikri|bika|becha|kharch|kharcha|munafa)\b|बिक्री|खर्च|उधार|मुनाफ़ा|मुनाफा/u.test(message);
+      const asksForAdvice = isAdviceQuestion(message.toLowerCase().trim());
 
       if (intent === 'data_query') {
-        response = generateResponse(message, state, lang);
+        response = generateResponse(message, state, responseLang);
+      } else if (speakReply && mentionsLedgerData && !asksForAdvice) {
+        response = responseLang === 'hi'
+          ? 'इस सवाल का भरोसेमंद जवाब देने के लिए ज़रूरी दुकान डेटा नहीं मिला। कृपया सवाल को स्पष्ट करें या संबंधित एंट्री पहले जोड़ें।'
+          : 'I do not have enough matching shop data to answer that reliably. Please clarify the question or add the relevant entries first.';
       } else {
         const apiResponse = await fetch('/api/ask', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             question: message,
-            language: lang === 'hi' ? 'Hindi' : 'English',
+            language: responseLang === 'hi' ? 'Hindi' : 'English',
             shopContext: buildAIShopContext(state),
           }),
         });
@@ -586,7 +596,7 @@ export function AskScreen() {
     } catch (error) {
       response = error instanceof Error && error.message !== 'Failed to fetch'
         ? error.message
-        : (lang === 'hi'
+        : (responseLang === 'hi'
           ? 'अभी AI सलाह उपलब्ध नहीं है। कृपया थोड़ी देर बाद फिर कोशिश करें।'
           : 'The AI advisor is unavailable right now. Please try again shortly.');
     } finally {
@@ -600,8 +610,20 @@ export function AskScreen() {
       timestamp: Date.now(),
     };
     dispatch({ type: 'ADD_CHAT_MESSAGE', payload: assistantMsg });
+
+    if (speakReply) {
+      setVoiceNotice(responseLang === 'hi' ? 'जवाब बोलकर सुना रहा हूँ…' : 'Reading the answer aloud…');
+      speakText(
+        response,
+        responseLang,
+        () => setVoiceNotice(''),
+        () => setVoiceNotice(responseLang === 'hi'
+          ? 'आवाज़ नहीं चला पाए। जवाब स्क्रीन पर उपलब्ध है।'
+          : 'Audio playback failed. The answer is still available on screen.')
+      );
+    }
   };
-  
+
   const handleNewChat = () => {
     dispatch({ type: 'CREATE_NEW_CHAT' });
     setShowHistory(false);
@@ -819,7 +841,23 @@ export function AskScreen() {
           >
             <Send size={20} />
           </button>
+          <VoiceMicButton
+            language={lang}
+            shape="rounded"
+            disabled={isSending}
+            label={lang === 'hi' ? 'आवाज़ से सवाल पूछें' : 'Ask by voice'}
+            onTranscript={(transcript) => {
+              setInput(transcript);
+              void handleSend(transcript, true);
+            }}
+            onStatus={setVoiceNotice}
+          />
         </div>
+        {voiceNotice && (
+          <p className="mt-2 text-xs leading-snug text-text-secondary" role="status" aria-live="polite">
+            {voiceNotice}
+          </p>
+        )}
       </div>
     </div>
   );
