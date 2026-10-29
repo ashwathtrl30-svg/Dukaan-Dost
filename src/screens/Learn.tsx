@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../store';
 import { t } from '../i18n';
-import { BookOpen, Play, CheckCircle, ChevronRight, RefreshCw, Store, ClipboardCheck } from 'lucide-react';
+import { Play, CheckCircle, ChevronRight, RefreshCw, Store, ClipboardCheck } from 'lucide-react';
 
 interface LessonData {
   id: string;
@@ -307,12 +307,47 @@ function getDailyLessons(dateKey: string, refreshCount: number): LessonData[] {
   );
 }
 
+function LessonCopy({ content }: { content: string }) {
+  return (
+    <div className="space-y-2">
+      {content.split('\\n').map((rawLine, index) => {
+        const line = rawLine.trim();
+        if (!line) return <div key={index} className="h-1" />;
+        const heading = line.match(/^\\*\\*(.+)\\*\\*$/);
+        if (heading) {
+          return <h4 key={index} className="text-body font-semibold text-text pt-1">{heading[1]}</h4>;
+        }
+        const bullet = line.match(/^(?:[-•])\\s+(.+)$/);
+        if (bullet) {
+          return (
+            <div key={index} className="flex items-start gap-2 pl-1">
+              <span className="text-primary leading-relaxed">•</span>
+              <p className="text-text leading-relaxed text-body flex-1">{bullet[1]}</p>
+            </div>
+          );
+        }
+        const numbered = line.match(/^(\\d+\\.)\\s+(.+)$/);
+        if (numbered) {
+          return (
+            <div key={index} className="flex items-start gap-2 pl-1">
+              <span className="text-primary font-semibold text-small leading-relaxed">{numbered[1]}</span>
+              <p className="text-text leading-relaxed text-body flex-1">{numbered[2]}</p>
+            </div>
+          );
+        }
+        return <p key={index} className="text-text leading-relaxed text-body">{line}</p>;
+      })}
+    </div>
+  );
+}
+
 // ============ LEARN SCREEN ============
 export function LearnScreen() {
   const { state } = useStore();
   const lang = state.language!;
   const [selectedLesson, setSelectedLesson] = useState<string | null>(null);
   const [completedLessons, setCompletedLessons] = useState<string[]>([]);
+  const [plannedLessons, setPlannedLessons] = useState<string[]>([]);
   const [refreshCount, setRefreshCount] = useState(0);
   const [todayKey, setTodayKey] = useState(() => getLocalDateKey());
   const dailyLessons = useMemo(() => getDailyLessons(todayKey, refreshCount), [todayKey, refreshCount]);
@@ -380,9 +415,7 @@ export function LearnScreen() {
             <h3 className="text-body font-semibold text-text mb-2">
               {lang === 'hi' ? 'काम की सीख' : 'The lesson'}
             </h3>
-            <p className="text-text whitespace-pre-line leading-relaxed text-body">
-              {lang === 'hi' ? lesson.contentHi : lesson.contentEn}
-            </p>
+            <LessonCopy content={lang === 'hi' ? lesson.contentHi : lesson.contentEn} />
           </div>
           
           <div className="space-y-3">
@@ -397,7 +430,14 @@ export function LearnScreen() {
             >
               <CheckCircle size={20} /> {t('done', lang)}
             </button>
-            <button className="btn-secondary">
+            <button
+              type="button"
+              onClick={() => {
+                setPlannedLessons(previous => previous.includes(lesson.id) ? previous : [...previous, lesson.id]);
+                setSelectedLesson(null);
+              }}
+              className="btn-secondary"
+            >
               <Play size={20} /> {t('tryInShop', lang)}
             </button>
           </div>
@@ -460,10 +500,16 @@ export function LearnScreen() {
                 <div className="flex-1 min-w-0">
                   <p className="text-body font-semibold text-text truncate">{lang === 'hi' ? lesson.titleHi : lesson.titleEn}</p>
                   <p className="text-small text-text-secondary truncate">{lang === 'hi' ? lesson.descHi : lesson.descEn}</p>
-                  <p className="text-small text-text-secondary mt-1">{lesson.duration} {t('minutes', lang)}</p>
+                  <p className="text-small text-text-secondary mt-1">
+                    {plannedLessons.includes(lesson.id)
+                      ? (lang === 'hi' ? 'आज आज़माने के लिए चुना' : 'Planned to try')
+                      : `${lesson.duration} ${t('minutes', lang)}`}
+                  </p>
                 </div>
                 {isCompleted ? (
                   <CheckCircle size={24} className="text-positive flex-shrink-0" />
+                ) : plannedLessons.includes(lesson.id) ? (
+                  <ClipboardCheck size={21} className="text-primary flex-shrink-0" />
                 ) : (
                   <ChevronRight size={20} className="text-text-secondary flex-shrink-0" />
                 )}
