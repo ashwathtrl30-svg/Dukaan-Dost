@@ -776,7 +776,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
               inputMode="numeric"
               pattern="[0-9]*"
               value={amount}
-              onChange={(e) => setAmount(e.target.value.replace(/\\D/g, '').slice(0, 7))}
+              onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').slice(0, 7))}
               placeholder={lang === 'hi' ? 'रकम यहाँ टाइप करें' : 'Type amount here'}
               className="input-field text-center mt-2"
               aria-label={lang === 'hi' ? 'रकम' : 'Amount in rupees'}
@@ -976,7 +976,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
               inputMode="numeric"
               pattern="[0-9]*"
               value={amount}
-              onChange={(e) => setAmount(e.target.value.replace(/\\D/g, '').slice(0, 7))}
+              onChange={(e) => setAmount(e.target.value.replace(/\D/g, '').slice(0, 7))}
               placeholder={lang === 'hi' ? 'रकम यहाँ टाइप करें' : 'Type amount here'}
               className="input-field text-center mt-2"
               aria-label={lang === 'hi' ? 'रकम' : 'Amount in rupees'}
