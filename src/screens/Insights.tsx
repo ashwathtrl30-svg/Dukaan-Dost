@@ -6,6 +6,7 @@ import {
   Calendar,
   Lightbulb,
   Minus,
+  Package,
   Sparkles,
   TrendingUp,
   Wallet,
