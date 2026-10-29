@@ -64,7 +64,7 @@ function AppContent() {
       } else if (transaction.type === 'expense') {
         dispatch({
           type: 'ADD_EXPENSE',
-          payload: { id, date: today, amount: transaction.amount, category: 'stock', createdAt: Date.now() },
+          payload: { id, date: today, amount: transaction.amount, category: transaction.expenseCategory || 'other', createdAt: Date.now() },
         });
         summaries.push(formatRupee(transaction.amount) + (lang === 'hi' ? ' खर्च' : ' expenses'));
         created.push({ type: 'expense', id });
