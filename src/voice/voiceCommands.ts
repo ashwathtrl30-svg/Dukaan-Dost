@@ -374,7 +374,11 @@ function closestExpenseCategory(text: string, span: AmountSpan): ExpenseCategory
 
 function stripVoiceCommandWords(value: string): string {
   return value
-    .replace(/(?:\bin\s+sab\b|\bsab\s+ka\b|\bsabka\b|\bsab\s+ki\b|\bplease\b|\badd\s+it\b|\badd\b|\brecord\b|\benter\b|\blog\b|\bsave\b|\bput\b|\bjod(?:o|na)?\b|\bdaal(?:o)?\b|\bdarj\b|\bjama\b|\bkaro\b|\bkar\s+do\b|\bsales?\b|\bbikri\b|\bbika\b|\bbecha\b|\bbech\s+diya\b|\bbik\s+gaya\b|\bbik\s+gayi\b|\bsold\b|\bexpenses?\b|\bkharch(?:a|e|aa)?\b|\budhaar\b|\budhar\b|\bcredit\b|जोड़(?:ो|ें|ना|िए)?|डाल(?:ो|िए)?|दर्ज|जमा|करो|करें|कर\s+दो|बिक्री|बिका|बेचा|बेच\s+दिया|बिक\s+गया|बिक\s+गई|खर्च(?:ा|े)?|उधार|ऐड|एड).*$/iu, '')
+    // Remove command/type tokens individually rather than cutting off everything
+    // after the first one. That preserves item names in phrases like
+    // "add sales: do kilo aloo 100 rupaye".
+    .replace(/\b(?:in\s+sab|sab\s+ka|sabka|sab\s+ki|please|add\s+it|add|record|enter|log|save|put|jod(?:o|na)?|daal(?:o)?|darj|jama|karo|kar\s+do|sales?|sell|sold|bikri|bika|becha|bech\s+diya|bik\s+gaya|bik\s+gayi|expenses?|kharch(?:a|e|aa)?|udhaar|udhar|credit)\b/giu, ' ')
+    .replace(/जोड़(?:ो|ें|ना|िए)?|डाल(?:ो|िए)?|दर्ज|जमा|करो|करें|कर\s+दो|बिक्री|बिका|बेचा|बेच\s+दिया|बिक\s+गया|बिक\s+गई|खर्च(?:ा|े)?|उधार|ऐड|एड/gu, ' ')
     .replace(/\b(?:in|mein|mai|me|and|aur|phir|then|total)\b/giu, ' ')
     .replace(/(?:में|मै|और|फिर|कुल)\s*$/gu, '')
     .replace(/[,:;]+/g, ' ')
