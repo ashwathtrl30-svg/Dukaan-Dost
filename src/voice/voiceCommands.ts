@@ -352,24 +352,34 @@ function currencySuffixEnd(span: AmountSpan, text: string): number {
 }
 
 function closestExpenseCategory(text: string, span: AmountSpan): ExpenseCategoryMatch | undefined {
-  const local = text.slice(Math.max(0, span.start - 65), Math.min(text.length, span.end + 90));
-  if (/(?:saaman|samaan|saman|saamaan|maal)\s+(?:bhejne|bhejna|bhejane|bhejne\s+mein|bhejne\s+me)|सामान\s+भेजने|माल\s+भेजने|भेजने\s+में/iu.test(local)) {
-    const match = /(?:samaan|saman|maal)\s+(?:bhejne|bhejna|bhejane|bhejne\s+mein|bhejne\s+me)|सामान\s+भेजने|माल\s+भेजने|भेजने\s+में/iu.exec(local);
-    if (match) {
-      const start = Math.max(0, span.start - 65) + (match.index || 0);
-      return { category: 'transport', start, end: start + match[0].length };
-    }
+  const distanceToSpan = (match: { start: number; end: number }) => {
+    if (span.end <= match.start) return match.start - span.end;
+    if (span.start >= match.end) return span.start - match.end;
+    return 0;
+  };
+
+  const matches = findExpenseCategoryMatches(text).sort(
+    (a, b) => distanceToSpan(a) - distanceToSpan(b),
+  );
+  const nearestCategory = matches[0];
+  const nearestCategoryDistance = nearestCategory ? distanceToSpan(nearestCategory) : Number.POSITIVE_INFINITY;
+
+  // Specific "goods being sent/delivered" language means transport, but only
+  // when that phrase is closer to this amount than a separate stock mention.
+  const shippingPattern = /(?:saaman|samaan|saamaan|saman|maal)\s+(?:bhejne|bhejna|bhejane|bhejne\s+mein|bhejne\s+me)|सामान\s+भेजने|माल\s+भेजने|भेजने\s+में/giu;
+  const shippingMatches = [...text.matchAll(shippingPattern)].map((match) => ({
+    category: 'transport',
+    start: match.index ?? 0,
+    end: (match.index ?? 0) + match[0].length,
+  }));
+  shippingMatches.sort((a, b) => distanceToSpan(a) - distanceToSpan(b));
+  const nearestShipping = shippingMatches[0];
+  const shippingDistance = nearestShipping ? distanceToSpan(nearestShipping) : Number.POSITIVE_INFINITY;
+
+  if (nearestShipping && shippingDistance <= 90 && shippingDistance <= nearestCategoryDistance) {
+    return nearestShipping;
   }
-  const matches = findExpenseCategoryMatches(text);
-  matches.sort((a, b) => {
-    const distA = span.end <= a.start ? a.start - span.end : span.start >= a.end ? span.start - a.end : 0;
-    const distB = span.end <= b.start ? b.start - span.end : span.start >= b.end ? span.start - b.end : 0;
-    return distA - distB;
-  });
-  if (!matches.length) return undefined;
-  const chosen = matches[0];
-  const distance = span.end <= chosen.start ? chosen.start - span.end : span.start >= chosen.end ? span.start - chosen.end : 0;
-  return distance <= 90 ? chosen : undefined;
+  return nearestCategory && nearestCategoryDistance <= 90 ? nearestCategory : undefined;
 }
 
 function stripVoiceCommandWords(value: string): string {
