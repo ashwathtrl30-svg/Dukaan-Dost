@@ -2,13 +2,20 @@ import React, { useState } from 'react';
 import { useStore, formatRupee, getTodaySales, getTodayExpenses, getLast7DaysData, getWeekSales, getTotalUdhaar, generateId, getToday } from '../store';
 import { t } from '../i18n';
 import { SaleEntry, ExpenseEntry, UdhaarEntry, PaymentType } from '../types';
-import { Plus, ArrowLeft, X, Check, TrendingUp, TrendingDown, Edit2 } from 'lucide-react';
+import { Plus, ArrowLeft, X, Check, TrendingUp, TrendingDown, Edit2, MoreVertical, ClipboardList, CalendarDays } from 'lucide-react';
 
 // ============ HOME SCREEN ============
+type DisplayEntry =
+  | (SaleEntry & { entryType: 'sale' })
+  | (ExpenseEntry & { entryType: 'expense' })
+  | (UdhaarEntry & { entryType: 'udhaar' });
+
 export function HomeScreen() {
   const { state } = useStore();
   const lang = state.language!;
   const [entryType, setEntryType] = useState<string | null>(null);
+  const [showEntriesMenu, setShowEntriesMenu] = useState(false);
+  const [showAllEntries, setShowAllEntries] = useState(false);
   const [showUdhaarMenu, setShowUdhaarMenu] = useState(false);
   const [showUdhaarList, setShowUdhaarList] = useState(false);
   const [editingEntry, setEditingEntry] = useState<any>(null);
@@ -208,11 +215,47 @@ export function HomeScreen() {
         )}
         
         {/* Recent entries */}
-        {(state.sales.length > 0 || state.expenses.length > 0) && (
-          <div className="px-5 py-2">
-            <p className="text-small font-semibold text-text-secondary mb-2 uppercase tracking-wide">
+        <div className="px-5 py-2">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <p className="text-small font-semibold text-text-secondary uppercase tracking-wide">
               {lang === 'hi' ? 'हाल की एंट्री' : 'Recent entries'}
             </p>
+            <div className="relative flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowEntriesMenu(!showEntriesMenu)}
+                aria-label={lang === 'hi' ? 'एंट्री मेनू खोलें' : 'Open entries menu'}
+                aria-expanded={showEntriesMenu}
+                className="w-10 h-10 rounded-full flex items-center justify-center text-text-secondary hover:bg-card"
+              >
+                <MoreVertical size={22} />
+              </button>
+              {showEntriesMenu && (
+                <>
+                  <button
+                    type="button"
+                    aria-label={lang === 'hi' ? 'मेनू बंद करें' : 'Close menu'}
+                    className="fixed inset-0 z-30 cursor-default"
+                    onClick={() => setShowEntriesMenu(false)}
+                  />
+                  <div className="absolute right-0 top-10 z-40 min-w-[190px] rounded-xl border border-border bg-card py-1 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowEntriesMenu(false);
+                        setShowAllEntries(true);
+                      }}
+                      className="w-full px-4 py-3 flex items-center gap-3 text-left text-body text-text hover:bg-bg"
+                    >
+                      <ClipboardList size={18} className="text-primary" />
+                      {lang === 'hi' ? 'सभी एंट्री देखें' : 'See All Entries'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          {(state.sales.length > 0 || state.expenses.length > 0) ? (
             <div className="space-y-2">
               {[...state.sales.slice(0, 3).map(s => ({ ...s, entryType: 'sale' as const })),
                 ...state.expenses.slice(0, 2).map(e => ({ ...e, entryType: 'expense' as const }))]
@@ -245,8 +288,12 @@ export function HomeScreen() {
                   </div>
                 ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-small text-text-secondary py-2">
+              {lang === 'hi' ? 'अभी कोई बिक्री या खर्च दर्ज नहीं है।' : 'No sales or expense entries yet.'}
+            </p>
+          )}
+        </div>
         
         <div className="h-24" />
       </div>
@@ -270,6 +317,11 @@ export function HomeScreen() {
       {showUdhaarList && (
         <UdhaarList onClose={() => setShowUdhaarList(false)} />
       )}
+
+      {/* All Entries */}
+      {showAllEntries && (
+        <AllEntriesModal onClose={() => setShowAllEntries(false)} />
+      )}
     </div>
   );
 }
@@ -283,6 +335,126 @@ function QuickAddButton({ emoji, label, color, onClick }: { emoji: string; label
       <span className="text-3xl">{emoji}</span>
       <span className="text-small font-semibold text-text">{label}</span>
     </button>
+  );
+}
+
+
+// ============ ALL ENTRIES ============
+function AllEntriesModal({ onClose }: { onClose: () => void }) {
+  const { state } = useStore();
+  const lang = state.language || 'en';
+  const locale = lang === 'hi' ? 'hi-IN' : 'en-IN';
+
+  const entries: DisplayEntry[] = [
+    ...state.sales.map((entry) => ({ ...entry, entryType: 'sale' as const })),
+    ...state.expenses.map((entry) => ({ ...entry, entryType: 'expense' as const })),
+    ...state.udhaar.map((entry) => ({ ...entry, entryType: 'udhaar' as const })),
+  ].sort((a, b) => {
+    const aTime = a.createdAt || new Date(a.date).getTime();
+    const bTime = b.createdAt || new Date(b.date).getTime();
+    return bTime - aTime;
+  });
+
+  const formatFullDate = (date: string) => {
+    const [year, month, day] = date.split('-').map(Number);
+    const parsedDate = year && month && day
+      ? new Date(year, month - 1, day)
+      : new Date(date);
+    return parsedDate.toLocaleDateString(locale, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  const getEntryTitle = (entry: DisplayEntry) => {
+    if (entry.entryType === 'sale') return t('sale', lang);
+    if (entry.entryType === 'expense') {
+      return t(`ec_${entry.category || 'other'}` as any, lang);
+    }
+    return lang === 'hi' ? 'उधार' : 'Udhaar';
+  };
+
+  const getEntrySubtitle = (entry: DisplayEntry) => {
+    if (entry.entryType === 'udhaar') {
+      return entry.customerName || (lang === 'hi' ? 'ग्राहक का नाम नहीं' : 'Customer name not provided');
+    }
+    if (entry.note?.trim()) return entry.note.trim();
+    if (entry.entryType === 'sale') {
+      return lang === 'hi' ? 'बिक्री' : 'Sale entry';
+    }
+    return lang === 'hi' ? 'खर्च' : 'Expense entry';
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-bg flex flex-col animate-fade-in">
+      <div className="px-5 py-4 border-b border-border flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={lang === 'hi' ? 'होम पर वापस जाएँ' : 'Back to Home'}
+          className="w-12 h-12 rounded-full flex items-center justify-center"
+        >
+          <ArrowLeft size={24} className="text-text-secondary" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-section-title text-text">
+            {lang === 'hi' ? 'सभी एंट्री' : 'All Entries'}
+          </h2>
+          <p className="text-small text-text-secondary">
+            {entries.length} {lang === 'hi' ? 'एंट्री' : (entries.length === 1 ? 'entry' : 'entries')}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex-1 scroll-area px-5 py-4">
+        {entries.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-5xl mb-4">📒</div>
+            <p className="text-body-lg text-text-secondary">
+              {lang === 'hi' ? 'अभी कोई एंट्री नहीं है।' : 'No entries yet.'}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2 pb-6">
+            {entries.map((entry) => {
+              const isSale = entry.entryType === 'sale';
+              const isExpense = entry.entryType === 'expense';
+              const title = getEntryTitle(entry);
+              const subtitle = getEntrySubtitle(entry);
+
+              return (
+                <div key={entry.entryType + '-' + entry.id} className="card flex items-center gap-3 px-4 py-3">
+                  <span className="text-2xl flex-shrink-0">
+                    {isSale ? '💰' : isExpense ? '📤' : '📒'}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-body font-semibold text-text truncate">{title}</p>
+                    <p className="text-small text-text-secondary truncate">{subtitle}</p>
+                    <p className="text-small text-text-secondary mt-1 flex items-center gap-1">
+                      <CalendarDays size={13} />
+                      {formatFullDate(entry.date)}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <span className={`text-body font-bold ${isSale ? 'text-positive' : isExpense ? 'text-problem' : 'text-warning'}`}>
+                      {isSale ? '+' : isExpense ? '-' : ''}{formatRupee(entry.amount)}
+                    </span>
+                    {entry.entryType === 'udhaar' && (
+                      <span className={`text-small ${entry.paid ? 'text-positive' : 'text-warning'}`}>
+                        {entry.paid
+                          ? (lang === 'hi' ? 'चुकाया' : 'Paid')
+                          : (lang === 'hi' ? 'बाकी' : 'Pending')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
