@@ -503,8 +503,8 @@ function FestivalTool() {
     <div className="space-y-4 animate-fade-in">
       <p className="text-small text-text-secondary">
         {lang === 'hi'
-          ? 'अगले 2 महीनों के त्योहार। तैयारी आपके कारोबार के प्रकार के हिसाब से है; खरीदने से पहले अपना स्टॉक और स्थानीय माँग जाँचें।'
-          : 'Upcoming festivals in the next 2 months. Advice is tailored to your shop type; check current stock and local demand before buying.'}
+          ? 'अगले 2 महीनों के त्योहार। तैयारी आपके कारोबार के प्रकार के हिसाब से है; खरीदने से पहले अपना स्टॉक और स्थानीय माँग जाँचें। कुछ त्योहारों की तारीख़ क्षेत्र के अनुसार बदल सकती है, इसलिए ऑर्डर से पहले स्थानीय तारीख़ की पुष्टि करें।'
+          : 'Upcoming festivals in the next 2 months. Advice is tailored to your shop type; check current stock and local demand before buying. Some observances can vary by region, so confirm the local date before placing festival orders.'}
       </p>
       {festivals.map((festival) => {
         const date = new Date(festival.date + 'T12:00:00');
