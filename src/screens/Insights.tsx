@@ -501,6 +501,9 @@ function getMyAdvice(
       'recorded-loss',
       'warning',
       lang === 'hi' ? `${label} दर्ज खर्च बिक्री से ज़्यादा हैं` : `Protect cash: ${label.toLowerCase()} is showing a shortfall`,
+      lang === 'hi'
+        ? `दर्ज खर्च बिक्री से ${formatRupee(gap)} ज़्यादा हैं। यह असली नुकसान भी हो सकता है या कुछ बिक्री छूटने से ऐसा दिख सकता है।`
+        : `Recorded expenses are ${formatRupee(gap)} above recorded sales. This may be a real shortfall, or some sales may not have been entered yet.`,
       getShopAction(shopType, 'shortfall', lang),
       105,
     );
@@ -526,7 +529,10 @@ function getMyAdvice(
       'cost-pressure',
       'warning',
       lang === 'hi' ? 'खर्च बिक्री से तेज़ बढ़ रहे हैं' : 'Costs may be squeezing your earnings',
-      getShopAction(shopType, topCategory?.category === 'stock' ? 'cost-stock' : 'cost', lang),
+      lang === 'hi'
+        ? `तुलना वाली अवधि में खर्च ${expenseGrowth}% बढ़ा, जबकि बिक्री ${salesGrowth}% बदली।${category ? ` ${category} सबसे बड़ा दर्ज खर्च है।` : ''}`
+        : `Compared with the same elapsed period, expenses rose ${expenseGrowth}% while sales changed by ${salesGrowth}%. ${category ? `${category} is the largest recorded expense category.` : ''}`,
+      getShopAction(shopType, 'cost', lang),
       96,
     );
   }
@@ -543,7 +549,10 @@ function getMyAdvice(
       'large-category',
       'watch',
       lang === 'hi' ? `${name} पर नज़र रखें` : `Check your largest cost before paying or reordering`,
-      getShopAction(shopType, topCategory.category === 'stock' ? 'cost-stock' : 'cost', lang),
+      lang === 'hi'
+        ? `${name} इस अवधि के दर्ज खर्च का लगभग ${topCategory.share}% है। यह ज़रूरी खर्च हो सकता है, लेकिन इसकी पुष्टि करना सही रहेगा।`
+        : `${name} makes up about ${topCategory.share}% of recorded expenses in this period. It may be necessary, but it is worth checking before committing more money.`,
+      getShopAction(shopType, 'cost', lang),
       70,
     );
   }
@@ -566,8 +575,11 @@ function getMyAdvice(
         'uneven-sales-days',
         'watch',
         lang === 'hi' ? 'कुछ दर्ज दिनों की बिक्री काफ़ी अलग है' : 'Sales vary a lot across recorded days',
+        lang === 'hi'
+          ? `${lowDate} को ${formatRupee(low[1])} और ${highDate} को ${formatRupee(high[1])} की बिक्री दर्ज हुई। यह दिन, माँग या अधूरी एंट्री के कारण हो सकता है।`
+          : `Recorded sales were ${formatRupee(low[1])} on ${lowDate} and ${formatRupee(high[1])} on ${highDate}. This may reflect the day, demand, or incomplete entries.`,
         getShopAction(shopType, 'uneven-days', lang),
-      62,
+        62,
       );
     }
   }
@@ -578,6 +590,9 @@ function getMyAdvice(
       'sales-fall',
       'watch',
       lang === 'hi' ? 'बिक्री में गिरावट का कारण खोजें' : 'Find the reason behind the sales dip',
+      lang === 'hi'
+        ? `तुलना वाली अवधि में दर्ज बिक्री ${Math.abs(salesFalling.salesChange!)}% कम है। अंदाज़े से छूट देने से पहले कारण पहचानें।`
+        : `Recorded sales are down ${Math.abs(salesFalling.salesChange!)}% versus the comparable period. Find the cause before offering discounts.`,
       getShopAction(shopType, 'sales-fall', lang),
       82,
     );
@@ -606,6 +621,13 @@ function getMyAdvice(
       'protect-progress',
       'positive',
       lang === 'hi' ? (strongWeek ? 'आपकी मेहनत रंग ला रही है' : 'अच्छी आदत, मज़बूत दुकान') : (strongWeek ? 'Your hard work is showing in the numbers' : 'Build on the good work you are doing'),
+      lang === 'hi'
+        ? (strongWeek
+            ? `इस हफ़्ते दर्ज खर्च के बाद ${formatRupee(week.profit)} बचा और मुनाफ़ा प्रतिशत ${week.profitMargin}% है। यह अच्छी दिशा है।`
+            : 'अभी कोई बड़ा ख़तरे का संकेत दर्ज आँकड़ों से साफ़ नहीं दिखता। नियमित हिसाब रखने से छोटी समस्या भी जल्दी पकड़ी जा सकती है।')
+        : (strongWeek
+            ? `Your records show ${formatRupee(week.profit)} left after recorded expenses and a ${week.profitMargin}% margin this week. That is encouraging progress.`
+            : 'No major warning stands out in the entries available. Consistent records help you spot small problems early, while there is still time to act.'),
       getShopAction(shopType, 'routine', lang),
       20,
     );
