@@ -282,7 +282,7 @@ function ChangeIndicator({
   lang: Language;
   kind: 'sales' | 'expenses';
 }) {
-  // A missing baseline is shown as a dash, never as a repeated "New activity" label.
+  // A missing comparison baseline is shown as a neutral dash.
   if (change === null) {
     return <span className="text-[11px] text-text-secondary">—</span>;
   }
