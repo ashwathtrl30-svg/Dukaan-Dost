@@ -6,6 +6,7 @@ import { Send, MoreVertical, Plus, ArrowLeft, Trash2, MessageCircle, Clock, Volu
 import { findKnowledgeEntry } from '../knowledgeBase';
 import { VoiceMicButton } from '../components/VoiceMicButton';
 import { detectVoiceLanguage, speakText } from '../voice/speech';
+import { getFestivalDateLabel, getFestivalName, getFestivalShopAdvice, getUpcomingFestivals } from '../festivals';
 
 // Helper: get today's date string
 function getTodayStr(): string {
@@ -134,34 +135,117 @@ function buildShopContext(state: any): string {
 function buildAIShopContext(state: any): string {
   const profile = state.shopProfile || {};
   const details: string[] = [];
+  const shopType = profile.shopType || 'other';
 
-  if (profile.shopType) {
-    details.push(`Shop type: ${t(`st_${profile.shopType}` as any, 'en')}`);
+  details.push(`Shop type: ${t(`st_${shopType}` as any, 'en')}`);
+  if (typeof profile.shopName === 'string' && profile.shopName.trim()) {
+    details.push(`Shop name: ${profile.shopName.trim().slice(0, 80)}`);
   }
   if (typeof profile.city === 'string' && profile.city.trim()) {
-    details.push(`City: ${profile.city.trim().slice(0, 80)}`);
+    details.push(`City/area: ${profile.city.trim().slice(0, 80)}`);
   }
-  if (Number.isInteger(profile.workers) && profile.workers > 0) {
-    details.push(`Workers: ${profile.workers}`);
+  if (profile.ownership) {
+    details.push(`Premises: ${profile.ownership === 'rent' ? 'rented' : 'owned'}`);
+  }
+  const durationLabels: Record<string, string> = {
+    under1: 'less than 1 year', '1to5': '1–5 years', '5to10': '5–10 years', over10: 'more than 10 years',
+  };
+  if (profile.duration && durationLabels[profile.duration]) details.push(`Business experience: ${durationLabels[profile.duration]}`);
+  if (profile.monthlySales) details.push(`Monthly sales range: ${t(`ms_${profile.monthlySales}` as any, 'en')}`);
+  if (Number.isInteger(profile.workers) && profile.workers > 0) details.push(`Workers: ${profile.workers}`);
+
+  const creditLabels: Record<string, string> = {
+    never: 'does not usually sell on credit', sometimes: 'sometimes sells on credit', often: 'frequently sells on credit',
+  };
+  if (profile.udhaarLevel && creditLabels[profile.udhaarLevel]) details.push(`Credit/udhaar pattern: ${creditLabels[profile.udhaarLevel]}`);
+
+  const accountingLabels: Record<string, string> = {
+    memory: 'tracks accounts from memory', notebook: 'uses a notebook', app: 'uses an app', nothing: 'does not currently use a regular method',
+  };
+  if (profile.accounting && accountingLabels[profile.accounting]) details.push(`Current record-keeping: ${accountingLabels[profile.accounting]}`);
+
+  const worryLabels: Record<string, string> = {
+    low_profit: 'improving profit', too_much_stock: 'slow-moving or excess stock', customers_not_paying: 'collecting customer payments',
+    rising_costs: 'rising costs', competition: 'competition', no_time: 'saving time', dont_know: 'general business guidance',
+  };
+  if (Array.isArray(profile.worries) && profile.worries.length) {
+    details.push(`Main business concerns: ${profile.worries.map((w: string) => worryLabels[w]).filter(Boolean).join(', ')}`);
   }
 
-  return details.length ? details.join("\n") : "Shop type not provided.";
+  details.push(
+    'Personalization rules: Answer for this exact shop type and its real operating model. Do not give kirana/grocery/food-stock advice to a salon, tailor, medical shop, or another unrelated business. For salons and tailors, focus on services, bookings, capacity, supplies and repeat customers; for food businesses, focus on menu or produce demand, freshness and waste; for a medical shop, focus on compliant inventory, expiry and customer service; for other retailers, focus on relevant products and sales history. Use the profile details above where relevant. Do not invent sales, inventory, or customer data; clearly separate suggestions from facts.'
+  );
+
+  return details.join("\n");
 }
 
-// Get current season/festival context
+
+// Derive seasonal context from the same future-only festival calendar used by Tools.
 function getTimeContext(): string {
-  const now = new Date();
-  const month = now.getMonth();
-  const day = now.getDate();
-  
-  // Indian festival calendar (approximate)
-  if (month === 9 && day > 10) return 'Diwali season (Oct-Nov)';
-  if (month === 2 || month === 3) return 'Holi season (Mar)';
-  if (month === 5 || month === 6) return 'Monsoon season (Jun-Jul)';
-  if (month === 10 || month === 11) return 'Winter season (Nov-Dec)';
-  if (month === 3 || month === 4) return 'Summer season (Apr-May)';
-  
+  const nextFestival = getUpcomingFestivals(new Date(), 2)[0];
+  if (nextFestival) {
+    return `Upcoming Indian festival: ${getFestivalName(nextFestival, 'en')} on ${getFestivalDateLabel(nextFestival.date, 'en')}.`;
+  }
+  const month = new Date().getMonth();
+  if (month === 5 || month === 6) return 'Monsoon season';
+  if (month === 3 || month === 4) return 'Summer season';
+  if (month === 10 || month === 11) return 'Winter season';
   return 'Regular season';
+}
+
+function getShopInventoryAdvice(shopType: string | null | undefined, lang: string): string {
+  const hi = lang === 'hi';
+  const advice: Record<string, { en: string; hi: string }> = {
+    salon: {
+      en: 'For your salon, track shampoo, conditioner, colour/treatment products and hygiene consumables used by your most-booked services. Check what is on hand, review product expiry and replenish based on bookings and recent use—not grocery or general retail stock.',
+      hi: 'आपके सैलून में सबसे ज़्यादा बुक होने वाली सेवाओं में इस्तेमाल होने वाला शैम्पू, कंडीशनर, कलर/ट्रीटमेंट और सफ़ाई का सामान दर्ज करें। मौजूदा मात्रा और एक्सपायरी जाँचें, फिर बुकिंग व हाल के इस्तेमाल के आधार पर भरें—किराना या सामान्य रिटेल स्टॉक के आधार पर नहीं।',
+    },
+    tailor: {
+      en: 'For your tailoring business, track thread, lining, zips, hooks, buttons and fabric linked to confirmed jobs. Compare supplies on hand with pending orders before buying more; avoid buying fabric for unconfirmed demand.',
+      hi: 'आपके सिलाई कारोबार में धागा, अस्तर, ज़िप, हुक, बटन और पक्के ऑर्डर से जुड़ा कपड़ा दर्ज करें। खरीदने से पहले लंबित काम और उपलब्ध सामग्री मिलाएँ; बिना पक्के ऑर्डर के कपड़ा न खरीदें।',
+    },
+    medical: {
+      en: 'For your medical shop, review compliant, fast-moving health essentials and basic first-aid items, monitor expiry and storage, and follow applicable pharmacy requirements. Replenish based on real demand rather than buying every category in bulk.',
+      hi: 'आपकी मेडिकल दुकान में नियमों के अनुसार रखे जाने वाले तेज़ बिकने वाले स्वास्थ्य संबंधी ज़रूरी सामान और प्राथमिक उपचार की चीज़ें देखें। एक्सपायरी व स्टोरेज जाँचें और लागू फार्मेसी नियमों का पालन करें। हर श्रेणी का थोक स्टॉक न लें।',
+    },
+    bakery: {
+      en: 'For your bakery, track ingredients, food-safe packaging and the cakes, cookies or snacks customers order most. Plan perishables against confirmed orders and recent sales to reduce waste.',
+      hi: 'आपकी बेकरी में सामग्री, फूड-सेफ पैकिंग और लोकप्रिय केक, कुकीज़ या स्नैक्स की माँग दर्ज करें। बर्बादी घटाने के लिए खराब होने वाली सामग्री पक्के ऑर्डर और हाल की बिक्री देखकर लें।',
+    },
+    sweet: {
+      en: 'For your sweets business, track popular varieties, gift-box sizes, ingredients and packaging. Make fresh batches in manageable quantities and use advance orders to guide preparation.',
+      hi: 'आपकी मिठाई की दुकान में लोकप्रिय मिठाइयाँ, गिफ्ट बॉक्स के आकार, सामग्री और पैकिंग की माँग दर्ज करें। सीमित मात्रा में ताज़ा बैच बनाएँ और एडवांस ऑर्डर देखकर तैयारी करें।',
+    },
+    restaurant: {
+      en: 'For your restaurant, review ingredient use and demand by dish, including confirmed orders. Keep perishables fresh, record waste and adjust prep quantities rather than ordering generic retail products.',
+      hi: 'आपके रेस्टोरेंट में हर डिश की माँग और सामग्री का इस्तेमाल देखें, जिसमें पक्के ऑर्डर भी शामिल हों। ताज़ी सामग्री रखें, बर्बादी दर्ज करें और सामान्य रिटेल सामान के बजाय तैयारी की मात्रा माँग के हिसाब से बदलें।',
+    },
+    tea: {
+      en: 'For your tea business, track tea, milk, sugar, cups and your most-requested snack pairings. Review peak-hour demand and replenish perishables in smaller batches.',
+      hi: 'आपकी चाय की दुकान में चाय, दूध, चीनी, कप और लोकप्रिय स्नैक्स की माँग दर्ज करें। व्यस्त घंटों की माँग देखें और जल्दी खराब होने वाली चीज़ें कम मात्रा में भरें।',
+    },
+    vegetable: {
+      en: 'For your produce business, track fresh items by name and compare what sold with what was left or spoiled. Replenish in small, frequent lots to protect freshness and cash.',
+      hi: 'आपके फल-सब्ज़ी कारोबार में हर ताज़ी चीज़ का नाम दर्ज करें और बिक्री की तुलना बचे या खराब हुए माल से करें। ताज़गी और नकद बचाने के लिए कम मात्रा में बार-बार खरीदें।',
+    },
+    kirana: {
+      en: 'For your kirana shop, rank named staples, snacks and household essentials by recent sales. Check shelf stock first, then replenish proven fast movers in manageable quantities.',
+      hi: 'आपकी किराना दुकान में नाम वाले राशन, स्नैक्स और घरेलू ज़रूरतों की हाल की बिक्री देखें। पहले शेल्फ़ का स्टॉक गिनें, फिर तेज़ बिकने वाला सामान उचित मात्रा में भरें।',
+    },
+    mobile: {
+      en: 'For your mobile shop, track accessory names and compatible phone models. Replenish common cables, chargers, cases or protectors based on recent demand and exact compatibility.',
+      hi: 'आपकी मोबाइल दुकान में एक्सेसरी और उनसे मेल खाने वाले फोन मॉडल का नाम दर्ज करें। हाल की माँग और सही मॉडल के आधार पर केबल, चार्जर, कवर या स्क्रीन प्रोटेक्टर भरें।',
+    },
+    hardware: {
+      en: 'For your hardware shop, track fast-moving repair items and compatible electrical accessories. Check current stock and relevant safety/quality requirements before replenishing.',
+      hi: 'आपकी हार्डवेयर दुकान में तेज़ बिकने वाला मरम्मत का सामान और सही मेल खाने वाली इलेक्ट्रिकल एक्सेसरी दर्ज करें। खरीदने से पहले मौजूदा स्टॉक और सुरक्षा/गुणवत्ता जाँचें।',
+    },
+    other: {
+      en: 'Track the items or services specific to your business by name. Compare recent sales with what is on hand or pending, then replenish only proven demand.',
+      hi: 'अपने कारोबार के अनुसार सामान या सेवाओं का नाम दर्ज करें। हाल की बिक्री की तुलना उपलब्ध स्टॉक या लंबित काम से करें और साबित माँग के अनुसार ही खरीदें।',
+    },
+  };
+  return (advice[shopType || 'other'] || advice.other)[hi ? 'hi' : 'en'];
 }
 
 // Main AI response generator - World-class advisor persona
@@ -189,11 +273,56 @@ function generateResponse(question: string, state: any, lang: string): string {
     return lang === 'hi' ? 'आपका स्वागत है! 😊 और कुछ पूछना हो तो बेझिझक पूछें।' : 'You\'re welcome! 😊 Feel free to ask anything else.';
   }
   
+  const mentionsFestival = /festival|diwali|dhanteras|bhai dooj|chhath|guru nanak|christmas|karwa chauth|karva chauth|karwa|karva|makar sankranti|pongal|vasant panchami|shivratri|holi|gudi padwa|ram navami|raksha bandhan|janmashtami|ganesh chaturthi|onam|navratri|dussehra|त्योहार|दिवाली|धनतेरस|भाई दूज|छठ|गुरु नानक|क्रिसमस|करवा चौथ|मकर संक्रांति|पोंगल|बसंत पंचमी|महाशिवरात्रि|होली|गुड़ी पड़वा|राम नवमी|रक्षा बंधन|जन्माष्टमी|गणेश चतुर्थी|ओणम|नवरात्रि|दशहरा/u.test(q);
+  const wantsFestivalPlan = mentionsFestival && (
+    intent === 'planning' ||
+    /\b(?:what should|what to|which items|what items|buy|keep ready|prepare|stock|festival plan|planning|tips|advice)\b|क्या रखें|क्या खरीदें|क्या खरीदना|तैयारी|कौन-सा सामान/u.test(q)
+  );
+  if (wantsFestivalPlan) {
+    const upcoming = getUpcomingFestivals(new Date(), 2);
+    const nameAliases: Array<{ idPart: string; pattern: RegExp }> = [
+      { idPart: 'karwa-chauth', pattern: /karwa|karva|करवा चौथ/u },
+      { idPart: 'ahoi-ashtami', pattern: /ahoi|अहोई/u },
+      { idPart: 'dhanteras', pattern: /dhanteras|धनतेरस/u },
+      { idPart: 'diwali', pattern: /diwali|deepavali|दिवाली|दीपावली/u },
+      { idPart: 'bhai-dooj', pattern: /bhai dooj|bhaiya dooj|भाई दूज/u },
+      { idPart: 'chhath-puja', pattern: /chhath|छठ/u },
+      { idPart: 'guru-nanak-jayanti', pattern: /guru nanak|गुरु नानक|kartik purnima|कार्तिक पूर्णिमा/u },
+      { idPart: 'christmas', pattern: /christmas|क्रिसमस/u },
+      { idPart: 'makar-sankranti', pattern: /makar sankranti|pongal|मकर संक्रांति|पोंगल/u },
+      { idPart: 'vasant-panchami', pattern: /vasant panchami|बसंत पंचमी/u },
+      { idPart: 'maha-shivratri', pattern: /shivratri|शिवरात्रि/u },
+      { idPart: 'holi', pattern: /holi|होली/u },
+      { idPart: 'gudi-padwa', pattern: /gudi padwa|ugadi|गुड़ी पड़वा|उगादी/u },
+      { idPart: 'ram-navami', pattern: /ram navami|राम नवमी/u },
+      { idPart: 'akshaya-tritiya', pattern: /akshaya tritiya|अक्षय तृतीया/u },
+      { idPart: 'raksha-bandhan', pattern: /raksha bandhan|रक्षा बंधन/u },
+      { idPart: 'janmashtami', pattern: /janmashtami|जन्माष्टमी/u },
+      { idPart: 'ganesh-chaturthi', pattern: /ganesh chaturthi|गणेश चतुर्थी/u },
+      { idPart: 'onam', pattern: /onam|ओणम/u },
+      { idPart: 'navratri', pattern: /navratri|नवरात्रि/u },
+      { idPart: 'dussehra', pattern: /dussehra|दशहरा/u },
+    ];
+    const alias = nameAliases.find((entry) => entry.pattern.test(q));
+    const festival = (alias && upcoming.find((entry) => entry.id.includes(alias.idPart))) || upcoming[0];
+    if (festival) {
+      const advice = getFestivalShopAdvice(festival.id, shopType, lang === 'hi' ? 'hi' : 'en');
+      const name = getFestivalName(festival, lang === 'hi' ? 'hi' : 'en');
+      const date = getFestivalDateLabel(festival.date, lang === 'hi' ? 'hi' : 'en');
+      return lang === 'hi'
+        ? `आपकी दुकान के प्रकार के हिसाब से ${name} (${date}) की तैयारी:\n\n**क्या तैयार रखें**\n${advice.keepReady}\n\n**क्या दोबारा मँगाएँ**\n${advice.restock}\n\n**काम की सलाह**\n${advice.insight}`
+        : `For your ${shopType ? t(`st_${shopType}` as any, 'en') : 'shop'}, prepare for ${name} (${date}) like this:\n\n**Keep ready**\n${advice.keepReady}\n\n**What to replenish**\n${advice.restock}\n\n**Useful insight**\n${advice.insight}`;
+    }
+  }
+
   // ===== BUSINESS ADVICE & PROBLEM SOLVING =====
   if (intent === 'business_advice' || intent === 'problem_solving' || intent === 'planning' || intent === 'comparison') {
     // First check knowledge base for specific advice
     const knowledgeEntry = findKnowledgeEntry(question);
     if (knowledgeEntry) {
+      if (knowledgeEntry.category === 'inventory') {
+        return getShopInventoryAdvice(shopType, lang);
+      }
       const baseResponse = lang === 'hi' ? knowledgeEntry.responseHi : knowledgeEntry.responseEn;
       
       // Personalize based on shop context
@@ -218,6 +347,30 @@ function generateResponse(question: string, state: any, lang: string): string {
         }
       }
       
+      const businessSpecificTip: Record<string, { en: string; hi: string }> = {
+        salon: {
+          en: 'For a salon, focus on appointment fill, repeat visits, service quality, hygiene supplies and the services customers request most.',
+          hi: 'सैलून में अपॉइंटमेंट, दोबारा आने वाले ग्राहक, सेवा की गुणवत्ता, सफ़ाई का सामान और लोकप्रिय सेवाओं पर ध्यान दें।',
+        },
+        tailor: {
+          en: 'For a tailoring business, focus on confirmed orders, fitting slots, on-time delivery, repeat customers and commonly used tailoring supplies.',
+          hi: 'सिलाई कारोबार में पक्के ऑर्डर, फिटिंग स्लॉट, समय पर डिलीवरी, पुराने ग्राहक और आम सिलाई के सामान पर ध्यान दें।',
+        },
+        medical: {
+          en: 'For a medical shop, prioritise compliant stock handling, expiry checks, reliable service and the health essentials customers regularly request.',
+          hi: 'मेडिकल दुकान में नियमों के अनुसार स्टॉक, एक्सपायरी जाँच, भरोसेमंद सेवा और नियमित माँग वाले स्वास्थ्य संबंधी सामान पर ध्यान दें।',
+        },
+        restaurant: {
+          en: 'For a restaurant, focus on reliable dishes, order timing, food freshness, customer feedback and reducing avoidable food waste.',
+          hi: 'रेस्टोरेंट में भरोसेमंद व्यंजन, ऑर्डर का समय, ताज़ा खाना, ग्राहक प्रतिक्रिया और अनावश्यक बर्बादी घटाने पर ध्यान दें।',
+        },
+      };
+      if (businessSpecificTip[shopType || '']) {
+        const tip = businessSpecificTip[shopType || ''];
+        personalized += lang === 'hi'
+          ? `\n\n**आपके कारोबार के लिए**\n${tip.hi}`
+          : `\n\n**For your business**\n${tip.en}`;
+      }
       return personalized;
     }
     
