@@ -940,7 +940,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
         <div className="px-5 py-4 safe-bottom space-y-3">
           <button
             onClick={handleSave}
-            disabled={!amount || parseInt(amount) <= 0}
+            disabled={!amount || parseInt(amount) <= 0 || (isSale && !itemName.trim())}
             className="btn-primary text-body-lg"
           >
             <Check size={20} /> {lang === 'hi' ? 'अपडेट करें' : 'Update'}
