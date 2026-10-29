@@ -347,6 +347,34 @@ function getMyAdvice(
     );
   }
 
+  const openCredit = udhaar.filter(entry => !entry.paid && Number(entry.amount) > 0);
+  const openCreditAmount = openCredit.reduce((sum, entry) => sum + Math.max(0, Number(entry.amount) || 0), 0);
+  const dueSoon = openCredit.filter(entry =>
+    typeof entry.dueDate === 'string' &&
+    /^\\d{4}-\\d{2}-\\d{2}$/.test(entry.dueDate) &&
+    entry.dueDate >= today &&
+    entry.dueDate <= (() => {
+      const end = new Date();
+      end.setDate(end.getDate() + 7);
+      return `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    })(),
+  );
+  if (overdue.length === 0 && openCredit.length > 0 &&
+      (dueSoon.length > 0 || (week.sales > 0 && openCreditAmount >= week.sales * 0.5))) {
+    add(
+      'credit-cash-pressure',
+      'watch',
+      lang === 'hi' ? 'आने वाले उधार भुगतान पर नज़र रखें' : 'Protect cash before udhaar comes due',
+      lang === 'hi'
+        ? `${formatRupee(openCreditAmount)} का उधार अभी बाकी है${dueSoon.length > 0 ? ` और ${dueSoon.length} भुगतान अगले 7 दिनों में तय हैं` : ''}। यह पैसा समय पर न आए तो स्टॉक और रोज़ के बिलों पर दबाव पड़ सकता है।`
+        : `${formatRupee(openCreditAmount)} in udhaar is still unpaid${dueSoon.length > 0 ? `, including ${dueSoon.length} balance(s) due within 7 days` : ''}. Late collection can make stock orders and regular bills harder to cover.`,
+      lang === 'hi'
+        ? 'देय तारीख़ से पहले ग्राहकों को रकम और भुगतान दिन याद दिलाएँ। अगला उधार लिखते समय तारीख़ तय करें और सप्लायर के भुगतान के लिए ज़रूरी नकद अलग रखें।'
+        : 'Remind customers of the amount and due date before it arrives. Agree on a date for any new credit and keep enough cash aside for upcoming supplier payments.',
+      88,
+    );
+  }
+
   const lossPeriod = week.profit < 0 ? week : month.profit < 0 ? month : null;
   if (lossPeriod) {
     const label = periodName(lossPeriod.period, lang);
@@ -540,7 +568,7 @@ function MyAdviceSection({ items, lang }: { items: MyAdviceItem[]; lang: Languag
                 <div className="min-w-0 flex-1">
                   <h3 className="text-body font-semibold text-text leading-snug">{item.title}</h3>
                   <p className="text-small text-text-secondary mt-1.5 leading-relaxed">{item.reason}</p>
-                  <div className="mt-3 rounded-lg bg-primary/5 p-3">
+                  <div className="mt-3 border-t border-border pt-3">
                     <p className="text-small font-semibold text-primary mb-1">{lang === 'hi' ? 'आज यह करें' : 'What to do next'}</p>
                     <p className="text-small text-text leading-relaxed">{item.action}</p>
                   </div>
