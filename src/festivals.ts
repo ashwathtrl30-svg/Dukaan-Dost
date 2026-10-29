@@ -317,6 +317,56 @@ function getFestivalShopFocus(shopType: ShopType | null | undefined): FestivalSh
   return 'goods';
 }
 
+
+function getHardwareFestivalProducts(id: string, lang: 'en' | 'hi'): string {
+  const has = (...matches: string[]) => matches.some(match => id.includes(match));
+  if (has('diwali', 'dhanteras', 'christmas')) {
+    return lang === 'hi'
+      ? 'LED/सजावटी लाइट, सुरक्षित कनेक्टर, एक्सटेंशन बोर्ड, दीये और तोरण—केवल मौजूदा रेंज के तेज़ बिकने वाले आइटम'
+      : 'LED/decorative lights, safe connectors, extension boards, diyas and torans—but only proven items already in your range';
+  }
+  if (has('ganesh-chaturthi', 'janmashtami', 'navratri', 'dussehra', 'gudi-padwa', 'tulsi-vivah', 'ram-navami', 'maha-shivratri', 'govardhan', 'guru-nanak', 'dattatreya', 'gita-jayanti', 'vivah-panchami', 'guru-purnima')) {
+    return lang === 'hi'
+      ? 'छोटे पूजा लैंप, दीये, तोरण के हुक और सजावटी फिटिंग—सिर्फ वही जो आपकी हार्डवेयर दुकान में पहले से बिकते हैं'
+      : 'small puja lamps, diyas, toran hooks and decorative fittings—only lines already sold by your hardware shop';
+  }
+  if (has('holi')) {
+    return lang === 'hi'
+      ? 'सफ़ाई की सामग्री और पानी के खेल का सामान केवल यदि पहले से बिकता हो; पानी के पास बिजली के सामान की सुरक्षा पर ध्यान दें'
+      : 'cleanup supplies and water-play items only if already sold; take extra care with electrical products around water';
+  }
+  if (has('makar-sankranti')) {
+    return lang === 'hi'
+      ? 'पतंग की डोर या संबंधित सामान केवल यदि आपके ग्राहक पहले से माँगते हों; अन्यथा नियमित तेज़ बिकने वाला हार्डवेयर'
+      : 'kite string or related accessories only if your customers already request them; otherwise stick to regular hardware best-sellers';
+  }
+  if (has('akshaya-tritiya', 'bhai-dooj', 'raksha-bandhan')) {
+    return lang === 'hi'
+      ? 'गिफ्ट योग्य घरेलू उपयोग की चीज़ें और छोटे उपयोगी सामान; महँगा या नया उत्पाद अनुमान से न जोड़ें'
+      : 'giftable home-use items and small practical products; do not add expensive or unfamiliar lines speculatively';
+  }
+  return lang === 'hi'
+    ? 'नियमित तेज़ बिकने वाला हार्डवेयर और मौजूदा पूजा/घरेलू सामान; नए त्योहार स्टॉक से पहले ग्राहक की माँग जाँचें'
+    : 'regular hardware best-sellers and existing puja/household items; check customer requests before adding festival stock';
+}
+
+function getMobileFestivalProducts(id: string, lang: 'en' | 'hi'): string {
+  const giftFestivals = ['dhanteras', 'diwali', 'christmas', 'bhai-dooj', 'raksha-bandhan', 'akshaya-tritiya'];
+  if (giftFestivals.some(match => id.includes(match))) {
+    return lang === 'hi'
+      ? 'गिफ्ट योग्य फोन कवर, चार्जर, केबल, ईयरबड और पावर एक्सेसरी; महँगे डिवाइस पक्के ऑर्डर या भरोसेमंद बिक्री पर ही लें'
+      : 'giftable phone covers, chargers, cables, earbuds and power accessories; buy costly devices only against confirmed orders or reliable sales';
+  }
+  if (id.includes('holi')) {
+    return lang === 'hi'
+      ? 'प्रोटेक्टिव कवर, स्क्रीन गार्ड और सामान्य एक्सेसरी; पानी से सुरक्षा के बारे में स्पष्ट जानकारी दें और नया स्टॉक अनुमान से न भरें'
+      : 'protective cases, screen guards and regular accessories; give clear water-protection information and avoid speculative stock';
+  }
+  return lang === 'hi'
+    ? 'नियमित बिकने वाले कवर, चार्जर, केबल और एक्सेसरी; केवल त्योहार की तारीख़ देखकर महँगे फोन न खरीदें'
+    : 'regularly selling covers, chargers, cables and accessories; do not buy expensive phones just because a festival is approaching';
+}
+
 export function getFestivalShopAdvice(
   festivalId: string,
   shopType: ShopType | null | undefined,
@@ -335,7 +385,11 @@ export function getFestivalShopAdvice(
         ? (lang === 'hi'
           ? 'नियमित ज़रूरी दवाएँ, फर्स्ट-एड और हाइजीन सामग्री; एक्सपायरी और स्टोरेज जाँचें'
           : 'regular essential medicines, first-aid and hygiene supplies, with expiry and storage checks')
-        : (lang === 'hi' ? plan.goodsHi : plan.goodsEn);
+        : focus === 'hardware'
+          ? getHardwareFestivalProducts(id, lang)
+          : focus === 'mobile'
+            ? getMobileFestivalProducts(id, lang)
+            : (lang === 'hi' ? plan.goodsHi : plan.goodsEn);
   const productLabel = lang === 'hi' ? 'तैयार रखें' : 'Keep ready';
   const keepReady = productLabel + ': ' + products + '. ' + base.keepReady;
   const restock = (lang === 'hi' ? plan.restockHi : plan.restockEn) + ' ' + base.restock;
