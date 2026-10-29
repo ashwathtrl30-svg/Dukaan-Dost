@@ -3,13 +3,17 @@ export type VoiceTransactionType = 'sale' | 'expense' | 'udhaar';
 export interface VoiceTransaction {
   type: VoiceTransactionType;
   amount: number;
+  itemName?: string;
+  quantity?: number;
+  quantityUnit?: string;
+  note?: string;
   customerName?: string;
   expenseCategory?: string;
 }
 
 export interface VoiceParseResult {
   transactions: VoiceTransaction[];
-  error?: 'not_command' | 'no_type' | 'missing_amount' | 'ambiguous_amount';
+  error?: 'not_command' | 'no_type' | 'missing_amount' | 'ambiguous_amount' | 'missing_item' | 'missing_customer' | 'unclear_entry' | 'too_many_entries';
 }
 
 interface Span {
@@ -61,6 +65,41 @@ const NUMBER_WORDS: Record<string, number> = {
   'नब्बे': 90,
 };
 
+
+Object.assign(NUMBER_WORDS, {
+  // Common speech-to-text and shopkeeper transliteration variants.
+  chalis: 40, chaalis: 40, chalees: 40, chalish: 40, challees: 40,
+  iktaalis: 41, iktalis: 41, iktalees: 41,
+  byaalees: 42, taintalis: 43, teintalis: 43,
+  chaunalis: 44, chavaalis: 44, paitalis: 45, pentaalis: 45, pentalis: 45, paintalees: 45,
+  chhiyalis: 46, saintaalis: 47, athtalis: 48, unachas: 49,
+  pachhaas: 50, ikyawan: 51, bawan: 52, tirpaan: 53, chavan: 54,
+  pachpaan: 55, chappan: 56, satavan: 57, atthavan: 58, unsathh: 59,
+  saathh: 60, iksathh: 61, baasath: 62, chonsath: 64, paainsath: 65,
+  chhiyasathh: 66, sadsathh: 67, athsath: 68, unahattar: 69,
+  satttar: 70, ikahatar: 71, bahatar: 72, tiahattar: 73, chauhatar: 74,
+  pachattar: 75, chihattar: 76, satattar: 77, unasi: 79, asi: 80,
+  ikyassi: 81, baasi: 82, pachaasi: 85, satasi: 87, nabbey: 90,
+  ikyanway: 91, banve: 92, panchanve: 95, chiyanve: 96,
+  sattanve: 97, atthanve: 98, ninyanvey: 99,
+  'इकतीस': 31, 'तैंतीस': 33, 'चौंतीस': 34, 'चौतीस': 34,
+  'पैंतीस': 35, 'छत्तीस': 36, 'सैंतीस': 37, 'अड़तीस': 38, 'अड़तीस': 38,
+  'उनतालीस': 39, 'इकतालीस': 41, 'बयालिस': 42,
+  'तैंतालीस': 43, 'चवालीस': 44, 'पैंतालीस': 45, 'छियालीस': 46,
+  'सैंतालीस': 47, 'अड़तालीस': 48, 'अड़तालीस': 48, 'उनचास': 49,
+  'इक्यावन': 51, 'बावन': 52, 'तिरपन': 53, 'चौवन': 54, 'पचपन': 55,
+  'छप्पन': 56, 'सत्तावन': 57, 'अट्ठावन': 58, 'उनसठ': 59,
+  'इकसठ': 61, 'बासठ': 62, 'तिरसठ': 63, 'चौंसठ': 64, 'पैंसठ': 65,
+  'छियासठ': 66, 'सड़सठ': 67, 'सड़सठ': 67, 'अड़सठ': 68, 'अड़सठ': 68,
+  'उनहत्तर': 69, 'इकहत्तर': 71, 'बहत्तर': 72, 'तिहत्तर': 73,
+  'चौहत्तर': 74, 'पचहत्तर': 75, 'छिहत्तर': 76, 'सतहत्तर': 77,
+  'अठहत्तर': 78, 'उन्नासी': 79, 'इक्यासी': 81, 'बयासी': 82,
+  'तिरासी': 83, 'चौरासी': 84, 'पचासी': 85, 'छियासी': 86,
+  'सतासी': 87, 'अठासी': 88, 'नवासी': 89, 'इक्यानवे': 91,
+  'बानवे': 92, 'तिरानवे': 93, 'चौरानवे': 94, 'पचानवे': 95,
+  'छियानवे': 96, 'सत्तानवे': 97, 'अट्ठानवे': 98, 'निन्यानवे': 99,
+});
+
 const HUNDRED_WORDS = new Set(['hundred', 'sau', 'सौ']);
 const THOUSAND_WORDS = new Set(['thousand', 'hazaar', 'hazar', 'हज़ार', 'हजार']);
 const LAKH_WORDS = new Set(['lakh', 'lac', 'लाख']);
@@ -86,7 +125,7 @@ function parseWordNumber(words: string[]): number {
   let current = 0;
   for (const raw of words) {
     const word = raw.toLowerCase();
-    if (word === 'and' || word === 'और') continue;
+    if (word === 'and' || word === 'aur' || word === 'और') continue;
     if (HUNDRED_WORDS.has(word)) {
       current = (current || 1) * 100;
     } else if (THOUSAND_WORDS.has(word)) {
@@ -98,6 +137,8 @@ function parseWordNumber(words: string[]): number {
     } else if (CRORE_WORDS.has(word)) {
       total += (current || 1) * 10000000;
       current = 0;
+    } else if (/^\d+(?:\.\d+)?$/.test(word)) {
+      current += Number(word);
     } else if (NUMBER_WORDS[word] !== undefined) {
       current += NUMBER_WORDS[word];
     } else {
@@ -119,48 +160,35 @@ function findAmountSpans(text: string): AmountSpan[] {
     });
   }
 
+  const isNumberPart = (value: string) =>
+    /^\d+(?:\.\d+)?$/.test(value) ||
+    NUMBER_WORDS[value] !== undefined ||
+    HUNDRED_WORDS.has(value) ||
+    THOUSAND_WORDS.has(value) ||
+    LAKH_WORDS.has(value) ||
+    CRORE_WORDS.has(value);
   const spans: AmountSpan[] = [];
   for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
-    if (/^[0-9]+(?:\.[0-9]+)?$/.test(token.value)) {
-      const amount = Number(token.value);
-      if (Number.isFinite(amount) && amount > 0) {
-        spans.push({ start: token.start, end: token.end, amount: Math.round(amount) });
-      }
-      continue;
-    }
-
-    if (!NUMBER_WORD_SET.has(token.value)) continue;
-
-    const words = [token.value];
-    let endIndex = token.end;
+    if (!isNumberPart(tokens[i].value)) continue;
+    const words = [tokens[i].value];
+    let end = tokens[i].end;
     let j = i + 1;
     while (j < tokens.length) {
-      const next = tokens[j];
-      if (NUMBER_WORD_SET.has(next.value)) {
-        words.push(next.value);
-        endIndex = next.end;
-        j++;
-        continue;
-      }
-      if (
-        (next.value === 'and' || next.value === 'और') &&
-        j + 1 < tokens.length &&
-        NUMBER_WORD_SET.has(tokens[j + 1].value)
-      ) {
-        words.push(next.value);
-        endIndex = next.end;
+      const gap = text.slice(tokens[j - 1].end, tokens[j].start);
+      if (!/^\s*(?:(?:and|aur|और)\s*)?$/iu.test(gap)) break;
+      if (isNumberPart(tokens[j].value)) {
+        words.push(tokens[j].value);
+        end = tokens[j].end;
         j++;
         continue;
       }
       break;
     }
-
     const amount = parseWordNumber(words);
-    if (amount > 0 && Number.isFinite(amount)) {
-      spans.push({ start: token.start, end: endIndex, amount: Math.round(amount) });
-      i = j - 1;
+    if (Number.isFinite(amount) && amount > 0) {
+      spans.push({ start: tokens[i].start, end, amount: Math.round(amount * 1000) / 1000 });
     }
+    i = j - 1;
   }
   return spans;
 }
@@ -230,7 +258,7 @@ function findExpenseCategoryMatches(text: string): ExpenseCategoryMatch[] {
     },
     {
       category: 'transport',
-      pattern: /\b(?:transport|delivery|fuel|petrol|diesel|shipping|courier|freight|vehicle expense|travel expense|transportation)\b|ढुलाई|पेट्रोल|डीजल|डीज़ल|ईंधन|डिलीवरी|यातायात|ट्रांसपोर्ट/iu,
+      pattern: /\\b(?:transport|delivery|fuel|petrol|diesel|shipping|courier|freight|vehicle expense|travel expense|transportation|samaan bhejne|saman bhejne|maal bhejne|bhejne ka kharcha)\\b|ढुलाई|पेट्रोल|डीजल|डीज़ल|ईंधन|डिलीवरी|यातायात|ट्रांसपोर्ट|सामान भेजने|माल भेजने|भेजने का खर्च/iu,
     },
     {
       category: 'packaging',
