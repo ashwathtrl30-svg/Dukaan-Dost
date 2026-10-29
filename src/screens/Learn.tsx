@@ -301,7 +301,7 @@ function getLocalDateKey(date = new Date()): string {
 function getDailyLessons(dateKey: string, refreshCount: number): LessonData[] {
   const [year, month, day] = dateKey.split('-').map(Number);
   const dayNumber = Math.floor(Date.UTC(year, month - 1, day) / 86400000);
-  const start = ((dayNumber + refreshCount * 5) % allLessons.length + allLessons.length) % allLessons.length;
+  const start = ((dayNumber * 5 + refreshCount * 5) % allLessons.length + allLessons.length) % allLessons.length;
   return Array.from({ length: Math.min(5, allLessons.length) }, (_, index) =>
     allLessons[(start + index) % allLessons.length],
   );
