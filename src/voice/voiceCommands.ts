@@ -189,17 +189,19 @@ function distanceBetween(a: AmountSpan, marker: Span): number {
 
 function getCustomerName(text: string): string | undefined {
   const patterns = [
+    /\b([a-z][a-z'-]*(?:\s+[a-z][a-z'-]*){0,1})\s+(?:ko|ke naam se|ke naam par)\b/i,
+    /([\u0900-\u097f]+(?:\s+[\u0900-\u097f]+){0,1})\s+(?:को|के नाम से|के नाम पर)/u,
     /\b(?:for|to|customer|named|name is)\s+([a-z][a-z'-]*(?:\s+[a-z][a-z'-]*){0,2})/i,
-    /(?:के नाम से|के नाम पर|नाम है|को)\s*([\u0900-\u097f]+(?:\s+[\u0900-\u097f]+){0,2})/u,
+    /(?:नाम है|को)\s*([\u0900-\u097f]+(?:\s+[\u0900-\u097f]+){0,2})/u,
     /\b(?:naam|naam pe|naam par)\s+([a-z][a-z'-]*(?:\s+[a-z][a-z'-]*){0,2})/i,
   ];
   for (const pattern of patterns) {
     const match = pattern.exec(text);
     if (match?.[1]) {
       const name = match[1].trim().replace(/\s+(?:rupees?|rupaye?|rs|udhaar|udhar|credit|add|jodo|karo|please).*$/i, '').trim();
-      if (name && !/^(?:rupees?|rupaye?|rs|add|sale|sales|expense|expenses|udhaar|udhar|credit)$/i.test(name)) {
-        return name.slice(0, 80);
-      }
+      const reserved = /^(?:rupees?|rupaye?|rs|add|sale|sales|expense|expenses|udhaar|udhar|credit)$/i.test(name) ||
+        /^(?:उधार|बिक्री|खर्च|जोड़ो|जोड़ें|डालो|दर्ज)$/u.test(name);
+      if (name && !reserved) return name.slice(0, 80);
     }
   }
   return undefined;
