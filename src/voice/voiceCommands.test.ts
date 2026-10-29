@@ -109,3 +109,26 @@ test('allows five entries but never silently partially accepts six', () => {
   assert.equal(five.error, undefined);
   assert.equal(five.transactions.length, 5);
 });
+
+
+test('reads shopkeeper-style number words ending in 5 and 0 in Roman and Devanagari forms', () => {
+  const samples: Array<[string, number]> = [
+    ['paitalis', 45], ['pachaas', 50], ['pachpan', 55], ['saath', 60],
+    ['painsath', 65], ['sattar', 70], ['pachhattar', 75], ['assi', 80],
+    ['pachasi', 85], ['nabbe', 90], ['pachanve', 95],
+    ['पैंतालीस', 45], ['पचास', 50], ['पचपन', 55], ['साठ', 60],
+    ['पैंसठ', 65], ['सत्तर', 70], ['पचहत्तर', 75], ['अस्सी', 80],
+    ['पचासी', 85], ['नब्बे', 90], ['पचानवे', 95],
+  ];
+  for (const [spoken, expected] of samples) {
+    const parsed = parseVoiceTransactions(spoken + ' rupaye rent kharch add karo');
+    assert.equal(parsed.error, undefined, spoken);
+    assert.equal(parsed.transactions[0]?.amount, expected, spoken);
+  }
+});
+
+test('rejects amounts above ₹1 crore instead of recording a guessed number', () => {
+  const parsed = parseVoiceTransactions('ek crore ek rupaye rent kharch add karo');
+  assert.equal(parsed.error, 'amount_out_of_range');
+  assert.deepEqual(parsed.transactions, []);
+});
