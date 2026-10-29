@@ -199,22 +199,23 @@ function getTrackedQuantitySummary(sales: any[], lang: string): string {
   const startDate = new Date(today + 'T12:00:00');
   startDate.setDate(startDate.getDate() - 6);
   const start = startDate.getFullYear() + '-' + String(startDate.getMonth() + 1).padStart(2, '0') + '-' + String(startDate.getDate()).padStart(2, '0');
-  const byItem = new Map<string, { name: string; quantity: number }>();
+  const byItem = new Map<string, { name: string; unit: string; quantity: number }>();
   sales.forEach((sale) => {
     if (typeof sale.itemName !== 'string' || !sale.itemName.trim() || sale.date < start || sale.date > today) return;
     const quantity = Number(sale.quantity);
     // Older records do not contain quantity; do not invent it for this summary.
     if (!Number.isFinite(quantity) || quantity <= 0) return;
     const name = sale.itemName.trim().replace(/\s+/g, ' ');
-    const key = name.toLocaleLowerCase();
-    const item = byItem.get(key) || { name, quantity: 0 };
+    const unit = String(sale.quantityUnit || 'unit').trim() || 'unit';
+    const key = name.toLocaleLowerCase() + '|' + unit.toLocaleLowerCase();
+    const item = byItem.get(key) || { name, unit, quantity: 0 };
     item.quantity += quantity;
     byItem.set(key, item);
   });
   const ranked = [...byItem.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 3);
   if (!ranked.length) return '';
   const total = ranked.reduce((sum, item) => sum + item.quantity, 0);
-  const list = ranked.map(item => item.name + ': ' + (Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 3 }))).join(', ');
+  const list = ranked.map(item => item.name + ': ' + (Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 3 })) + ' ' + item.unit).join(', ');
   return lang === 'hi'
     ? '\n\n**पिछले 7 दिनों की दर्ज मात्रा (शीर्ष सामान/सेवाएँ):** ' + list + '। इन शीर्ष चीज़ों की कुल दर्ज मात्रा ' + total + ' यूनिट है। केवल मात्रा दर्ज वाली एंट्री शामिल हैं।'
     : '\n\n**Tracked quantities, last 7 days (top items/services):** ' + list + '. Total for these top items is ' + total + ' units. Only entries with a recorded quantity are included.';
