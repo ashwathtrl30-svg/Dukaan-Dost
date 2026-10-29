@@ -362,8 +362,26 @@ function StockReorderTool() {
   const lang = state.language!;
   const shopType = state.shopProfile.shopType;
   const serviceBusiness = shopType === 'salon' || shopType === 'tailor';
-  const todayKey = getLocalDateKey();
-  const startDate = new Date();
+  const [todayKey, setTodayKey] = useState(() => getLocalDateKey());
+
+  useEffect(() => {
+    const refreshDay = () => setTodayKey(getLocalDateKey());
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const timer = window.setTimeout(
+      refreshDay,
+      Math.max(1000, nextMidnight.getTime() - now.getTime() + 250),
+    );
+    window.addEventListener('focus', refreshDay);
+    document.addEventListener('visibilitychange', refreshDay);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('focus', refreshDay);
+      document.removeEventListener('visibilitychange', refreshDay);
+    };
+  }, [todayKey]);
+
+  const startDate = new Date(todayKey + 'T12:00:00');
   startDate.setDate(startDate.getDate() - 6);
   const startKey = getLocalDateKey(startDate);
 
