@@ -500,6 +500,18 @@ function cleanItemName(segment: string, amountSpan: AmountSpan, quantity?: Quant
   } else if (!candidate.trim()) {
     candidate = segment.slice(amountSpan.end);
   }
+  // When speech recognition repeats the same amount as a word and digits
+  // ("sattar (70 rupees)"), drop the spoken amount that follows "bik gaya".
+  const trailingNumbers = findAmountSpans(candidate);
+  const lastNumber = trailingNumbers[trailingNumbers.length - 1];
+  if (lastNumber && lastNumber.end >= candidate.length - 2) {
+    const beforeNumber = candidate.slice(0, lastNumber.start);
+    const afterNumber = candidate.slice(lastNumber.end);
+    const followsSaleVerb = /\b(?:bik|bika|biki|bech|becha|bechi|sold|sell|selling|price|cost)\b|बिक|बेच/iu.test(beforeNumber);
+    if (followsSaleVerb && /^[\s()\].,]*$/.test(afterNumber)) {
+      candidate = beforeNumber;
+    }
+  }
   const cleaned = stripVoiceCommands(candidate);
   return cleaned.slice(0, 80);
 }
@@ -585,6 +597,9 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
     }
     if (!Number.isFinite(money.span.amount) || money.span.amount <= 0) {
       return { transactions: [], error: 'missing_amount' };
+    }
+    if (money.span.amount > 10000000) {
+      return { transactions: [], error: 'ambiguous_amount' };
     }
 
     if (type === 'sale') {
