@@ -273,7 +273,7 @@ function generateResponse(question: string, state: any, lang: string): string {
     return lang === 'hi' ? 'आपका स्वागत है! 😊 और कुछ पूछना हो तो बेझिझक पूछें।' : 'You\'re welcome! 😊 Feel free to ask anything else.';
   }
   
-  const mentionsFestival = /festival|diwali|dhanteras|bhai dooj|chhath|guru nanak|christmas|karwa chauth|karva chauth|karwa|karva|makar sankranti|pongal|vasant panchami|shivratri|holi|gudi padwa|ram navami|raksha bandhan|janmashtami|ganesh chaturthi|onam|navratri|dussehra|त्योहार|दिवाली|धनतेरस|भाई दूज|छठ|गुरु नानक|क्रिसमस|करवा चौथ|मकर संक्रांति|पोंगल|बसंत पंचमी|महाशिवरात्रि|होली|गुड़ी पड़वा|राम नवमी|रक्षा बंधन|जन्माष्टमी|गणेश चतुर्थी|ओणम|नवरात्रि|दशहरा/u.test(q);
+  const mentionsFestival = /festival|diwali|dhanteras|govardhan|bhai dooj|chhath|tulsi vivah|vivah panchami|gita jayanti|dattatreya|guru nanak|christmas|karwa chauth|karva chauth|karwa|karva|ahoi|makar sankranti|pongal|vasant panchami|shivratri|holi|gudi padwa|ram navami|raksha bandhan|janmashtami|ganesh chaturthi|onam|navratri|dussehra|त्योहार|दिवाली|धनतेरस|गोवर्धन|भाई दूज|छठ|तुलसी विवाह|विवाह पंचमी|गीता जयंती|दत्तात्रेय|गुरु नानक|क्रिसमस|करवा चौथ|अहोई|मकर संक्रांति|पोंगल|बसंत पंचमी|महाशिवरात्रि|होली|गुड़ी पड़वा|राम नवमी|रक्षा बंधन|जन्माष्टमी|गणेश चतुर्थी|ओणम|नवरात्रि|दशहरा/u.test(q);
   const wantsFestivalPlan = mentionsFestival && (
     intent === 'planning' ||
     /\b(?:what should|what to|which items|what items|buy|keep ready|prepare|stock|festival plan|planning|tips|advice)\b|क्या रखें|क्या खरीदें|क्या खरीदना|तैयारी|कौन-सा सामान/u.test(q)
@@ -285,8 +285,13 @@ function generateResponse(question: string, state: any, lang: string): string {
       { idPart: 'ahoi-ashtami', pattern: /ahoi|अहोई/u },
       { idPart: 'dhanteras', pattern: /dhanteras|धनतेरस/u },
       { idPart: 'diwali', pattern: /diwali|deepavali|दिवाली|दीपावली/u },
+      { idPart: 'govardhan-puja', pattern: /govardhan|गोवर्धन/u },
       { idPart: 'bhai-dooj', pattern: /bhai dooj|bhaiya dooj|भाई दूज/u },
       { idPart: 'chhath-puja', pattern: /chhath|छठ/u },
+      { idPart: 'tulsi-vivah', pattern: /tulsi vivah|तुलसी विवाह/u },
+      { idPart: 'vivah-panchami', pattern: /vivah panchami|विवाह पंचमी/u },
+      { idPart: 'gita-jayanti', pattern: /gita jayanti|गीता जयंती/u },
+      { idPart: 'dattatreya-jayanti', pattern: /dattatreya|दत्तात्रेय/u },
       { idPart: 'guru-nanak-jayanti', pattern: /guru nanak|गुरु नानक|kartik purnima|कार्तिक पूर्णिमा/u },
       { idPart: 'christmas', pattern: /christmas|क्रिसमस/u },
       { idPart: 'makar-sankranti', pattern: /makar sankranti|pongal|मकर संक्रांति|पोंगल/u },
@@ -304,7 +309,13 @@ function generateResponse(question: string, state: any, lang: string): string {
       { idPart: 'dussehra', pattern: /dussehra|दशहरा/u },
     ];
     const alias = nameAliases.find((entry) => entry.pattern.test(q));
-    const festival = (alias && upcoming.find((entry) => entry.id.includes(alias.idPart))) || upcoming[0];
+    const matchingFestival = alias ? upcoming.find((entry) => entry.id.includes(alias.idPart)) : undefined;
+    if (alias && !matchingFestival) {
+      return lang === 'hi'
+        ? 'यह त्योहार अगले 2 महीनों की सूची में नहीं है। त्योहार की तैयारी के लिए होम के बजाय टूल्स में Festival Planner देखें और वहाँ दिख रहे आगामी त्योहार चुनें।'
+        : 'That festival is not in the next 2 months. Open Tools → Festival Planner to see upcoming festivals and choose one that is still ahead.';
+    }
+    const festival = matchingFestival || upcoming[0];
     if (festival) {
       const advice = getFestivalShopAdvice(festival.id, shopType, lang === 'hi' ? 'hi' : 'en');
       const name = getFestivalName(festival, lang === 'hi' ? 'hi' : 'en');
