@@ -22,7 +22,7 @@ test('parses three named sales with unit quantities from natural Hinglish', () =
 
 test('recognizes spoken Hindi amount words and assigns separate expense categories', () => {
   const parsed = parseVoiceTransactions(
-    'do hazar rupaye bijli, paanch hazar saaman, ek hazar transport saaman bhejne mein kharch ho gaya, kharch mein add karo',
+    'do hazar rupaye bijli, paanch hazar saaman, ek hazar saaman bhejne mein kharch ho gaya, kharch mein add karo',
   );
   assert.equal(parsed.error, undefined);
   assert.deepEqual(
@@ -71,4 +71,15 @@ test('rejects an unclear sale with no item name', () => {
   const parsed = parseVoiceTransactions('100 rupaye sale add karo');
   assert.equal(parsed.error, 'missing_item');
   assert.deepEqual(parsed.transactions, []);
+});
+
+
+test('classifies saaman as stock and saaman bhejne as transport', () => {
+  const stock = parseVoiceTransactions('paanch hazar saaman kharch add karo');
+  assert.equal(stock.error, undefined);
+  assert.equal(stock.transactions[0]?.expenseCategory, 'stock');
+
+  const shipping = parseVoiceTransactions('ek hazar saaman bhejne mein kharch add karo');
+  assert.equal(shipping.error, undefined);
+  assert.equal(shipping.transactions[0]?.expenseCategory, 'transport');
 });
