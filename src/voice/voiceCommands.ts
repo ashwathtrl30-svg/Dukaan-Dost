@@ -234,7 +234,7 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
     markers.forEach((marker, index) => {
       if (marker.start < amount.end) return;
       const gap = text.slice(amount.end, marker.start);
-      const isCurrencyGap = /^[\s₹$]*(?:(?:rupees?|rs|rupay(?:e)?|rupaye|rupee|ka|ki|ke|worth|amount|of)\s*)*$/iu.test(gap);
+      const isCurrencyGap = /^[\s₹$]*(?:(?:rupees?|rs|rupay(?:e)?|rupaye|rupee|ka|ki|ke|worth|amount|of|रुपये?|रुपया|रुपए|रूपये|रूपए|का|की|के)\s*)*$/iu.test(gap);
       const distance = marker.start - amount.end;
       if (isCurrencyGap && distance < nextDistance) {
         nextDistance = distance;
