@@ -270,6 +270,9 @@ export function HomeScreen() {
                       <p className="text-body font-medium text-text">
                         {entry.entryType === 'sale' ? (entry.itemName?.trim() || t('sale', lang)) : t(`ec_${(entry as any).category || 'other'}` as any, lang)}
                       </p>
+                      {entry.entryType === 'expense' && (entry as any).note?.trim() && (
+                        <p className="text-small text-text-secondary truncate">{(entry as any).note}</p>
+                      )}
                       <p className="text-small text-text-secondary">
                         {entry.entryType === 'sale' && Number.isFinite(Number((entry as any).quantity)) && Number((entry as any).quantity) > 0 ? `${lang === 'hi' ? 'मात्रा' : 'Qty'}: ${Number((entry as any).quantity)} ${((entry as any).quantityUnit || (lang === 'hi' ? 'यूनिट' : 'unit'))} · ` : ''}{new Date(entry.date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' })}
                       </p>
@@ -608,6 +611,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
   const lang = state.language!;
   const [itemName, setItemName] = useState('');
   const [quantity, setQuantity] = useState('1');
+  const [quantityUnit, setQuantityUnit] = useState('unit');
   const [amount, setAmount] = useState('');
   const [paymentType, setPaymentType] = useState<PaymentType>('cash');
   const [expenseCategory, setExpenseCategory] = useState('stock');
@@ -641,7 +645,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
     
     if (isSale) {
       const entry: SaleEntry = {
-        id, date: today, amount: numAmount, itemName: cleanedItemName, quantity: numQuantity, paymentType, createdAt: Date.now()
+        id, date: today, amount: numAmount, itemName: cleanedItemName, quantity: numQuantity, quantityUnit, paymentType, createdAt: Date.now()
       };
       dispatch({ type: 'ADD_SALE', payload: entry });
     } else if (isExpense) {
@@ -673,6 +677,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
     setAmount('');
     setItemName('');
     setQuantity('1');
+    setQuantityUnit('unit');
     setCustomerName('');
   };
   
@@ -754,17 +759,34 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
               <label className="text-small font-medium text-text-secondary block mb-2">
                 {lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
               </label>
-              <input
-                type="number"
-                inputMode="decimal"
-                min="0.01"
-                step="any"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                placeholder={lang === 'hi' ? 'जैसे 10' : 'e.g. 10'}
-                className="input-field"
-                aria-label={lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0.01"
+                  step="any"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  placeholder={lang === 'hi' ? 'जैसे 10' : 'e.g. 10'}
+                  className="input-field"
+                  aria-label={lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
+                />
+                <select
+                  value={quantityUnit}
+                  onChange={(e) => setQuantityUnit(e.target.value)}
+                  className="input-field"
+                  aria-label={lang === 'hi' ? 'मात्रा की इकाई' : 'Quantity unit'}
+                >
+                  <option value="unit">{lang === 'hi' ? 'पीस/यूनिट' : 'unit / piece'}</option>
+                  <option value="kg">kg</option>
+                  <option value="g">g</option>
+                  <option value="litre">{lang === 'hi' ? 'लीटर' : 'litre'}</option>
+                  <option value="packet">{lang === 'hi' ? 'पैकेट' : 'packet'}</option>
+                  <option value="bottle">{lang === 'hi' ? 'बोतल' : 'bottle'}</option>
+                  <option value="dozen">{lang === 'hi' ? 'दर्जन' : 'dozen'}</option>
+                  <option value="metre">{lang === 'hi' ? 'मीटर' : 'metre'}</option>
+                </select>
+              </div>
               <p className="text-small text-text-secondary mt-1">
                 {lang === 'hi' ? 'एक बार में कई पीस/यूनिट दर्ज करें।' : 'Record multiple pieces or units in one sale.'}
               </p>
@@ -874,6 +896,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
   const lang = state.language!;
   const [itemName, setItemName] = useState(String(entry.itemName || ''));
   const [quantity, setQuantity] = useState(String(entry.quantity ?? 1));
+  const [quantityUnit, setQuantityUnit] = useState(String(entry.quantityUnit || 'unit'));
   const [amount, setAmount] = useState(String(entry.amount));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
@@ -892,7 +915,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
     const newEntry = {
       ...entry,
       amount: numAmount,
-      ...(isSale ? { itemName: itemName.trim(), quantity: numQuantity } : {}),
+      ...(isSale ? { itemName: itemName.trim(), quantity: numQuantity, quantityUnit } : {}),
       createdAt: Date.now(),
     };
     
@@ -958,16 +981,33 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
               <label className="text-small font-medium text-text-secondary block mb-2">
                 {lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
               </label>
-              <input
-                type="number"
-                inputMode="decimal"
-                min="0.01"
-                step="any"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                className="input-field"
-                aria-label={lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="0.01"
+                  step="any"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  className="input-field"
+                  aria-label={lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
+                />
+                <select
+                  value={quantityUnit}
+                  onChange={(e) => setQuantityUnit(e.target.value)}
+                  className="input-field"
+                  aria-label={lang === 'hi' ? 'मात्रा की इकाई' : 'Quantity unit'}
+                >
+                  <option value="unit">{lang === 'hi' ? 'पीस/यूनिट' : 'unit / piece'}</option>
+                  <option value="kg">kg</option>
+                  <option value="g">g</option>
+                  <option value="litre">{lang === 'hi' ? 'लीटर' : 'litre'}</option>
+                  <option value="packet">{lang === 'hi' ? 'पैकेट' : 'packet'}</option>
+                  <option value="bottle">{lang === 'hi' ? 'बोतल' : 'bottle'}</option>
+                  <option value="dozen">{lang === 'hi' ? 'दर्जन' : 'dozen'}</option>
+                  <option value="metre">{lang === 'hi' ? 'मीटर' : 'metre'}</option>
+                </select>
+              </div>
             </div>
           )}
           <div className="text-center mb-4">
