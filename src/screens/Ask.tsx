@@ -1185,6 +1185,8 @@ export function AskScreen() {
           >
             <Send size={20} />
           </button>
+        </div>
+        <div className="mt-3">
           <VoiceMicButton
             language={lang}
             shape="rounded"
