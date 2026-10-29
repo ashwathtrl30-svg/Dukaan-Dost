@@ -302,8 +302,12 @@ function findExpenseCategoryMatches(text: string): ExpenseCategoryMatch[] {
   ];
 
   return patterns.flatMap(({ category, pattern }) => {
-    const match = pattern.exec(text);
-    return match ? [{ category, start: match.index, end: match.index + match[0].length }] : [];
+    const globalPattern = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g');
+    return [...text.matchAll(globalPattern)].map((match) => ({
+      category,
+      start: match.index ?? 0,
+      end: (match.index ?? 0) + match[0].length,
+    }));
   });
 }
 
