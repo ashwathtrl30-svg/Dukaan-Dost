@@ -328,7 +328,7 @@ function getMyAdvice(
   const overdue = udhaar.filter(entry =>
     !entry.paid &&
     typeof entry.dueDate === 'string' &&
-    /^\\d{4}-\\d{2}-\\d{2}$/.test(entry.dueDate) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(entry.dueDate) &&
     entry.dueDate < today,
   );
   const overdueAmount = overdue.reduce((sum, entry) => sum + Math.max(0, Number(entry.amount) || 0), 0);
@@ -351,7 +351,7 @@ function getMyAdvice(
   const openCreditAmount = openCredit.reduce((sum, entry) => sum + Math.max(0, Number(entry.amount) || 0), 0);
   const dueSoon = openCredit.filter(entry =>
     typeof entry.dueDate === 'string' &&
-    /^\\d{4}-\\d{2}-\\d{2}$/.test(entry.dueDate) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(entry.dueDate) &&
     entry.dueDate >= today &&
     entry.dueDate <= (() => {
       const end = new Date();
