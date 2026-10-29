@@ -764,7 +764,7 @@ export function InsightsScreen() {
   const quantityWeekStartDate = new Date(quantityToday + 'T12:00:00');
   quantityWeekStartDate.setDate(quantityWeekStartDate.getDate() - 6);
   const quantityWeekStart = quantityWeekStartDate.getFullYear() + '-' + String(quantityWeekStartDate.getMonth() + 1).padStart(2, '0') + '-' + String(quantityWeekStartDate.getDate()).padStart(2, '0');
-  const quantitiesByItem = new Map<string, { name: string; unit: string; quantity: number }>();
+  const quantitiesByItem = new Map<string, { name: string; unit: string; quantity: number; revenue: number }>();
   state.sales.forEach((sale) => {
     if (!sale.itemName?.trim() || sale.date < quantityWeekStart || sale.date > quantityToday) return;
     const quantity = Number(sale.quantity);
@@ -773,8 +773,9 @@ export function InsightsScreen() {
     const name = sale.itemName.trim().replace(/\s+/g, ' ');
     const unit = String(sale.quantityUnit || 'unit').trim() || 'unit';
     const key = name.toLocaleLowerCase() + '|' + unit.toLocaleLowerCase();
-    const current = quantitiesByItem.get(key) || { name, unit, quantity: 0 };
+    const current = quantitiesByItem.get(key) || { name, unit, quantity: 0, revenue: 0 };
     current.quantity += quantity;
+    current.revenue += Number(sale.amount) || 0;
     quantitiesByItem.set(key, current);
   });
   const topQuantityItems = [...quantitiesByItem.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 3);
@@ -851,10 +852,15 @@ export function InsightsScreen() {
                   </div>
                   <div className="space-y-2">
                     {topQuantityItems.map((item) => (
-                      <div key={item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase()} className="flex items-center justify-between gap-3 text-small">
+                      <div key={item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase()} className="flex items-start justify-between gap-3 text-small">
                         <span className="text-text-secondary break-words">{item.name}</span>
-                        <span className="font-semibold text-text shrink-0">
-                          {Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} {item.unit}
+                        <span className="text-right shrink-0">
+                          <span className="font-semibold text-text block">
+                            {Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} {item.unit}
+                          </span>
+                          <span className="text-[10px] text-text-secondary block">
+                            {lang === 'hi' ? 'औसत' : 'Avg'} {formatRupee(item.revenue / item.quantity)} / {item.unit}
+                          </span>
                         </span>
                       </div>
                     ))}
