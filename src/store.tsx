@@ -136,7 +136,7 @@ function reducer(state: AppState, action: Action): AppState {
       };
       return {
         ...state,
-        chatSessions: [newSession, ...state.chatSessions],
+        chatSessions: [newSession, ...state.chatSessions.filter(session => session.messages.length > 0)],
         activeSessionId: newSession.id,
       };
     }
@@ -213,7 +213,31 @@ function loadState(): AppState {
       if (!parsed.chatSessions) parsed.chatSessions = [];
       if (parsed.activeSessionId === undefined) parsed.activeSessionId = null;
       
-      return { ...initialState, ...parsed };
+      const hydratedState: AppState = { ...initialState, ...parsed };
+
+      // Start each full website visit with a fresh Ask conversation while
+      // keeping completed conversations available in Chat History.
+      if (hydratedState.onboardingComplete) {
+        const savedSessions = Array.isArray(hydratedState.chatSessions)
+          ? hydratedState.chatSessions.filter(
+              (session) => Array.isArray(session.messages) && session.messages.length > 0
+            )
+          : [];
+        const freshSession: ChatSession = {
+          id: generateId(),
+          title: 'New Chat',
+          createdAt: Date.now(),
+          messages: [],
+        };
+
+        return {
+          ...hydratedState,
+          chatSessions: [freshSession, ...savedSessions],
+          activeSessionId: freshSession.id,
+        };
+      }
+
+      return hydratedState;
     }
   } catch (e) {
     console.error('Failed to load state:', e);
