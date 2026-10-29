@@ -24,7 +24,7 @@ interface AmountSpan {
 }
 
 const NUMBER_WORDS: Record<string, number> = {
-  zero: 0, oh: 0, one: 1, a: 1, an: 1, two: 2, three: 3, four: 4, five: 5,
+  zero: 0, oh: 0, one: 1, two: 2, three: 3, four: 4, five: 5,
   six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12,
   thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17,
   eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50,
@@ -226,6 +226,42 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
 
   const assigned: AmountSpan[][] = markers.map(() => []);
   amounts.forEach((amount) => {
+    // Prefer a type keyword immediately after the amount ("200 rupees sales").
+    // If the amount follows a type ("sales 200 and expenses 300"), assign it
+    // to the preceding type instead of stealing it for the next transaction.
+    let nextIndex = -1;
+    let nextDistance = Number.POSITIVE_INFINITY;
+    markers.forEach((marker, index) => {
+      if (marker.start < amount.end) return;
+      const gap = text.slice(amount.end, marker.start);
+      const isCurrencyGap = /^[\\s₹$]*(?:(?:rupees?|rs|rupay(?:e)?|rupaye|rupee|ka|ki|ke|worth|amount|of)\\s*)*$/iu.test(gap);
+      const distance = marker.start - amount.end;
+      if (isCurrencyGap && distance < nextDistance) {
+        nextDistance = distance;
+        nextIndex = index;
+      }
+    });
+
+    if (nextIndex >= 0 && nextDistance <= 45) {
+      assigned[nextIndex].push(amount);
+      return;
+    }
+
+    let previousIndex = -1;
+    let previousDistance = Number.POSITIVE_INFINITY;
+    markers.forEach((marker, index) => {
+      if (marker.end > amount.start) return;
+      const distance = amount.start - marker.end;
+      if (distance < previousDistance) {
+        previousDistance = distance;
+        previousIndex = index;
+      }
+    });
+    if (previousIndex >= 0 && previousDistance <= 55) {
+      assigned[previousIndex].push(amount);
+      return;
+    }
+
     let nearestIndex = -1;
     let nearestDistance = Number.POSITIVE_INFINITY;
     markers.forEach((marker, index) => {
