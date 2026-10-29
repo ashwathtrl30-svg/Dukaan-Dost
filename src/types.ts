@@ -33,6 +33,8 @@ export interface SaleEntry {
   date: string; // YYYY-MM-DD
   amount: number;
   itemName?: string;
+  /** Units/pieces/services included in this sale; old entries default to one. */
+  quantity?: number;
   category?: string;
   paymentType: PaymentType;
   note?: string;
