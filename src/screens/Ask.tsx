@@ -22,6 +22,16 @@ function isTodayQuestion(q: string): boolean {
   return /today|aaj|आज|आजका|आज का|आजकी|आज की/.test(q);
 }
 
+// Hindi "kal" is treated as yesterday for historical shop-ledger questions.
+function isYesterdayQuestion(q: string): boolean {
+  return /yesterday|yesterday's|last day|kal|कल|बीते कल|पिछले दिन/.test(q);
+}
+
+function getYesterdayStr(): string {
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  return yesterday.toISOString().split('T')[0];
+}
+
 // Helper: detect if question is about this week
 function isWeekQuestion(q: string): boolean {
   return /week|hafte|हफ़्ते|हफ्ते|इस हफ़्ते|this week|last week|पिछले/.test(q);
@@ -231,6 +241,51 @@ function generateResponse(question: string, state: any, lang: string): string {
   
   // ===== DATA QUERIES - Answer with actual data =====
   if (intent === 'data_query') {
+    // Yesterday's entries are calculated from the exact ledger date, not an AI guess.
+    if (isYesterdayQuestion(q)) {
+      const yesterday = getYesterdayStr();
+      const yesterdaySales = state.sales.filter((entry: any) => entry.date === yesterday);
+      const yesterdayExpenses = state.expenses.filter((entry: any) => entry.date === yesterday);
+      const yesterdayUdhaar = state.udhaar.filter((entry: any) => entry.date === yesterday);
+      const salesTotal = yesterdaySales.reduce((sum: number, entry: any) => sum + entry.amount, 0);
+      const expenseTotal = yesterdayExpenses.reduce((sum: number, entry: any) => sum + entry.amount, 0);
+
+      if (isSalesQuestion(q)) {
+        return yesterdaySales.length
+          ? (lang === 'hi'
+            ? 'कल की कुल बिक्री: ₹' + fmt(salesTotal) + ' (' + yesterdaySales.length + ' एंट्री)'
+            : "Yesterday's total sales: ₹" + fmt(salesTotal) + ' (' + yesterdaySales.length + ' ' + (yesterdaySales.length === 1 ? 'entry' : 'entries') + ')')
+          : (lang === 'hi' ? 'कल की कोई बिक्री दर्ज नहीं है। मैं अनुमान नहीं लगाऊँगा।' : 'No sales entries were recorded yesterday, so I cannot report a sales total.');
+      }
+
+      if (isExpenseQuestion(q)) {
+        return yesterdayExpenses.length
+          ? (lang === 'hi'
+            ? 'कल का कुल खर्च: ₹' + fmt(expenseTotal) + ' (' + yesterdayExpenses.length + ' एंट्री)'
+            : "Yesterday's total expenses: ₹" + fmt(expenseTotal) + ' (' + yesterdayExpenses.length + ' ' + (yesterdayExpenses.length === 1 ? 'entry' : 'entries') + ')')
+          : (lang === 'hi' ? 'कल का कोई खर्च दर्ज नहीं है। मैं अनुमान नहीं लगाऊँगा।' : 'No expense entries were recorded yesterday, so I cannot report an expense total.');
+      }
+
+      if (isProfitQuestion(q)) {
+        if (!yesterdaySales.length || !yesterdayExpenses.length) {
+          return lang === 'hi'
+            ? 'कल का सही मुनाफ़ा निकालने के लिए बिक्री और खर्च—दोनों की एंट्री चाहिए। उपलब्ध डेटा अधूरा है, इसलिए मैं अनुमान नहीं लगाऊँगा।'
+            : 'I need both sales and expense entries for yesterday to calculate profit reliably. The available data is incomplete, so I will not guess.';
+        }
+        return lang === 'hi'
+          ? 'कल का दर्ज मुनाफ़ा: ₹' + fmt(salesTotal - expenseTotal) + ' (बिक्री ₹' + fmt(salesTotal) + ', खर्च ₹' + fmt(expenseTotal) + ')'
+          : "Yesterday's recorded profit: ₹" + fmt(salesTotal - expenseTotal) + ' (sales ₹' + fmt(salesTotal) + ', expenses ₹' + fmt(expenseTotal) + ')';
+      }
+
+      if (isUdhaarQuestion(q)) {
+        const total = yesterdayUdhaar.reduce((sum: number, entry: any) => sum + entry.amount, 0);
+        return yesterdayUdhaar.length
+          ? (lang === 'hi'
+            ? 'कल दर्ज उधार: ₹' + fmt(total) + ' (' + yesterdayUdhaar.length + ' एंट्री)'
+            : "Udhaar recorded yesterday: ₹" + fmt(total) + ' (' + yesterdayUdhaar.length + ' ' + (yesterdayUdhaar.length === 1 ? 'entry' : 'entries') + ')')
+          : (lang === 'hi' ? 'कल कोई उधार एंट्री दर्ज नहीं है।' : 'No udhaar entries were recorded yesterday.');
+      }
+    }
     // Today's sales
     if (isTodayQuestion(q) && isSalesQuestion(q)) {
       const todaySaleEntries = state.sales.filter((s: any) => s.date === today);
