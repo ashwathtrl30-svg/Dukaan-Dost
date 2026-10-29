@@ -310,14 +310,14 @@ function getDailyLessons(dateKey: string, refreshCount: number): LessonData[] {
 function LessonCopy({ content }: { content: string }) {
   return (
     <div className="space-y-2">
-      {content.split('\\n').map((rawLine, index) => {
+      {content.split('\n').map((rawLine, index) => {
         const line = rawLine.trim();
         if (!line) return <div key={index} className="h-1" />;
-        const heading = line.match(/^\\*\\*(.+)\\*\\*$/);
+        const heading = line.match(/^\*\*(.+)\*\*$/);
         if (heading) {
           return <h4 key={index} className="text-body font-semibold text-text pt-1">{heading[1]}</h4>;
         }
-        const bullet = line.match(/^(?:[-•])\\s+(.+)$/);
+        const bullet = line.match(/^(?:[-•])\s+(.+)$/);
         if (bullet) {
           return (
             <div key={index} className="flex items-start gap-2 pl-1">
@@ -326,7 +326,7 @@ function LessonCopy({ content }: { content: string }) {
             </div>
           );
         }
-        const numbered = line.match(/^(\\d+\\.)\\s+(.+)$/);
+        const numbered = line.match(/^(\d+\.)\s+(.+)$/);
         if (numbered) {
           return (
             <div key={index} className="flex items-start gap-2 pl-1">
