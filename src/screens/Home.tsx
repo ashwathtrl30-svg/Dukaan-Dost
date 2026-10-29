@@ -271,7 +271,7 @@ export function HomeScreen() {
                         {entry.entryType === 'sale' ? (entry.itemName?.trim() || t('sale', lang)) : t(`ec_${(entry as any).category || 'other'}` as any, lang)}
                       </p>
                       <p className="text-small text-text-secondary">
-                        {entry.entryType === 'sale' && Number.isFinite(Number((entry as any).quantity)) && Number((entry as any).quantity) > 0 ? `${lang === 'hi' ? 'मात्रा' : 'Qty'}: ${Number((entry as any).quantity)} · ` : ''}{new Date(entry.date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' })}
+                        {entry.entryType === 'sale' && Number.isFinite(Number((entry as any).quantity)) && Number((entry as any).quantity) > 0 ? `${lang === 'hi' ? 'मात्रा' : 'Qty'}: ${Number((entry as any).quantity)} ${((entry as any).quantityUnit || (lang === 'hi' ? 'यूनिट' : 'unit'))} · ` : ''}{new Date(entry.date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' })}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -384,7 +384,7 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
       const quantity = Number((entry as any).quantity);
       if (Number.isFinite(quantity) && quantity > 0) {
         const qtyLabel = lang === 'hi' ? 'मात्रा' : 'Qty';
-        return `${qtyLabel}: ${quantity}`;
+        return `${qtyLabel}: ${quantity} ${entry.quantityUnit || (lang === 'hi' ? 'यूनिट' : 'unit')}`;
       }
       return lang === 'hi' ? 'बिक्री' : 'Sale entry';
     }
