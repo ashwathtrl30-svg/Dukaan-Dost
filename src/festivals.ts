@@ -367,6 +367,47 @@ function getMobileFestivalProducts(id: string, lang: 'en' | 'hi'): string {
     : 'regularly selling covers, chargers, cables and accessories; do not buy expensive phones just because a festival is approaching';
 }
 
+
+function getFestivalServiceProducts(
+  id: string,
+  shopType: ShopType | null | undefined,
+  lang: 'en' | 'hi',
+  fallbackEn: string,
+  fallbackHi: string,
+): string {
+  const salon = shopType === 'salon';
+  const choose = (en: string, hi: string) => lang === 'hi' ? hi : en;
+  if (salon) {
+    if (id.includes('karwa-chauth')) return choose('pre-book mehendi, manicure and evening styling appointments; prepare the usual beauty consumables', 'मेहंदी, मैनीक्योर और शाम की स्टाइलिंग पहले बुक करें; सामान्य ब्यूटी सामग्री तैयार रखें');
+    if (id.includes('navratri')) return choose('reserve evening makeup and hair-styling slots for garba nights where locally popular', 'जहाँ गरबा लोकप्रिय है वहाँ शाम के मेकअप और हेयर स्टाइलिंग स्लॉट रखें');
+    if (id.includes('holi')) return choose('offer pre-Holi grooming and scheduled post-Holi hair/skin clean-up services', 'होली से पहले ग्रूमिंग और बाद में तय हेयर/स्किन क्लीन-अप सेवाएँ रखें');
+    if (id.includes('vivah-panchami') || id.includes('akshaya-tritiya')) return choose('confirm occasion and wedding makeup/hair bookings with realistic service durations', 'अवसर और शादी के मेकअप/हेयर की बुकिंग पक्की करें और सेवा का वास्तविक समय तय करें');
+    if (id.includes('diwali') || id.includes('dhanteras')) return choose('book pre-Diwali hair styling, makeup and grooming; protect booked time slots', 'दिवाली से पहले हेयर स्टाइलिंग, मेकअप और ग्रूमिंग बुक करें; पक्के स्लॉट सुरक्षित रखें');
+    if (id.includes('christmas')) return choose('confirm party grooming, hair styling and nail appointments ahead of peak evening slots', 'व्यस्त शाम से पहले पार्टी ग्रूमिंग, हेयर स्टाइलिंग और नेल अपॉइंटमेंट पक्के करें');
+    if (id.includes('raksha-bandhan') || id.includes('bhai-dooj')) return choose('offer family-visit grooming and quick styling appointments, timed around customer plans', 'ग्राहकों के कार्यक्रम के अनुसार परिवार से मिलने की ग्रूमिंग और जल्दी स्टाइलिंग के स्लॉट रखें');
+    if (id.includes('ganesh-chaturthi')) return choose('schedule grooming around local Ganesh installation and immersion timings', 'स्थानीय गणेश स्थापना और विसर्जन के समय के अनुसार ग्रूमिंग स्लॉट रखें');
+    if (id.includes('onam')) return choose('book grooming and occasion styling ahead of family gatherings', 'पारिवारिक मिलन से पहले ग्रूमिंग और अवसर स्टाइलिंग बुक करें');
+    if (id.includes('gudi-padwa')) return choose('offer new-year grooming slots based on confirmed local family-event bookings', 'पक्की स्थानीय पारिवारिक बुकिंग के अनुसार नए साल की ग्रूमिंग के स्लॉट रखें');
+    if (id.includes('janmashtami') || id.includes('maha-shivratri') || id.includes('ram-navami')) return choose('confirm appointment times around local temple visits and observance schedules', 'स्थानीय मंदिर जाने और पूजा के समय के अनुसार अपॉइंटमेंट पक्के करें');
+    if (id.includes('chhath-puja')) return choose('confirm bookings early because customers may travel or observe long rituals', 'बुकिंग पहले पक्की करें क्योंकि ग्राहक यात्रा या लंबे अनुष्ठान में हो सकते हैं');
+    return choose('keep normal appointments and the consumables used by booked services ready; do not assume a festival rush without enquiries', 'नियमित अपॉइंटमेंट और बुक सेवाओं की सामग्री तैयार रखें; पूछताछ बिना त्योहार की भीड़ न मानें');
+  }
+  if (id.includes('karwa-chauth')) return choose('prioritise blouse/saree finishing, falls and urgent alterations for confirmed festive outfits', 'पक्के त्योहार कपड़ों के लिए ब्लाउज़/साड़ी फिनिशिंग, फॉल और जल्दी फिटिंग को प्राथमिकता दें');
+  if (id.includes('navratri')) return choose('take regional garba or festive-wear fittings only where customers wear them, and confirm collection slots', 'जहाँ गरबा/त्योहार कपड़े पहने जाते हों वहाँ ही फिटिंग लें और पिकअप स्लॉट पक्का करें');
+  if (id.includes('holi')) return choose('plan simple casual-wear repairs and alterations already requested; avoid speculative garment stock', 'पहले से माँगी गई कैज़ुअल कपड़ों की मरम्मत/फिटिंग करें; अनुमान से कपड़ों का स्टॉक न लें');
+  if (id.includes('vivah-panchami') || id.includes('akshaya-tritiya')) return choose('confirm wedding or occasion-wear fittings, measurements and delivery dates before accepting more work', 'शादी/अवसर के कपड़ों की फिटिंग, नाप और डिलीवरी तारीख़ पक्की करके ही नया काम लें');
+  if (id.includes('diwali') || id.includes('dhanteras') || id.includes('bhai-dooj')) return choose('prioritise festive outfit alterations, blouse finishing and delivery dates already promised', 'पहले से वादा किए त्योहार कपड़ों की फिटिंग, ब्लाउज़ फिनिशिंग और डिलीवरी तारीख़ को प्राथमिकता दें');
+  if (id.includes('raksha-bandhan')) return choose('keep capacity for quick outfit fixes and confirmed family-occasion alterations', 'जल्दी कपड़ों के बदलाव और पक्की पारिवारिक फिटिंग के लिए समय रखें');
+  if (id.includes('christmas')) return choose('schedule party-wear alterations and confirm pickup times before the event date', 'कार्यक्रम से पहले पार्टी कपड़ों की फिटिंग और पिकअप समय तय करें');
+  if (id.includes('onam')) return choose('confirm traditional-attire fitting and collection dates ahead of family gatherings', 'पारिवारिक मिलन से पहले पारंपरिक कपड़ों की फिटिंग और पिकअप तारीख़ पक्की करें');
+  if (id.includes('gudi-padwa')) return choose('confirm new-year festive outfit finishing and alteration pickup dates', 'नए साल के त्योहार कपड़ों की फिनिशिंग और फिटिंग पिकअप तारीख़ पक्की करें');
+  if (id.includes('janmashtami')) return choose('take children’s festive-costume work only if it is part of your normal service, with confirmed measurements', 'बच्चों के त्योहार कॉस्ट्यूम का काम केवल तभी लें जब यह आपकी सामान्य सेवा हो, नाप पक्का करके');
+  if (id.includes('ganesh-chaturthi')) return choose('confirm traditional outfit alterations and delivery dates around installation/immersion days', 'स्थापना/विसर्जन के आसपास पारंपरिक कपड़ों की फिटिंग और डिलीवरी पक्की करें');
+  if (id.includes('chhath-puja')) return choose('agree on collection dates before ritual days and avoid promising unachievable urgent work', 'पूजा के दिनों से पहले पिकअप तारीख़ तय करें और ऐसा जल्दी काम न लें जिसे समय पर पूरा न कर सकें');
+  if (id.includes('vasant-panchami')) return choose('take yellow or school/family-event outfit alterations only when customers ask', 'पीले कपड़ों या स्कूल/परिवार आयोजन की फिटिंग केवल ग्राहक की माँग पर लें');
+  return choose('keep confirmed alterations, fitting appointments and customer-approved garments organised; avoid unconfirmed seasonal work', 'पक्की फिटिंग, अपॉइंटमेंट और ग्राहक के तय कपड़े व्यवस्थित रखें; बिना पक्के ऑर्डर मौसमी काम न लें');
+}
+
 export function getFestivalShopAdvice(
   festivalId: string,
   shopType: ShopType | null | undefined,
@@ -378,7 +419,7 @@ export function getFestivalShopAdvice(
   const base = adviceForType(shopType, lang);
   const isService = shopType === 'salon' || shopType === 'tailor';
   const products = isService
-    ? (lang === 'hi' ? plan.serviceHi : plan.serviceEn)
+    ? getFestivalServiceProducts(id, shopType, lang, plan.serviceEn, plan.serviceHi)
     : focus === 'food'
       ? (lang === 'hi' ? plan.foodHi : plan.foodEn)
       : focus === 'medical'
