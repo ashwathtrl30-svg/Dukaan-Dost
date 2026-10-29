@@ -90,7 +90,13 @@ export function getLocalDateKey(date: Date = new Date()): string {
 
 export function getUpcomingFestivals(now: Date = new Date(), monthsAhead = 2): UpcomingFestival[] {
   const start = getLocalDateKey(now);
-  const endDate = new Date(now.getFullYear(), now.getMonth() + monthsAhead, now.getDate());
+  const targetMonth = new Date(now.getFullYear(), now.getMonth() + monthsAhead, 1);
+  const lastDayOfTargetMonth = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0).getDate();
+  const endDate = new Date(
+    targetMonth.getFullYear(),
+    targetMonth.getMonth(),
+    Math.min(now.getDate(), lastDayOfTargetMonth),
+  );
   const end = getLocalDateKey(endDate);
   return FESTIVAL_CALENDAR
     .filter((festival) => festival.date >= start && festival.date <= end)
