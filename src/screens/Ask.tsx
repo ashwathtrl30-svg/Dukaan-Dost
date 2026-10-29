@@ -21,10 +21,10 @@ function fmt(n: number): string {
 // In particular, "$56$" should render as "56", not look like USD.
 function normalizeAIAnswer(answer: string): string {
   return answer
-    .replace(/\\$\\$([\\s\\S]+?)\\$\\$/g, '$1')
-    .replace(/\\$(\\s*[+-]?\\d+(?:,\\d{3})*(?:\\.\\d+)?\\s*)\\$/g, '$1')
-    .replace(/\\\\\\(([\\s\\S]+?)\\\\\\)/g, '$1')
-    .replace(/\\\\\\[([\\s\\S]+?)\\\\\\]/g, '$1')
+    .replace(/\$\$([\s\S]+?)\$\$/g, '$1')
+    .replace(/\$(\s*[+-]?\d+(?:,\d{3})*(?:\.\d+)?\s*)\$/g, '$1')
+    .replace(/\\\(([\s\S]+?)\\\)/g, '$1')
+    .replace(/\\\[([\s\S]+?)\\\]/g, '$1')
     .trim();
 }
 
