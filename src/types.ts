@@ -62,6 +62,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+  language?: 'en' | 'hi';
 }
 
 export interface ChatSession {
