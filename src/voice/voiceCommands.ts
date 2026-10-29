@@ -298,7 +298,7 @@ function findExpenseCategoryMatches(text: string): ExpenseCategoryMatch[] {
     },
     {
       category: 'stock',
-      pattern: /\b(?:stock purchase|stock|inventory|goods purchase|purchase of goods|items purchase|purchase|goods|maal|samaan|saman)\b|स्टॉक|सामान|माल|खरीदारी|माल खरीद/iu,
+      pattern: /\b(?:stock purchase|stock|inventory|goods purchase|purchase of goods|items purchase|purchase|goods|maal|saaman|samaan|saamaan|saman)\b|स्टॉक|सामान|माल|खरीदारी|माल खरीद/iu,
     },
   ];
 
