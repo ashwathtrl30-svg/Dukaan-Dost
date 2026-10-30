@@ -33,10 +33,12 @@ export interface SaleEntry {
   date: string; // YYYY-MM-DD
   amount: number;
   itemName?: string;
-  /** Measured or counted quantity sold, e.g. 500 ml, 2 kg or 3 packets. */
+  /** Number of separate items/services sold, independent of weight or volume. */
+  numberOfItemsSold?: number;
+  /** Optional measured quantity, e.g. 500 g, 2 kg, 750 ml or 1 litre. */
   quantity?: number;
   quantityUnit?: string;
-  /** Optional separate package count when a sale also records total weight/volume. */
+  /** Legacy package count retained for older saved entries. */
   packageCount?: number;
   packageUnit?: string;
   category?: string;

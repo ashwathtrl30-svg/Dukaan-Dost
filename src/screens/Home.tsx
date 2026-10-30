@@ -3,7 +3,7 @@ import { useStore, formatRupee, getTodaySales, getTodayExpenses, getLast7DaysDat
 import { t } from '../i18n';
 import { NotebookScreen } from './NotebookScreen';
 import { SaleEntry, ExpenseEntry, UdhaarEntry, PaymentType } from '../types';
-import { parseSaleQuantityInput, formatSaleQuantityInput } from '../quantity';
+import { parseSaleQuantityInput, isMeasuredSaleQuantity, shopUsesMeasuredQuantity } from '../quantity';
 import { Plus, ArrowLeft, X, Check, TrendingUp, TrendingDown, Edit2, MoreVertical, ClipboardList, CalendarDays, Trash2 } from 'lucide-react';
 
 // ============ HOME SCREEN ============
@@ -15,11 +15,20 @@ type DisplayEntry =
 function formatSaleQuantity(entry: any): string {
   const quantity = Number(entry.quantity);
   if (!Number.isFinite(quantity) || quantity <= 0 || !entry.quantityUnit) return '';
-  const main = quantity + ' ' + entry.quantityUnit;
-  const packageCount = Number(entry.packageCount);
-  return Number.isFinite(packageCount) && packageCount > 0 && entry.packageUnit
-    ? packageCount + ' ' + entry.packageUnit + ' · ' + main
-    : main;
+  const parsed = parseSaleQuantityInput(`${quantity} ${entry.quantityUnit}`);
+  return isMeasuredSaleQuantity(parsed) ? quantity + ' ' + entry.quantityUnit : '';
+}
+
+function formatSaleDetails(entry: any, lang: string): string {
+  const count = Number(entry.numberOfItemsSold ?? entry.packageCount ?? entry.quantity);
+  const itemCount = Number.isFinite(count) && count > 0
+    ? `${lang === 'hi' ? 'आइटम' : 'Items'}: ${count}`
+    : '';
+  const quantity = formatSaleQuantity(entry);
+  const measured = quantity
+    ? `${lang === 'hi' ? 'मात्रा' : 'Qty'}: ${quantity}`
+    : '';
+  return [itemCount, measured].filter(Boolean).join(' · ');
 }
 
 export function HomeScreen() {
@@ -291,9 +300,7 @@ export function HomeScreen() {
                             : (entry.customerName || (lang === 'hi' ? 'ग्राहक' : 'Customer'))}
                       </p>
                       <p className="text-small text-text-secondary">
-                        {entry.entryType === 'sale' && formatSaleQuantity(entry)
-                          ? `${lang === 'hi' ? 'मात्रा' : 'Qty'}: ${formatSaleQuantity(entry)} · `
-                          : ''}
+                        {entry.entryType === 'sale' ? formatSaleDetails(entry, lang) + (formatSaleDetails(entry, lang) ? ' · ' : '') : ''}
                         {entry.entryType === 'expense'
                           ? `${t(`ec_${entry.category || 'other'}` as any, lang)} · `
                           : ''}
@@ -447,15 +454,10 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
     if (entry.entryType === 'udhaar') {
       return entry.customerName || (lang === 'hi' ? 'ग्राहक का नाम नहीं' : 'Customer name not provided');
     }
-    if (entry.note?.trim()) return entry.note.trim();
     if (entry.entryType === 'sale') {
-      const quantity = Number((entry as any).quantity);
-      if (Number.isFinite(quantity) && quantity > 0) {
-        const qtyLabel = lang === 'hi' ? 'मात्रा' : 'Qty';
-        return `${qtyLabel}: ${formatSaleQuantity(entry)}`;
-      }
-      return lang === 'hi' ? 'बिक्री' : 'Sale entry';
+      return formatSaleDetails(entry, lang) || (lang === 'hi' ? 'बिक्री' : 'Sale entry');
     }
+    if (entry.note?.trim()) return entry.note.trim();
     return lang === 'hi' ? 'खर्च' : 'Expense entry';
   };
 
@@ -723,8 +725,11 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
   const { state, dispatch } = useStore();
   const lang = state.language!;
   const [itemName, setItemName] = useState('');
+  const [numberOfItemsText, setNumberOfItemsText] = useState('1');
   const [quantityText, setQuantityText] = useState('');
   const parsedQuantity = parseSaleQuantityInput(quantityText);
+  const validMeasuredQuantity = isMeasuredSaleQuantity(parsedQuantity);
+  const usesMeasuredQuantity = shopUsesMeasuredQuantity(state.shopProfile.shopType);
   const [amount, setAmount] = useState('');
   const [paymentType, setPaymentType] = useState<PaymentType>('cash');
   const [expenseCategory, setExpenseCategory] = useState('stock');
@@ -750,8 +755,14 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
   const handleSave = () => {
     const numAmount = parseInt(amount, 10) || 0;
     const cleanedItemName = itemName.trim();
-    const saleQuantity = parseSaleQuantityInput(quantityText);
-    if (numAmount <= 0 || (isSale && (!cleanedItemName || !saleQuantity))) return;
+    const parsedSaleQuantity = parseSaleQuantityInput(quantityText);
+    const saleQuantity = isMeasuredSaleQuantity(parsedSaleQuantity) ? parsedSaleQuantity : null;
+    const numberOfItemsSold = Number.parseInt(numberOfItemsText, 10);
+    if (numAmount <= 0 || (isSale && (
+      !cleanedItemName ||
+      !Number.isInteger(numberOfItemsSold) || numberOfItemsSold <= 0 ||
+      (usesMeasuredQuantity && quantityText.trim() && !saleQuantity)
+    ))) return;
     
     const id = generateId();
     const today = getToday();
@@ -762,11 +773,8 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
         date: today,
         amount: numAmount,
         itemName: cleanedItemName,
-        quantity: saleQuantity!.quantity,
-        quantityUnit: saleQuantity!.quantityUnit,
-        ...(saleQuantity!.packageCount && saleQuantity!.packageUnit
-          ? { packageCount: saleQuantity!.packageCount, packageUnit: saleQuantity!.packageUnit }
-          : {}),
+        numberOfItemsSold,
+        ...(saleQuantity ? { quantity: saleQuantity.quantity, quantityUnit: saleQuantity.quantityUnit } : {}),
         paymentType,
         createdAt: Date.now()
       };
@@ -799,6 +807,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
     
     setAmount('');
     setItemName('');
+    setNumberOfItemsText('1');
     setQuantityText('');
     setCustomerName('');
   };
@@ -879,25 +888,43 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
           {isSale && (
             <div className="mb-4">
               <label className="text-small font-medium text-text-secondary block mb-2">
-                {lang === 'hi' ? 'मात्रा * (संख्या + इकाई)' : 'Quantity * (number + unit)'}
+                {lang === 'hi' ? 'बेची गई चीज़ों की संख्या *' : 'Number of items sold *'}
+              </label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1"
+                step="1"
+                value={numberOfItemsText}
+                onChange={(e) => setNumberOfItemsText(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder={lang === 'hi' ? 'जैसे 2' : 'e.g. 2'}
+                className="input-field"
+                aria-label={lang === 'hi' ? 'बेची गई चीज़ों की संख्या' : 'Number of items sold'}
+              />
+            </div>
+          )}
+          {isSale && usesMeasuredQuantity && (
+            <div className="mb-4">
+              <label className="text-small font-medium text-text-secondary block mb-2">
+                {lang === 'hi' ? 'माप की मात्रा (वज़न / तरल)' : 'Measured quantity (weight / liquid)'}
               </label>
               <input
                 type="text"
                 value={quantityText}
                 onChange={(e) => setQuantityText(e.target.value.slice(0, 60))}
-                placeholder={lang === 'hi' ? 'जैसे 500 ग्राम, 1 लीटर, 2 किलो, 750 मिली, 1 पीस' : 'e.g. 500g, 1l, 2kg, 750ml, 1 piece'}
+                placeholder={lang === 'hi' ? 'जैसे 500 ग्राम, 2 किलो, 750 मिली, 1 लीटर' : 'e.g. 500g, 2kg, 750ml, 1 litre'}
                 className="input-field"
                 maxLength={60}
-                aria-label={lang === 'hi' ? 'बेची गई मात्रा और इकाई' : 'Quantity sold and unit'}
+                aria-label={lang === 'hi' ? 'माप की मात्रा' : 'Measured quantity'}
               />
               <p className="text-small text-text-secondary mt-1">
                 {lang === 'hi'
-                  ? 'संख्या के बाद एक सही इकाई लिखें। उदाहरण: 500 ग्राम, 1 लीटर, 2 किलो या 1 पीस। सिर्फ संख्या लिखने से बिक्री सेव नहीं होगी। पैकेट और कुल वज़न दोनों हों तो लिखें: 2 पैकेट, 2 किलो।'
-                  : 'Enter a number followed by one valid unit: 500g, 1l, 2kg, 750ml or 1 piece. A number alone is not accepted. For pack count plus total weight, enter: 2 packets, 2 kg.'}
+                  ? 'यह वज़न या तरल की मात्रा है। सामान की गिनती ऊपर अलग डालें।'
+                  : 'This is the weight or liquid amount. Enter the item count separately above.'}
               </p>
-              {quantityText.trim() && !parsedQuantity && (
+              {quantityText.trim() && !validMeasuredQuantity && (
                 <p className="text-small text-problem mt-1" role="alert">
-                  {lang === 'hi' ? 'संख्या के बाद सही इकाई लिखें, जैसे 500 ग्राम, 1 लीटर, 2 किलो या 1 पीस।' : 'Enter a number plus a valid unit, e.g. 500g, 1l, 2kg or 1 piece.'}
+                  {lang === 'hi' ? 'सिर्फ वज़न या तरल की सही मात्रा लिखें, जैसे 500 ग्राम, 2 किलो, 750 मिली या 1 लीटर।' : 'Enter a valid weight or liquid amount, e.g. 500g, 2kg, 750ml or 1 litre.'}
                 </p>
               )}
             </div>
@@ -980,7 +1007,12 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
         <div className="px-5 py-4 safe-bottom">
           <button
             onClick={handleSave}
-            disabled={!amount || parseInt(amount, 10) <= 0 || (isSale && (!itemName.trim() || !parsedQuantity))}
+            disabled={!amount || parseInt(amount, 10) <= 0 || (isSale && (
+              !itemName.trim() ||
+              !Number.isInteger(Number.parseInt(numberOfItemsText, 10)) ||
+              Number.parseInt(numberOfItemsText, 10) <= 0 ||
+              (usesMeasuredQuantity && quantityText.trim() && !validMeasuredQuantity)
+            ))}
             className="btn-primary text-body-lg"
           >
             <Check size={20} /> {t('save', lang)}
@@ -1005,8 +1037,11 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
   const { state, dispatch } = useStore();
   const lang = state.language!;
   const [itemName, setItemName] = useState(String(entry.itemName || ''));
-  const [quantityText, setQuantityText] = useState(formatSaleQuantityInput(entry));
+  const [numberOfItemsText, setNumberOfItemsText] = useState(String(entry.numberOfItemsSold ?? entry.packageCount ?? entry.quantity ?? 1));
+  const [quantityText, setQuantityText] = useState(entry.quantity && entry.quantityUnit && isMeasuredSaleQuantity(parseSaleQuantityInput(`${entry.quantity} ${entry.quantityUnit}`)) ? `${entry.quantity} ${entry.quantityUnit}` : '');
   const parsedQuantity = parseSaleQuantityInput(quantityText);
+  const validMeasuredQuantity = isMeasuredSaleQuantity(parsedQuantity);
+  const usesMeasuredQuantity = shopUsesMeasuredQuantity(state.shopProfile.shopType);
   const [amount, setAmount] = useState(String(entry.amount));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
@@ -1015,8 +1050,14 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
   
   const handleSave = () => {
     const numAmount = parseInt(amount, 10) || 0;
-    const saleQuantity = parseSaleQuantityInput(quantityText);
-    if (numAmount <= 0 || (isSale && (!itemName.trim() || !saleQuantity))) return;
+    const parsedSaleQuantity = parseSaleQuantityInput(quantityText);
+    const saleQuantity = isMeasuredSaleQuantity(parsedSaleQuantity) ? parsedSaleQuantity : null;
+    const numberOfItemsSold = Number.parseInt(numberOfItemsText, 10);
+    if (numAmount <= 0 || (isSale && (
+      !itemName.trim() ||
+      !Number.isInteger(numberOfItemsSold) || numberOfItemsSold <= 0 ||
+      (usesMeasuredQuantity && quantityText.trim() && !saleQuantity)
+    ))) return;
     
     // Delete old entry
     dispatch({ type: 'DELETE_ENTRY', payload: { type: entry.entryType, id: entry.id } });
@@ -1027,10 +1068,11 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
       amount: numAmount,
       ...(isSale ? {
         itemName: itemName.trim(),
-        quantity: saleQuantity!.quantity,
-        quantityUnit: saleQuantity!.quantityUnit,
-        packageCount: saleQuantity!.packageCount,
-        packageUnit: saleQuantity!.packageUnit,
+        numberOfItemsSold,
+        quantity: saleQuantity?.quantity,
+        quantityUnit: saleQuantity?.quantityUnit,
+        packageCount: undefined,
+        packageUnit: undefined,
       } : {}),
       createdAt: Date.now(),
     };
@@ -1095,23 +1137,43 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
           {isSale && (
             <div className="mb-4">
               <label className="text-small font-medium text-text-secondary block mb-2">
-                {lang === 'hi' ? 'मात्रा * (संख्या + इकाई)' : 'Quantity * (number + unit)'}
+                {lang === 'hi' ? 'बेची गई चीज़ों की संख्या *' : 'Number of items sold *'}
+              </label>
+              <input
+                type="number"
+                inputMode="numeric"
+                min="1"
+                step="1"
+                value={numberOfItemsText}
+                onChange={(e) => setNumberOfItemsText(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder={lang === 'hi' ? 'जैसे 2' : 'e.g. 2'}
+                className="input-field"
+                aria-label={lang === 'hi' ? 'बेची गई चीज़ों की संख्या' : 'Number of items sold'}
+              />
+            </div>
+          )}
+          {isSale && usesMeasuredQuantity && (
+            <div className="mb-4">
+              <label className="text-small font-medium text-text-secondary block mb-2">
+                {lang === 'hi' ? 'माप की मात्रा (वज़न / तरल)' : 'Measured quantity (weight / liquid)'}
               </label>
               <input
                 type="text"
                 value={quantityText}
                 onChange={(e) => setQuantityText(e.target.value.slice(0, 60))}
-                placeholder={lang === 'hi' ? 'जैसे 500 ग्राम, 1 लीटर, 2 किलो, 750 मिली, 1 पीस' : 'e.g. 500g, 1l, 2kg, 750ml, 1 piece'}
+                placeholder={lang === 'hi' ? 'जैसे 500 ग्राम, 2 किलो, 750 मिली, 1 लीटर' : 'e.g. 500g, 2kg, 750ml, 1 litre'}
                 className="input-field"
                 maxLength={60}
-                aria-label={lang === 'hi' ? 'बेची गई मात्रा और इकाई' : 'Quantity sold and unit'}
+                aria-label={lang === 'hi' ? 'माप की मात्रा' : 'Measured quantity'}
               />
               <p className="text-small text-text-secondary mt-1">
-                {lang === 'hi' ? 'उदाहरण: 500 ग्राम, 1 लीटर, 2 किलो, 1 पीस या 2 पैकेट, 2 किलो' : 'Examples: 500g, 1l, 2kg, 1 piece, or 2 packets, 2 kg.'}
+                {lang === 'hi'
+                  ? 'यह वज़न या तरल की मात्रा है। सामान की गिनती ऊपर अलग डालें।'
+                  : 'This is the weight or liquid amount. Enter the item count separately above.'}
               </p>
-              {quantityText.trim() && !parsedQuantity && (
+              {quantityText.trim() && !validMeasuredQuantity && (
                 <p className="text-small text-problem mt-1" role="alert">
-                  {lang === 'hi' ? 'संख्या के बाद सही इकाई लिखें, जैसे 500 ग्राम, 1 लीटर, 2 किलो या 1 पीस।' : 'Enter a number plus a valid unit, e.g. 500g, 1l, 2kg or 1 piece.'}
+                  {lang === 'hi' ? 'सिर्फ वज़न या तरल की सही मात्रा लिखें, जैसे 500 ग्राम, 2 किलो, 750 मिली या 1 लीटर।' : 'Enter a valid weight or liquid amount, e.g. 500g, 2kg, 750ml or 1 litre.'}
                 </p>
               )}
             </div>
@@ -1159,7 +1221,12 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
         <div className="px-5 py-4 safe-bottom space-y-3">
           <button
             onClick={handleSave}
-            disabled={!amount || parseInt(amount, 10) <= 0 || (isSale && (!itemName.trim() || !parsedQuantity))}
+            disabled={!amount || parseInt(amount, 10) <= 0 || (isSale && (
+              !itemName.trim() ||
+              !Number.isInteger(Number.parseInt(numberOfItemsText, 10)) ||
+              Number.parseInt(numberOfItemsText, 10) <= 0 ||
+              (usesMeasuredQuantity && quantityText.trim() && !validMeasuredQuantity)
+            ))}
             className="btn-primary text-body-lg"
           >
             <Check size={20} /> {lang === 'hi' ? 'अपडेट करें' : 'Update'}

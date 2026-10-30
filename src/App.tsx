@@ -58,7 +58,7 @@ function AppContent() {
   };
 
   const handleHomeVoiceConfirm = () => {
-    const parsed = parseVoiceTransactions(homeVoiceDraft);
+    const parsed = parseVoiceTransactions(homeVoiceDraft, state.shopProfile.shopType);
     if (!parsed.transactions.length || parsed.error) {
       showTemporaryVoiceStatus(voiceErrorMessage(parsed.error));
       return;
@@ -83,8 +83,10 @@ function AppContent() {
             date: today,
             amount: transaction.amount,
             itemName: transaction.itemName!.trim(),
-            quantity,
-            quantityUnit: transaction.quantityUnit!,
+            numberOfItemsSold: transaction.numberOfItemsSold || quantity || 1,
+            ...(transaction.quantity && transaction.quantityUnit
+              ? { quantity, quantityUnit: transaction.quantityUnit }
+              : {}),
             ...(transaction.packageCount && transaction.packageUnit
               ? { packageCount: transaction.packageCount, packageUnit: transaction.packageUnit }
               : {}),
@@ -92,11 +94,13 @@ function AppContent() {
             createdAt: Date.now(),
           },
         });
-        const quantitySummary = transaction.packageCount && transaction.packageUnit
-          ? transaction.packageCount + ' ' + transaction.packageUnit + ' · ' + quantity + ' ' + transaction.quantityUnit
-          : quantity + ' ' + transaction.quantityUnit;
+        const quantitySummary = transaction.quantity && transaction.quantityUnit
+          ? quantity + ' ' + transaction.quantityUnit
+          : '';
+        const countSummary = (transaction.numberOfItemsSold || quantity || 1) + (lang === 'hi' ? ' आइटम' : ' items');
         summaries.push(
-          (transaction.itemName || 'Sale') + ' · ' + quantitySummary + ' · ' + formatRupee(transaction.amount),
+          (transaction.itemName || 'Sale') + ' · ' + countSummary +
+          (quantitySummary ? ' · ' + quantitySummary : '') + ' · ' + formatRupee(transaction.amount),
         );
         created.push({ type: 'sale', id });
       } else if (transaction.type === 'expense') {
@@ -239,7 +243,7 @@ function AppContent() {
             aria-label={lang === 'hi' ? 'आवाज़ से पहचाना गया टेक्स्ट' : 'Recognized voice transcript'}
           />
           {(() => {
-            const parsed = parseVoiceTransactions(homeVoiceDraft);
+            const parsed = parseVoiceTransactions(homeVoiceDraft, state.shopProfile.shopType);
             const canAdd = !parsed.error && parsed.transactions.length > 0 && parsed.transactions.length <= 5;
             return (
               <>
@@ -260,9 +264,10 @@ function AppContent() {
                           </p>
                           {transaction.type === 'sale' && (
                             <p className="text-xs text-text-secondary">
-                              {transaction.packageCount && transaction.packageUnit
-                                ? `${transaction.packageCount} ${transaction.packageUnit} · ${transaction.quantity} ${transaction.quantityUnit}`
-                                : `${transaction.quantity} ${transaction.quantityUnit}`}
+                              {transaction.numberOfItemsSold || transaction.quantity || 1} {lang === 'hi' ? 'आइटम' : 'items'}
+                              {transaction.quantity && transaction.quantityUnit
+                                ? ` · ${transaction.quantity} ${transaction.quantityUnit}`
+                                : ''}
                             </p>
                           )}
                         </div>

@@ -1,3 +1,5 @@
+import type { ShopType } from './types';
+
 export interface ParsedSaleQuantity {
   /** Main measured or counted quantity, e.g. 500 ml, 2 kg or 3 packets. */
   quantity: number;
@@ -9,6 +11,21 @@ export interface ParsedSaleQuantity {
 
 type QuantityUnitKind = 'measure' | 'package';
 type NormalizedUnit = { unit: string; kind: QuantityUnitKind };
+
+const MEASUREMENT_UNITS = new Set([
+  'kg', 'g', 'mg', 'ml', 'litre', 'quintal', 'tonne', 'metre', 'cm', 'mm',
+]);
+
+/** Weight/volume is useful for grocery and produce-style shops, not most service or piece-based shops. */
+export function shopUsesMeasuredQuantity(shopType: ShopType | null | undefined): boolean {
+  if (!shopType) return true;
+  return ['kirana', 'vegetable', 'bakery', 'sweet', 'other'].includes(shopType);
+}
+
+/** The measured-quantity input accepts weight/volume/length units only. */
+export function isMeasuredSaleQuantity(value: ParsedSaleQuantity | null): value is ParsedSaleQuantity {
+  return Boolean(value && MEASUREMENT_UNITS.has(value.quantityUnit) && !value.packageCount);
+}
 
 const UNIT_ALIASES: Record<string, NormalizedUnit> = {
   kg: { unit: 'kg', kind: 'measure' }, kgs: { unit: 'kg', kind: 'measure' },

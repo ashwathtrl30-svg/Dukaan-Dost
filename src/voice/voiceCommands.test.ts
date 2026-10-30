@@ -367,3 +367,42 @@ test('infers a sale from a complete quantity-item-price phrase without an add co
     quantityUnit: 'kg',
   }]);
 });
+
+test('parses conversational Hindi chawal sale as rice with count and measured quantity', () => {
+  const parsed = parseVoiceTransactions('maine do kilo chawal 200 rupaye mai bech di', 'kirana');
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(
+    parsed.transactions.map(({ itemName, numberOfItemsSold, quantity, quantityUnit, amount }) => ({
+      itemName, numberOfItemsSold, quantity, quantityUnit, amount,
+    })),
+    [{ itemName: 'rice', numberOfItemsSold: 2, quantity: 2, quantityUnit: 'kg', amount: 200 }],
+  );
+});
+
+test('multiplies a spoken price per item by the number sold', () => {
+  const parsed = parseVoiceTransactions('maine 2 kg chawal bech di, ek kii kimat 100 thii', 'kirana');
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(
+    parsed.transactions.map(({ itemName, numberOfItemsSold, quantity, quantityUnit, amount }) => ({
+      itemName, numberOfItemsSold, quantity, quantityUnit, amount,
+    })),
+    [{ itemName: 'rice', numberOfItemsSold: 2, quantity: 2, quantityUnit: 'kg', amount: 200 }],
+  );
+});
+
+test('hardware and salon sales use item counts without measured quantities', () => {
+  const hardware = parseVoiceTransactions('maine do charger 500 rupaye mein bech diye', 'hardware');
+  assert.equal(hardware.error, undefined);
+  assert.deepEqual(
+    hardware.transactions.map(({ itemName, numberOfItemsSold, quantity, quantityUnit, amount }) => ({
+      itemName, numberOfItemsSold, quantity, quantityUnit, amount,
+    })),
+    [{ itemName: 'charger', numberOfItemsSold: 2, quantity: undefined, quantityUnit: undefined, amount: 500 }],
+  );
+
+  const salon = parseVoiceTransactions('ek haircut 300 rupaye mein becha', 'salon');
+  assert.equal(salon.error, undefined);
+  assert.equal(salon.transactions[0]?.numberOfItemsSold, 1);
+  assert.equal(salon.transactions[0]?.quantity, undefined);
+  assert.equal(salon.transactions[0]?.amount, 300);
+});
