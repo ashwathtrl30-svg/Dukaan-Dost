@@ -131,7 +131,17 @@ export function formatSaleQuantityInput(entry: {
   }
   const main = String(entry.quantity) + ' ' + entry.quantityUnit;
   if (Number.isFinite(Number(entry.packageCount)) && Number(entry.packageCount) > 0 && entry.packageUnit) {
-    return String(entry.packageCount) + ' ' + entry.packageUnit + ', ' + main;
+    const packageCount = Number(entry.packageCount);
+    const packageUnit = entry.packageUnit === 'dozen'
+      ? 'dozen'
+      : packageCount === 1
+        ? entry.packageUnit
+        : entry.packageUnit === 'box'
+          ? 'boxes'
+          : entry.packageUnit.endsWith('s')
+            ? entry.packageUnit
+            : entry.packageUnit + 's';
+    return String(entry.packageCount) + ' ' + packageUnit + ', ' + main;
   }
   return main;
 }
