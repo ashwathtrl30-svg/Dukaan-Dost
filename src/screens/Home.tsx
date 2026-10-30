@@ -879,25 +879,25 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
           {isSale && (
             <div className="mb-4">
               <label className="text-small font-medium text-text-secondary block mb-2">
-                {lang === 'hi' ? 'बेची गई मात्रा और इकाई' : 'Quantity sold (include unit)'}
+                {lang === 'hi' ? 'मात्रा * (संख्या + इकाई)' : 'Quantity * (number + unit)'}
               </label>
               <input
                 type="text"
                 value={quantityText}
                 onChange={(e) => setQuantityText(e.target.value.slice(0, 60))}
-                placeholder={lang === 'hi' ? 'जैसे 500 मिली, 2 किलो, 3 पैकेट' : 'e.g. 500 ml, 2 kg, 1 litre, 3 packets'}
+                placeholder={lang === 'hi' ? 'जैसे 500 ग्राम, 1 लीटर, 2 किलो, 750 मिली, 1 पीस' : 'e.g. 500g, 1l, 2kg, 750ml, 1 piece'}
                 className="input-field"
                 maxLength={60}
                 aria-label={lang === 'hi' ? 'बेची गई मात्रा और इकाई' : 'Quantity sold and unit'}
               />
               <p className="text-small text-text-secondary mt-1">
                 {lang === 'hi'
-                  ? 'मात्रा और इकाई दोनों ज़रूरी हैं। पैकेट की संख्या और कुल वज़न हो तो लिखें: 2 पैकेट, 2 किलो।'
-                  : 'Quantity and unit are required. For pack count plus total weight, enter: 2 packets, 2 kg.'}
+                  ? 'संख्या के बाद एक सही इकाई लिखें। उदाहरण: 500 ग्राम, 1 लीटर, 2 किलो या 1 पीस। सिर्फ संख्या लिखने से बिक्री सेव नहीं होगी। पैकेट और कुल वज़न दोनों हों तो लिखें: 2 पैकेट, 2 किलो।'
+                  : 'Enter a number followed by one valid unit: 500g, 1l, 2kg, 750ml or 1 piece. A number alone is not accepted. For pack count plus total weight, enter: 2 packets, 2 kg.'}
               </p>
               {quantityText.trim() && !parsedQuantity && (
                 <p className="text-small text-problem mt-1" role="alert">
-                  {lang === 'hi' ? 'मात्रा सही तरह लिखें, जैसे 500 मिली या 2 पैकेट, 2 किलो।' : 'Use a quantity and unit, e.g. 500 ml or 2 packets, 2 kg.'}
+                  {lang === 'hi' ? 'संख्या के बाद सही इकाई लिखें, जैसे 500 ग्राम, 1 लीटर, 2 किलो या 1 पीस।' : 'Enter a number plus a valid unit, e.g. 500g, 1l, 2kg or 1 piece.'}
                 </p>
               )}
             </div>
@@ -1095,23 +1095,23 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
           {isSale && (
             <div className="mb-4">
               <label className="text-small font-medium text-text-secondary block mb-2">
-                {lang === 'hi' ? 'बेची गई मात्रा और इकाई' : 'Quantity sold (include unit)'}
+                {lang === 'hi' ? 'मात्रा * (संख्या + इकाई)' : 'Quantity * (number + unit)'}
               </label>
               <input
                 type="text"
                 value={quantityText}
                 onChange={(e) => setQuantityText(e.target.value.slice(0, 60))}
-                placeholder={lang === 'hi' ? 'जैसे 500 मिली, 2 किलो, 3 पैकेट' : 'e.g. 500 ml, 2 kg, 1 litre, 3 packets'}
+                placeholder={lang === 'hi' ? 'जैसे 500 ग्राम, 1 लीटर, 2 किलो, 750 मिली, 1 पीस' : 'e.g. 500g, 1l, 2kg, 750ml, 1 piece'}
                 className="input-field"
                 maxLength={60}
                 aria-label={lang === 'hi' ? 'बेची गई मात्रा और इकाई' : 'Quantity sold and unit'}
               />
               <p className="text-small text-text-secondary mt-1">
-                {lang === 'hi' ? 'उदाहरण: 2 पैकेट, 2 किलो' : 'Example: 2 packets, 2 kg'}
+                {lang === 'hi' ? 'उदाहरण: 500 ग्राम, 1 लीटर, 2 किलो, 1 पीस या 2 पैकेट, 2 किलो' : 'Examples: 500g, 1l, 2kg, 1 piece, or 2 packets, 2 kg.'}
               </p>
               {quantityText.trim() && !parsedQuantity && (
                 <p className="text-small text-problem mt-1" role="alert">
-                  {lang === 'hi' ? 'मात्रा और इकाई सही तरह लिखें।' : 'Enter a valid quantity and unit.'}
+                  {lang === 'hi' ? 'संख्या के बाद सही इकाई लिखें, जैसे 500 ग्राम, 1 लीटर, 2 किलो या 1 पीस।' : 'Enter a number plus a valid unit, e.g. 500g, 1l, 2kg or 1 piece.'}
                 </p>
               )}
             </div>
