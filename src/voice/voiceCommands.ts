@@ -8,8 +8,11 @@ export interface VoiceTransaction {
   itemName?: string;
   /** Quantity/pieces recorded in a single sale. */
   quantity?: number;
-  /** Unit spoken by the shopkeeper, e.g. kg, litre, packet or unit. */
+  /** Unit spoken by the shopkeeper, e.g. kg, litre, ml or packet. */
   quantityUnit?: string;
+  /** Optional separate package count when both count and total measure are spoken. */
+  packageCount?: number;
+  packageUnit?: string;
   /** Customer name for udhaar, required for a multi-entry voice credit. */
   customerName?: string;
   expenseCategory?: string;
@@ -23,6 +26,7 @@ export type VoiceParseError =
   | 'missing_amount'
   | 'ambiguous_amount'
   | 'missing_item'
+  | 'missing_quantity'
   | 'missing_customer'
   | 'too_many_entries'
   | 'amount_out_of_range'
@@ -397,9 +401,55 @@ function detectExpenseCategory(text: string, marker?: Span): string {
 const MAX_VOICE_BATCH = 5;
 const MAX_VOICE_AMOUNT = 10_000_000;
 
+function matchQuantityUnit(after: string): { unit: string; length: number } | undefined {
+  const match = /^\\s*(millilit(?:er|re)s?|ml|milligrams?|mg|kilograms?|kilos?|kgs?|kg|grams?|gms?|gm|g|litres?|liters?|ltr|lt|l|quintals?|tonnes?|tons?|meters?|metres?|m|cm|mm|packets?|packs?|pkts?|pieces?|pcs?|pc|units?|items?|bottles?|boxes?|dozen|dz|bags?|sacks?|pouches?|bundles?|strips?|jars?|cans?|pairs?|trays?|rolls?|sets?|plates?|cups?|glasses?|services?|किलोग्राम|किलो|ग्राम|मिलीलीटर|लीटर|लिटर|पैकेट|पीस|नग|बोतल|डिब्बा|डिब्बे|दर्जन|पाव|क्विंटल)/iu.exec(after);
+  if (!match) return undefined;
+  const word = match[1].toLowerCase();
+  let unit = word;
+  if (/^(?:kilo|kilogram|kg)/iu.test(word) || word === 'किलो' || word === 'किलोग्राम') unit = 'kg';
+  else if (/^(?:gram|gm|gms|g)$/iu.test(word) || word === 'ग्राम') unit = 'g';
+  else if (/^(?:milliliter|millilitre|ml|मिलीलीटर)$/iu.test(word)) unit = 'ml';
+  else if (/^(?:liter|litre|ltr|lt|l)$/iu.test(word) || word === 'लीटर' || word === 'लिटर') unit = 'litre';
+  else if (/^(?:milligram|mg)$/iu.test(word)) unit = 'mg';
+  else if (/^quintal/iu.test(word) || word === 'क्विंटल') unit = 'quintal';
+  else if (/^(?:ton|tonne)/iu.test(word)) unit = 'tonne';
+  else if (/^(?:meter|metre|m)$/iu.test(word)) unit = 'metre';
+  else if (/^cm$/iu.test(word)) unit = 'cm';
+  else if (/^mm$/iu.test(word)) unit = 'mm';
+  else if (/^(?:packet|pack|pkt)/iu.test(word) || word === 'पैकेट') unit = 'packet';
+  else if (/^(?:piece|pc)/iu.test(word) || word === 'पीस' || word === 'नग') unit = 'piece';
+  else if (/^unit/iu.test(word)) unit = 'unit';
+  else if (/^item/iu.test(word)) unit = 'item';
+  else if (/^bottle/iu.test(word) || word === 'बोतल') unit = 'bottle';
+  else if (/^box/iu.test(word) || word === 'डिब्बा' || word === 'डिब्बे') unit = 'box';
+  else if (/^(?:dozen|dz)/iu.test(word) || word === 'दर्जन') unit = 'dozen';
+  else if (/^bag/iu.test(word)) unit = 'bag';
+  else if (/^sack/iu.test(word)) unit = 'sack';
+  else if (/^pouch/iu.test(word)) unit = 'pouch';
+  else if (/^bundle/iu.test(word)) unit = 'bundle';
+  else if (/^strip/iu.test(word)) unit = 'strip';
+  else if (/^jar/iu.test(word)) unit = 'jar';
+  else if (/^can/iu.test(word)) unit = 'can';
+  else if (/^pair/iu.test(word)) unit = 'pair';
+  else if (/^tray/iu.test(word)) unit = 'tray';
+  else if (/^roll/iu.test(word)) unit = 'roll';
+  else if (/^set/iu.test(word)) unit = 'set';
+  else if (/^plate/iu.test(word)) unit = 'plate';
+  else if (/^cup/iu.test(word)) unit = 'cup';
+  else if (/^glass/iu.test(word)) unit = 'glass';
+  else if (/^service/iu.test(word)) unit = 'service';
+  else if (word === 'पाव') unit = 'pav';
+  return { unit, length: match[0].length };
+}
+
+function isMeasureQuantityUnit(unit: string | undefined): boolean {
+  return Boolean(unit && ['kg', 'g', 'mg', 'ml', 'litre', 'quintal', 'tonne', 'metre', 'cm', 'mm', 'pav'].includes(unit));
+}
+
 function isQuantitySpan(span: AmountSpan, text: string): boolean {
-  const after = text.slice(span.end, span.end + 55);
-  return /^\s*(?:(?:aadhe?|aadha|aadhi|aadhay|half)\s+kilo\s+ke\s+packets?|half[- ]kilo\s+packets?|(?:aadhe?|aadha|half)\s+kilo\s+packets?|(?:[0-9]+(?:\.[0-9]+)?\s*)?(?:kg|kilos?|kilograms?|grams?|gram|gm|g|litres?|liters?|ltr|l|packets?|packs?|pieces?|pcs?|units?|items?|bottles?|boxes?|dozen|dz|किलो|किलोग्राम|ग्राम|लीटर|लिटर|पैकेट|पीस|नग|बोतल|डिब्बा|डिब्बे|पाव|आधा|आधे|आधी|क्विंटल))/iu.test(after);
+  const after = text.slice(span.end, span.end + 70);
+  const halfPacket = /^\\s*(?:(?:aadhe?|aadha|aadhi|aadhay|half)\\s+kilo\\s+ke\\s+packets?|half[- ]kilo\\s+packets?|(?:aadhe?|aadha|half)\\s+kilo\\s+packets?)/iu.test(after);
+  return halfPacket || Boolean(matchQuantityUnit(after));
 }
 
 function isAttachedBrandNumber(span: AmountSpan, text: string): boolean {
@@ -460,17 +510,19 @@ function stripVoiceCommandWords(value: string): string {
     .trim();
 }
 
-function parseLeadingQuantity(segment: string): { quantity: number; quantityUnit: string; remainder: string } {
-  let value = segment.trim().replace(/^[,;:\s]+/, '');
-  value = value.replace(/^(?:and|aur|phir|then|plus|और|फिर)\s+/iu, '');
+function parseLeadingQuantity(segment: string): {
+  quantity?: number;
+  quantityUnit?: string;
+  remainder: string;
+} {
+  let value = segment.trim().replace(/^[,;:\\s]+/, '');
+  value = value.replace(/^(?:and|aur|phir|then|plus|और|फिर)\\s+/iu, '');
   const spans = findAmountSpans(value);
   const first = spans[0];
-  if (!first || first.start > 3 || isQuantitySpan(first, value) === false && currencySuffixEnd(first, value) > first.end) {
-    return { quantity: 1, quantityUnit: 'unit', remainder: value };
-  }
+  if (!first || first.start > 3) return { remainder: value };
 
   const after = value.slice(first.end);
-  const halfPacket = /^\s*(?:(?:aadhe?|aadha|aadhi|aadhay|half)\s+kilo\s+ke\s+packets?|half[- ]kilo\s+packets?|(?:aadhe?|aadha|half)\s+kilo\s+packets?)/iu.exec(after);
+  const halfPacket = /^\\s*(?:(?:aadhe?|aadha|aadhi|aadhay|half)\\s+kilo\\s+ke\\s+packets?|half[- ]kilo\\s+packets?|(?:aadhe?|aadha|half)\\s+kilo\\s+packets?)/iu.exec(after);
   if (halfPacket) {
     return {
       quantity: first.amount,
@@ -479,37 +531,80 @@ function parseLeadingQuantity(segment: string): { quantity: number; quantityUnit
     };
   }
 
-  const unitMatch = /^\s*(kilos?|kilograms?|kg|grams?|gm|g|litres?|liters?|ltr|l|packets?|packs?|pieces?|pcs?|units?|items?|bottles?|boxes?|dozen|dz|किलो|किलोग्राम|ग्राम|लीटर|लिटर|पैकेट|पीस|नग|बोतल|डिब्बा|डिब्बे|पाव|क्विंटल)/iu.exec(after);
-  if (unitMatch) {
-    const word = unitMatch[1].toLowerCase();
-    let quantityUnit = word;
-    if (/^(?:kilo|kilogram|kg)/i.test(word) || word === 'किलो' || word === 'किलोग्राम') quantityUnit = 'kg';
-    else if (/^(?:gram|gm|g)$/i.test(word) || word === 'ग्राम') quantityUnit = 'g';
-    else if (/^(?:litre|liter|ltr|l)$/i.test(word) || word === 'लीटर' || word === 'लिटर') quantityUnit = 'litre';
-    else if (/^(?:packet|pack|पैकेट)/i.test(word)) quantityUnit = 'packet';
-    else if (/^(?:piece|pc|pcs|पीस|नग)/i.test(word)) quantityUnit = 'piece';
-    else if (/^(?:bottle|बोतल)/i.test(word)) quantityUnit = 'bottle';
-    else if (/^(?:box|boxes|डिब्बा|डिब्बे)/i.test(word)) quantityUnit = 'box';
-    else if (/^(?:dozen|dz)/i.test(word)) quantityUnit = 'dozen';
-    const consumed = first.end + unitMatch[0].length;
-    return { quantity: first.amount, quantityUnit, remainder: value.slice(consumed) };
-  }
-
-  // A spoken number immediately before a product name is treated as count.
-  // The price span itself is excluded from this descriptor, so it cannot be consumed here.
-  return { quantity: first.amount, quantityUnit: 'unit', remainder: value.slice(first.end) };
+  const unitMatch = matchQuantityUnit(after);
+  if (!unitMatch) return { remainder: value };
+  return {
+    quantity: first.amount,
+    quantityUnit: unitMatch.unit,
+    remainder: value.slice(first.end + unitMatch.length),
+  };
 }
 
-function cleanSaleItemName(segment: string): { itemName: string; quantity: number; quantityUnit: string } {
-  const parsed = parseLeadingQuantity(segment);
-  let itemName = stripVoiceCommandWords(parsed.remainder);
+function cleanSaleItemName(segment: string): {
+  itemName: string;
+  quantity?: number;
+  quantityUnit?: string;
+  packageCount?: number;
+  packageUnit?: string;
+} {
+  const commandStripped = stripVoiceCommandWords(segment);
+  const parsed = parseLeadingQuantity(commandStripped);
+  let quantity = parsed.quantity;
+  let quantityUnit = parsed.quantityUnit;
+  let packageCount: number | undefined;
+  let packageUnit: string | undefined;
+  let remainder = parsed.remainder;
+
+  const additionalTerms = findAmountSpans(remainder)
+    .map(span => {
+      const unitMatch = matchQuantityUnit(remainder.slice(span.end));
+      return unitMatch
+        ? { span, end: span.end + unitMatch.length, amount: span.amount, unit: unitMatch.unit }
+        : undefined;
+    })
+    .filter((term): term is { span: AmountSpan; end: number; amount: number; unit: string } => Boolean(term));
+
+  const extraMeasure = additionalTerms.find(term => isMeasureQuantityUnit(term.unit));
+  const extraPackage = additionalTerms.find(term => !isMeasureQuantityUnit(term.unit));
+
+  if (quantity !== undefined && quantityUnit) {
+    if (isMeasureQuantityUnit(quantityUnit) && extraPackage) {
+      packageCount = extraPackage.amount;
+      packageUnit = extraPackage.unit;
+    } else if (!isMeasureQuantityUnit(quantityUnit) && extraMeasure) {
+      packageCount = quantity;
+      packageUnit = quantityUnit;
+      quantity = extraMeasure.amount;
+      quantityUnit = extraMeasure.unit;
+    }
+  } else if (extraMeasure) {
+    quantity = extraMeasure.amount;
+    quantityUnit = extraMeasure.unit;
+    if (extraPackage) {
+      packageCount = extraPackage.amount;
+      packageUnit = extraPackage.unit;
+    }
+  } else if (extraPackage) {
+    quantity = extraPackage.amount;
+    quantityUnit = extraPackage.unit;
+  }
+
+  // Remove any extra quantity tokens from the product/service name. This lets
+  // "2 packets maida, 2 kg" save as item "maida", not "maida 2 kg".
+  for (const term of additionalTerms.sort((a, b) => b.span.start - a.span.start)) {
+    remainder = remainder.slice(0, term.span.start) + ' ' + remainder.slice(term.end);
+  }
+
+  let itemName = stripVoiceCommandWords(remainder);
   itemName = itemName
-    .replace(/\b(?:rupees?|rupee|rs|rupay|rupaye|rupaya|rupiya|रुपये?|रुपया|रुपए|रूपये?|रूपए)\b/giu, ' ')
-    .replace(/^(?:of|for|the|a|an|ka|ki|ke|kilo|kg|packet|pack|aur|and|में|की|का|के)\s+/iu, '')
-    .replace(/(?:से|में)\s*$/u, '')
-    .replace(/\s+/g, ' ')
+    .replace(/\\b(?:rupees?|rupee|rs|rupay|rupaye|rupaya|rupiya|रुपये?|रुपया|रुपए|रूपये?|रूपए)\\b/giu, ' ')
+    .replace(/^(?:of|for|the|a|an|ka|ki|ke|kilo|kg|packet|pack|aur|and|में|की|का|के)\\s+/iu, '')
+    .replace(/(?:से|में)\\s*$/u, '')
+    .replace(/[,:;]+/g, ' ')
+    .replace(/\\s+/g, ' ')
     .trim();
-  return { itemName, quantity: parsed.quantity, quantityUnit: parsed.quantityUnit };
+
+  return { itemName, quantity, quantityUnit, packageCount, packageUnit };
 }
 
 function getNameFromContext(context: string): string | undefined {
