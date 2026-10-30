@@ -671,7 +671,20 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
     /\b(?:add|record|enter|log|save|put|sale|sales|sell|sold|jod|jodo|jodna|likho?|likh|daal|dalo|dal|darj|jama|karo|kar do|kar do na|bik\s+gaya|bik\s+gayi|bik\s+gaye|bech\s+diya|bech\s+di)\b|बिक गया|बिक गई|बेच दिया|बेच दी|जोड़|जोड़ो|जोड़ें|जोड़ना|जोड़िए|डाल|डालो|डालिए|दर्ज|लिख|जमा|ऐड|एड|करो|करें|करना|डाल दो/iu;
   const questionPattern =
     /\b(?:what|when|where|why|how|can|should|tell|show|kitna|kitne|kitni|kya|kaise|kyun|batao)\b|कितना|कितनी|कितने|क्या|कैसे|क्यों|बताओ/iu;
-  if (!actionPattern.test(text) || questionPattern.test(text)) {
+  const numberSpans = findAmountSpans(text);
+  const quantitySpans = numberSpans.filter(span => isQuantitySpan(span, text));
+  const moneySpans = numberSpans.filter(span =>
+    !isQuantitySpan(span, text) && !isAttachedBrandNumber(span, text),
+  );
+  const naturalSalePrefix = moneySpans.length ? text.slice(0, moneySpans[0].start) : '';
+  const naturalSaleItem = cleanSaleItemName(naturalSalePrefix);
+  const naturalSaleCandidate = quantitySpans.length > 0 &&
+    moneySpans.some(span => currencySuffixEnd(span, text) > span.end) &&
+    Boolean(naturalSaleItem.itemName && naturalSaleItem.quantity && naturalSaleItem.quantityUnit);
+
+  // In the Home voice-entry flow, a complete "quantity + item + price" phrase
+  // is itself a clear sale command. Do not infer a sale from an amount alone.
+  if ((!actionPattern.test(text) && !naturalSaleCandidate) || questionPattern.test(text)) {
     return { transactions: [], error: 'not_command' };
   }
 
@@ -679,15 +692,11 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
   const distinctTypes = new Set(markers.map(marker => marker.type));
   const mentionedExpenseCategory = detectExpenseCategory(text);
   if (!distinctTypes.size && mentionedExpenseCategory !== 'other') distinctTypes.add('expense');
+  if (!distinctTypes.size && naturalSaleCandidate) distinctTypes.add('sale');
   if (!distinctTypes.size) return { transactions: [], error: 'no_type' };
   const fallbackType = distinctTypes.size === 1
     ? [...distinctTypes][0]
     : undefined;
-
-  const numberSpans = findAmountSpans(text);
-  const moneySpans = numberSpans.filter(span =>
-    !isQuantitySpan(span, text) && !isAttachedBrandNumber(span, text),
-  );
   if (!moneySpans.length) return { transactions: [], error: 'missing_amount' };
   if (moneySpans.length > MAX_VOICE_BATCH) {
     return { transactions: [], error: 'too_many_entries' };
