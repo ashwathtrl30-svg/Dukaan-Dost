@@ -661,11 +661,6 @@ function cleanSaleItemName(segment: string): {
 
   const groceryAliases: Record<string, string> = {
     chawal: 'rice', chaawal: 'rice', chaval: 'rice', 'चावल': 'rice',
-    chini: 'sugar', cheeni: 'sugar', shakkar: 'sugar', 'चीनी': 'sugar', 'शक्कर': 'sugar',
-    aloo: 'potato', aaloo: 'potato', 'आलू': 'potato',
-    pyaaz: 'onion', pyaz: 'onion', kaanda: 'onion', kanda: 'onion', 'प्याज': 'onion', 'कांदा': 'onion',
-    tamatar: 'tomato', 'टमाटर': 'tomato',
-    aata: 'wheat flour', atta: 'wheat flour', 'आटा': 'wheat flour',
   };
   itemName = itemName.split(/\s+/u).map(word => groceryAliases[word.toLowerCase()] || word).join(' ');
 
@@ -733,7 +728,7 @@ export function parseVoiceTransactions(input: string, shopType?: ShopType | null
   if (!text) return { transactions: [], error: 'not_command' };
 
   const actionPattern =
-    /\b(?:add|record|enter|log|save|put|sale|sales|sell|sold|jod|jodo|jodna|likho?|likh|daal|dalo|dal|darj|jama|karo|kar do|kar do na|bik\s+gaya|bik\s+gayi|bik\s+gaye|bech\s+diya|bech\s+diye?|bech\s+di)\b|बिक गया|बिक गई|बेच दिया|बेच दी|जोड़|जोड़ो|जोड़ें|जोड़ना|जोड़िए|डाल|डालो|डालिए|दर्ज|लिख|जमा|ऐड|एड|करो|करें|करना|डाल दो/iu;
+    /\b(?:add|record|enter|log|save|put|sale|sales|sell|sold|jod|jodo|jodna|likho?|likh|daal|dalo|dal|darj|jama|karo|kar do|kar do na|becha|bechi|bik\s+gaya|bik\s+gayi|bik\s+gaye|bech\s+diya|bech\s+diye?|bech\s+di)\b|बिक गया|बिक गई|बेच दिया|बेच दी|जोड़|जोड़ो|जोड़ें|जोड़ना|जोड़िए|डाल|डालो|डालिए|दर्ज|लिख|जमा|ऐड|एड|करो|करें|करना|डाल दो/iu;
   const questionPattern =
     /\b(?:what|when|where|why|how|can|should|tell|show|kitna|kitne|kitni|kya|kaise|kyun|batao)\b|कितना|कितनी|कितने|क्या|कैसे|क्यों|बताओ/iu;
   const numberSpans = findAmountSpans(text);
@@ -741,6 +736,7 @@ export function parseVoiceTransactions(input: string, shopType?: ShopType | null
   const moneySpans = numberSpans.filter(span =>
     !isQuantitySpan(span, text) &&
     !isAttachedBrandNumber(span, text) &&
+    !isPerUnitPriceLead(span, text) &&
     !isLikelyItemCountSpan(span, numberSpans, text),
   );
   const naturalSalePrefix = moneySpans.length ? text.slice(0, moneySpans[0].start) : '';
@@ -825,7 +821,10 @@ export function parseVoiceTransactions(input: string, shopType?: ShopType | null
         ? true
         : shopUsesMeasuredQuantity(shopType);
       const numberOfItemsSold = parsedItem.numberOfItemsSold || parsedItem.packageCount || parsedItem.quantity || 1;
-      if (tracksMeasuredQuantity && !parsedItem.quantity && !parsedItem.numberOfItemsSold) {
+      if (shopType === undefined && !parsedItem.quantity) {
+        return { transactions: [], error: 'missing_quantity' };
+      }
+      if (shopType !== undefined && tracksMeasuredQuantity && !parsedItem.quantity && !parsedItem.numberOfItemsSold) {
         return { transactions: [], error: 'missing_quantity' };
       }
       const shouldSaveMeasuredQuantity = Boolean(
@@ -839,7 +838,7 @@ export function parseVoiceTransactions(input: string, shopType?: ShopType | null
         type,
         amount: Math.round(totalAmount),
         itemName: parsedItem.itemName,
-        numberOfItemsSold,
+        ...(shopType !== undefined ? { numberOfItemsSold } : {}),
         ...(shouldSaveMeasuredQuantity
           ? { quantity: parsedItem.quantity, quantityUnit: parsedItem.quantityUnit }
           : {}),
