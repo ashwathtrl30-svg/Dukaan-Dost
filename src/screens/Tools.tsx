@@ -391,18 +391,21 @@ function StockReorderTool() {
     sale.date >= startKey &&
     sale.date <= todayKey,
   );
-  const totals = new Map<string, { name: string; amount: number; quantity: number; quantityEntries: number; untrackedQuantityEntries: number; entries: number; lastSold: string }>();
+  const totals = new Map<string, { name: string; unit: string; amount: number; quantity: number; quantityEntries: number; untrackedQuantityEntries: number; entries: number; lastSold: string }>();
   namedSales.forEach((sale) => {
     const name = sale.itemName!.trim().replace(/\s+/g, ' ');
-    const key = name.toLocaleLowerCase();
-    const current = totals.get(key) || { name, amount: 0, quantity: 0, quantityEntries: 0, untrackedQuantityEntries: 0, entries: 0, lastSold: sale.date };
-    current.amount += Number(sale.amount) || 0;
     const recordedQuantity = Number(sale.quantity);
-    if (Number.isFinite(recordedQuantity) && recordedQuantity > 0) {
+    const unit = typeof sale.quantityUnit === 'string' ? sale.quantityUnit.trim() : '';
+    const hasMeasuredQuantity = Number.isFinite(recordedQuantity) && recordedQuantity > 0 && Boolean(unit);
+    // Keep kg, g, pieces and other units in separate totals.
+    const key = name.toLocaleLowerCase() + '|' + (hasMeasuredQuantity ? unit.toLocaleLowerCase() : 'untracked');
+    const current = totals.get(key) || { name, unit: hasMeasuredQuantity ? unit : '', amount: 0, quantity: 0, quantityEntries: 0, untrackedQuantityEntries: 0, entries: 0, lastSold: sale.date };
+    current.amount += Number(sale.amount) || 0;
+    if (hasMeasuredQuantity) {
       current.quantity += recordedQuantity;
       current.quantityEntries += 1;
     } else {
-      // Older sales have no quantity; don't invent a unit count for them.
+      // Legacy entries without a recognized unit must not be counted as measured units.
       current.untrackedQuantityEntries += 1;
     }
     current.entries += 1;
@@ -427,21 +430,21 @@ function StockReorderTool() {
               : 'Name each service and quantity when recording a sale. This list ranks recorded service count first, then sales value.')
             : (lang === 'hi'
               ? 'हर बिक्री में सामान का नाम और मात्रा लिखें। यह सूची पहले दर्ज मात्रा, फिर बिक्री मूल्य के आधार पर क्रम दिखाती है।'
-              : 'Name each item and enter its quantity. This list ranks items by quantity sold, then sales value; it does not know current shelf stock.')}
+              : 'Enter an item name and a number-plus-unit quantity such as 500g, 1l or 2kg. Different units stay separate in this ranking; it does not know current shelf stock.')}
         </p>
       </div>
 
       {ranked.length > 0 ? (
         <div className="space-y-2">
           {ranked.map((item, index) => (
-            <div key={item.name.toLocaleLowerCase()} className="card flex items-center gap-3 px-4 py-3">
+            <div key={item.name.toLocaleLowerCase() + '|' + (item.unit || 'untracked')} className="card flex items-center gap-3 px-4 py-3">
               <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
                 {index + 1}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-text break-words">{item.name}</p>
                 <p className="text-small text-text-secondary">
-                  {item.quantityEntries > 0 ? `${Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} ${lang === 'hi' ? 'यूनिट दर्ज' : (item.quantity === 1 ? 'unit recorded' : 'units recorded')}` : (lang === 'hi' ? 'मात्रा दर्ज नहीं' : 'quantity not recorded')} · {item.entries} {lang === 'hi' ? 'एंट्री' : (item.entries === 1 ? 'entry' : 'entries')}{item.untrackedQuantityEntries > 0 ? ` · ${item.untrackedQuantityEntries} ${lang === 'hi' ? 'पुरानी बिना मात्रा' : 'older without quantity'}` : ''}
+                  {item.quantityEntries > 0 ? `${Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} ${item.unit} ${lang === 'hi' ? 'दर्ज' : 'recorded'}` : (lang === 'hi' ? 'इकाई दर्ज नहीं' : 'unit not recorded')} · {item.entries} {lang === 'hi' ? 'एंट्री' : (item.entries === 1 ? 'entry' : 'entries')}
                 </p>
               </div>
               <p className="font-bold text-positive whitespace-nowrap">{formatRupee(item.amount)}</p>
