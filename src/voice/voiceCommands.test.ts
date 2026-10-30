@@ -303,7 +303,7 @@ test('never accepts a sale without an item name or explicit quantity and unit', 
 });
 
 test('records both packet count and total weight when a sale includes both', () => {
-  const parsed = parseVoiceTransactions('add 2 packet maida, 2 kg, 500 rupaye sales');
+  const parsed = parseVoiceTransactions('2 packet maida, 2 kg, 500 rupaye');
   assert.equal(parsed.error, undefined);
   assert.deepEqual(parsed.transactions, [{
     type: 'sale',
@@ -338,6 +338,7 @@ test('rejects the entire batch when one sale has no explicit quantity', () => {
 
 test('manual sales quantity input accepts measured quantities and package counts', () => {
   assert.deepEqual(parseSaleQuantityInput('500 ml'), { quantity: 500, quantityUnit: 'ml' });
+  assert.deepEqual(parseSaleQuantityInput('500 मिली'), { quantity: 500, quantityUnit: 'ml' });
   assert.deepEqual(parseSaleQuantityInput('1 litre'), { quantity: 1, quantityUnit: 'litre' });
   assert.deepEqual(parseSaleQuantityInput('2 kg'), { quantity: 2, quantityUnit: 'kg' });
   assert.deepEqual(parseSaleQuantityInput('3 packets'), { quantity: 3, quantityUnit: 'packet' });
@@ -353,4 +354,16 @@ test('formats saved sale quantities for editing without losing package count', (
   assert.equal(formatSaleQuantityInput({
     quantity: 2, quantityUnit: 'kg', packageCount: 2, packageUnit: 'packet',
   }), '2 packet, 2 kg');
+});
+
+test('infers a sale from a complete quantity-item-price phrase without an add command', () => {
+  const parsed = parseVoiceTransactions('2 kg sugar, 70 rupaye');
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(parsed.transactions, [{
+    type: 'sale',
+    amount: 70,
+    itemName: 'sugar',
+    quantity: 2,
+    quantityUnit: 'kg',
+  }]);
 });
