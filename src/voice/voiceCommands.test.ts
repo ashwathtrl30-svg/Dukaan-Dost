@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseVoiceTransactions } from './voiceCommands.ts';
+import { parseSaleQuantityInput, formatSaleQuantityInput } from '../quantity';
 
 test('parses three named sales with unit quantities from natural Hinglish', () => {
   const parsed = parseVoiceTransactions(
@@ -87,7 +88,7 @@ test('classifies saaman as stock and saaman bhejne as transport', () => {
 
 test('keeps sales and expenses separate in one confirmed voice batch', () => {
   const parsed = parseVoiceTransactions(
-    'aloo ki bikri 100 rupaye, bijli bill ka kharch 2000 rupaye, kaanda ki bikri 250 rupaye add karo',
+    '2 kg aloo ki bikri 100 rupaye, bijli bill ka kharch 2000 rupaye, 3 kg kaanda ki bikri 250 rupaye add karo',
   );
   assert.equal(parsed.error, undefined);
   assert.deepEqual(
@@ -215,7 +216,7 @@ test('keeps explicit customer names when the credit description also mentions st
 
 test('classifies mixed sales and expenses only when each amount has a clear local cue', () => {
   const parsed = parseVoiceTransactions(
-    'aloo 100 rupaye, bijli ka kharch 2000 rupaye, kaanda 250 rupaye sales aur expenses add karo',
+    '2 kg aloo 100 rupaye, bijli ka kharch 2000 rupaye, 3 kg kaanda 250 rupaye sales aur expenses add karo',
   );
   assert.equal(parsed.error, undefined);
   assert.deepEqual(
@@ -285,4 +286,71 @@ test('combines spoken hundreds, thousands and lakhs without splitting amounts', 
     assert.equal(parsed.transactions.length, 1, spoken);
     assert.equal(parsed.transactions[0]?.amount, expected, spoken);
   }
+});
+
+test('never accepts a sale without an item name or explicit quantity and unit', () => {
+  const noItem = parseVoiceTransactions('add 100 rupees sales');
+  assert.equal(noItem.error, 'missing_item');
+  assert.deepEqual(noItem.transactions, []);
+
+  const noQuantity = parseVoiceTransactions('add maida 100 rupees sales');
+  assert.equal(noQuantity.error, 'missing_quantity');
+  assert.deepEqual(noQuantity.transactions, []);
+
+  const noUnit = parseVoiceTransactions('add 2 maida 100 rupees sales');
+  assert.equal(noUnit.error, 'missing_quantity');
+  assert.deepEqual(noUnit.transactions, []);
+});
+
+test('records both packet count and total weight when a sale includes both', () => {
+  const parsed = parseVoiceTransactions('add 2 packet maida, 2 kg, 500 rupaye sales');
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(parsed.transactions, [{
+    type: 'sale',
+    amount: 500,
+    itemName: 'maida',
+    quantity: 2,
+    quantityUnit: 'kg',
+    packageCount: 2,
+    packageUnit: 'packet',
+  }]);
+});
+
+test('recognizes ml and litre quantities in voice sales', () => {
+  const milk = parseVoiceTransactions('add 500 ml milk 30 rupees sale');
+  assert.equal(milk.error, undefined);
+  assert.equal(milk.transactions[0]?.quantity, 500);
+  assert.equal(milk.transactions[0]?.quantityUnit, 'ml');
+
+  const oil = parseVoiceTransactions('add 1 litre oil 150 rupees sale');
+  assert.equal(oil.error, undefined);
+  assert.equal(oil.transactions[0]?.quantity, 1);
+  assert.equal(oil.transactions[0]?.quantityUnit, 'litre');
+});
+
+test('rejects the entire batch when one sale has no explicit quantity', () => {
+  const parsed = parseVoiceTransactions(
+    '2 kg sugar 70 rupees, maida 100 rupees sales add',
+  );
+  assert.equal(parsed.error, 'missing_quantity');
+  assert.deepEqual(parsed.transactions, []);
+});
+
+test('manual sales quantity input accepts measured quantities and package counts', () => {
+  assert.deepEqual(parseSaleQuantityInput('500 ml'), { quantity: 500, quantityUnit: 'ml' });
+  assert.deepEqual(parseSaleQuantityInput('1 litre'), { quantity: 1, quantityUnit: 'litre' });
+  assert.deepEqual(parseSaleQuantityInput('2 kg'), { quantity: 2, quantityUnit: 'kg' });
+  assert.deepEqual(parseSaleQuantityInput('3 packets'), { quantity: 3, quantityUnit: 'packet' });
+  assert.deepEqual(parseSaleQuantityInput('2 packets, 2 kg'), {
+    quantity: 2, quantityUnit: 'kg', packageCount: 2, packageUnit: 'packet',
+  });
+  assert.equal(parseSaleQuantityInput('2'), null);
+  assert.equal(parseSaleQuantityInput('0 kg'), null);
+  assert.equal(parseSaleQuantityInput('two kg'), null);
+});
+
+test('formats saved sale quantities for editing without losing package count', () => {
+  assert.equal(formatSaleQuantityInput({
+    quantity: 2, quantityUnit: 'kg', packageCount: 2, packageUnit: 'packet',
+  }), '2 packet, 2 kg');
 });
