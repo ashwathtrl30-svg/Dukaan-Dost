@@ -19,6 +19,10 @@ test('preserves pack count and total measured quantity', () => {
     formatSaleQuantityInput({ quantity: 2, quantityUnit: 'kg', packageCount: 2, packageUnit: 'packet' }),
     '2 packets, 2 kg',
   );
+  assert.equal(
+    formatSaleQuantityInput({ quantity: 1, quantityUnit: 'kg', packageCount: 1, packageUnit: 'packet' }),
+    '1 packet, 1 kg',
+  );
 });
 
 test('rejects quantities without a recognized unit', () => {
