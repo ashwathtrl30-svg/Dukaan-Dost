@@ -33,8 +33,13 @@ export interface SaleEntry {
   date: string; // YYYY-MM-DD
   amount: number;
   itemName?: string;
-  /** Units/pieces/services included in this sale; optional on legacy entries. */
+  /** Numeric quantity sold, e.g. 500 for 500 g. */
   quantity?: number;
+  /** Normalized unit for the quantity, e.g. g, kg, ml, litre, piece. */
+  quantityUnit?: string;
+  /** Optional pack count when both pack count and total measure are supplied. */
+  packageCount?: number;
+  packageUnit?: string;
   category?: string;
   paymentType: PaymentType;
   note?: string;
