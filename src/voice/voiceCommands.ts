@@ -602,13 +602,34 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
     const leftStart = index === 0 ? 0 : suffixEnds[index - 1];
     const left = text.slice(leftStart, span.start);
     const right = text.slice(suffixEnds[index], index + 1 < moneySpans.length ? moneySpans[index + 1].start : text.length);
-    const type = distinctTypes.size === 1
-      ? fallbackType
-      : classifyVoiceTransaction(text, span, markers, distinctTypes, 'sale');
+    const descriptor = amountBeforeDescriptor ? right : left;
+    const descriptorExpenseCategory = detectExpenseCategory(descriptor);
+    const descriptorHasExpenseCue = findMarkers(descriptor).some(marker => marker.type === 'expense');
+    const unambiguousExpenseCategories = new Set([
+      'rent', 'electricity', 'salary', 'transport', 'packaging', 'maintenance',
+    ]);
+    const descriptorItem = cleanSaleItemName(descriptor).itemName;
+
+    let type: VoiceTransactionType | undefined;
+    if (distinctTypes.size === 1) {
+      type = fallbackType;
+    } else if (
+      distinctTypes.has('expense') &&
+      descriptorExpenseCategory !== 'other' &&
+      (descriptorHasExpenseCue || unambiguousExpenseCategories.has(descriptorExpenseCategory))
+    ) {
+      // Use the category attached to this amount, never a nearby category
+      // belonging to the next or previous transaction.
+      type = 'expense';
+    } else if (distinctTypes.has('sale') && descriptorItem && descriptorExpenseCategory === 'other') {
+      type = 'sale';
+    } else {
+      type = classifyVoiceTransaction(text, span, markers, distinctTypes, 'sale');
+    }
+
     if (!type) return { transactions: [], error: 'ambiguous_amount' };
 
     if (type === 'sale') {
-      const descriptor = amountBeforeDescriptor ? right : left;
       const parsedItem = cleanSaleItemName(descriptor);
       if (!parsedItem.itemName) return { transactions: [], error: 'missing_item' };
       transactions.push({
@@ -629,10 +650,10 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
     }
 
     const categoryMatch = closestExpenseCategory(text, span);
-    const expenseCategory = categoryMatch?.category || 'other';
-    const categoryInLeft = categoryMatch ? categoryMatch.start >= leftStart && categoryMatch.end <= span.start : false;
-    const noteSource = categoryInLeft ? left : right;
-    const note = stripVoiceCommandWords(noteSource).slice(0, 100);
+    const expenseCategory = descriptorExpenseCategory !== 'other'
+      ? descriptorExpenseCategory
+      : categoryMatch?.category || 'other';
+    const note = stripVoiceCommandWords(descriptor).slice(0, 100);
     transactions.push({
       type: 'expense',
       amount: span.amount,
