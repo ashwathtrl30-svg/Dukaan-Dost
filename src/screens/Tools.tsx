@@ -446,7 +446,7 @@ function StockReorderTool() {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-text break-words">{item.name}</p>
                 <p className="text-small text-text-secondary">
-                  {item.quantityEntries > 0 ? `$${item.packageCount > 0 ? item.packageCount + ' ' + item.packageUnit + ' · ' : ''}${Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} ${item.unit} ${lang === 'hi' ? 'दर्ज' : 'recorded'}` : (lang === 'hi' ? 'मात्रा दर्ज नहीं' : 'quantity not recorded')} · {item.entries} {lang === 'hi' ? 'एंट्री' : (item.entries === 1 ? 'entry' : 'entries')}{item.untrackedQuantityEntries > 0 ? ` · ${item.untrackedQuantityEntries} ${lang === 'hi' ? 'पुरानी बिना मात्रा' : 'older without quantity'}` : ''}
+                  {item.quantityEntries > 0 ? `${item.packageCount > 0 ? item.packageCount + ' ' + item.packageUnit + ' · ' : ''}${Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} ${item.unit} ${lang === 'hi' ? 'दर्ज' : 'recorded'}` : (lang === 'hi' ? 'मात्रा दर्ज नहीं' : 'quantity not recorded')} · {item.entries} {lang === 'hi' ? 'एंट्री' : (item.entries === 1 ? 'entry' : 'entries')}{item.untrackedQuantityEntries > 0 ? ` · ${item.untrackedQuantityEntries} ${lang === 'hi' ? 'पुरानी बिना मात्रा' : 'older without quantity'}` : ''}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1">
