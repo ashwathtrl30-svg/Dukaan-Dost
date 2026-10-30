@@ -25,21 +25,68 @@ test.afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
-test('sends mixed-script and alternate speech transcripts to the AI interpreter', async () => {
+test('sends mixed Hindi and Hinglish text to the server interpreter and validates the result', async () => {
   const mock = installResponse({
     transactions: [{
       type: 'sale',
-      amount: 200,
+      amount: 70,
       itemName: 'sugar',
       numberOfItemsSold: 2,
       quantity: 2,
       quantityUnit: 'kg',
     }],
-    selectedTranscript: 'à¤¦à¥‹ à¤¸à¥Œ rupe, à¤¦à¥‹ kg à¤¶à¤•à¥à¤•à¤°, à¤¸à¥‡à¤² à¤à¤¡ à¤•à¤°à¥‹',
+    selectedTranscript: 'do kilo sugar bik gaya sattar rupaye mein',
+    clarification: '',
   });
 
   const result = await interpretVoiceTransactions({
-    transcript: 'à¤¦à¥‹ à¤¸à¥Œ rupe do kg sakkar sale add karo',
-    candidates: [
-      'à¤¦à¥‹ à¤¸à¥Œ rupe à¤¦à¥‹ kg à¤¶à¤•à¥à¤•à¤° à¤¸à¥‡à¤² à¤à¤¡ à¤•à¤°à¥‹',
-      'à¤¦à¥‹ à¤¸à¥Œ rupe à¤¦à¥‹ kg à¤¶à¤•à¥à¤•à¤° à¤¸à¥‡à¤² à¤à¤¡ ¶»§q«^t€­¥É…¹„œ°±…¹Õ…”è€•¸œô¤°(€€€€½¥¹½µÁ±•Ñ”ÑÉ…¹Í…Ñ¥½¸±¥ÍÐ¼°(€€¤ì((€¥¹ÍÑ…±±I•ÍÁ½¹Í”¡ì(€€€ÑÉ…¹Í…Ñ¥½¹ÌèÉÉ…ä¹™É½´¡ì±•¹Ñ è€Øô°€ ¤€ôø€¡ì(€€€€€ÑåÁ”è€Õ‘¡……Èœ°…µ½Õ¹Ðè€ÄÀ°ÕÍÑ½µ•É9…µ”è€I…Ù¤œ°(€€€ô¤¤°(€ô¤ì(€…Ý…¥Ð…ÍÍ•ÉÐ¹É•©•ÑÌ (€€€¥¹Ñ•ÉÁÉ•ÑY½¥•QÉ…¹Í…Ñ¥½¹Ì¡ìÑÉ…¹ÍÉ¥ÁÐè€µ…¹ä•¹ÑÉ¥•Ìœ°Í¡½ÁQåÁ”è€­¥É…¹„œ°±…¹Õ…”è€•¸œô¤°(€€€€½¥¹½µÁ±•Ñ”ÑÉ…¹Í…Ñ¥½¸±¥ÍÐ¼°(€€¤ì)ô¤ì()Ñ•ÍÐ É•ÑÕÉ¹Ì„ÍÑÉÕÑÕÉ•±…É¥™¥…Ñ¥½¸Ý¥Ñ¡½ÕÐ…•ÁÑ¥¹œÁ…ÉÑ¥…°É•½É‘Ìœ°…Íå¹Œ€ ¤€ôøì(€¥¹ÍÑ…±±I•ÍÁ½¹Í”¡ì(€€€ÑÉ…¹Í…Ñ¥½¹Ìèmt°(€€€•ÉÉ½Èè€µ¥ÍÍ¥¹}ÕÍÑ½µ•Èœ°(€€€±…É¥™¥…Ñ¥½¸è€]¡¥ ÕÍÑ½µ•ÈÍ¡½Õ±Ñ¡¥ÌÉ•‘¥Ð‰”É•½É‘•™½Èüœ°(€ô¤ì((€½¹ÍÐÉ•ÍÕ±Ð€ô…Ý…¥Ð¥¹Ñ•ÉÁÉ•ÑY½¥•QÉ…¹Í…Ñ¥½¹Ì¡ì(€€€ÑÉ…¹ÍÉ¥ÁÐè€œÔÀÉÕÁ••ÌÕ‘¡……Èœ°(€€€Í¡½ÁQåÁ”è€­¥É…¹„œ°(€€€±…¹Õ…”è€•¸œ°(€ô¤ì((€…ÍÍ•ÉÐ¹•ÅÕ…°¡É•ÍÕ±Ð¹•ÉÉ½È°€µ¥ÍÍ¥¹}ÕÍÑ½µ•Èœ¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡É•ÍÕ±Ð¹ÑÉ…¹Í…Ñ¥½¹Ì¹±•¹Ñ °€À¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡É•ÍÕ±Ð¹±…É¥™¥…Ñ¥½¸ñð€œœ°€½]¡¥ ÕÍÑ½µ•È¼¤ì)ô¤ì()Ñ•ÍÐ ‘½•Ì¹½Ð½¹Ù•ÉÐÍ•ÉÙ•È™…¥±ÕÉ•Ì¥¹Ñ¼Õ•ÍÍ•±½…°•¹ÑÉ¥•Ìœ°…Íå¹Œ€ ¤€ôøì(€¥¹ÍÑ…±±I•ÍÁ½¹Í”¡ì•ÉÉ½Èè€$Ù½¥”¥¹Ñ•ÉÁÉ•Ñ…Ñ¥½¸¥ÌÑ•µÁ½É…É¥±äÕ¹…Ù…¥±…‰±”¸œô°€ÔÀÈ¤ì(€…Ý…¥Ð…ÍÍ•ÉÐ¹É•©•ÑÌ (€€€¥¹Ñ•ÉÁÉ•ÑY½¥•QÉ…¹Í…Ñ¥½¹Ì¡ìÑÉ…¹ÍÉ¥ÁÐè€œÈ­œÍÕ…È€ÄÀÀœ°Í¡½ÁQåÁ”è€­¥É…¹„œ°±…¹Õ…”è€•¸œô¤°(€€€€½Ñ•µÁ½É…É¥±äÕ¹…Ù…¥±…‰±”¼°(€€¤ì)ô¤ì
+    transcript: 'do kilo sugar bik gaya sattar rupaye mein',
+    candidates: ['2 kg sugar sold for 70 rupees'],
+    shopType: 'kirana',
+    language: 'hi',
+  });
+
+  assert.equal(mock.url, '/api/parse-voice');
+  assert.deepEqual(mock.body?.candidates, ['2 kg sugar sold for 70 rupees']);
+  assert.equal(mock.body?.language, 'hi');
+  assert.equal(result.transactions.length, 1);
+  assert.equal(result.transactions[0].amount, 70);
+  assert.equal(result.transactions[0].quantity, 2);
+  assert.equal(result.transactions[0].quantityUnit, 'kg');
+  assert.equal(result.selectedTranscript, 'do kilo sugar bik gaya sattar rupaye mein');
+});
+
+test('returns clarification without creating transactions when an amount or quantity is unclear', async () => {
+  installResponse({
+    transactions: [],
+    error: 'missing_quantity',
+    selectedTranscript: 'sugar sattar rupaye',
+    clarification: 'How much sugar was sold?',
+  });
+
+  const result = await interpretVoiceTransactions({
+    transcript: 'sugar sattar rupaye',
+    shopType: 'kirana',
+    language: 'en',
+  });
+
+  assert.equal(result.transactions.length, 0);
+  assert.equal(result.error, 'missing_quantity');
+  assert.equal(result.clarification, 'How much sugar was sold?');
+});
+
+test('rejects a malformed AI transaction instead of returning it for saving', async () => {
+  installResponse({
+    transactions: [{ type: 'sale', amount: 70, itemName: '', numberOfItemsSold: 2 }],
+    selectedTranscript: 'some unclear speech',
+  });
+
+  const result = await interpretVoiceTransactions({
+    transcript: 'some unclear speech',
+    shopType: 'other',
+    language: 'en',
+  });
+
+  assert.equal(result.transactions.length, 0);
+  assert.equal(result.error, 'unclear');
+});
