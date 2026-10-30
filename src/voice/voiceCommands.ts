@@ -54,4 +54,828 @@ interface AmountSpan {
   amount: number;
 }
 
-const NUMBER_WORDS: R���q�^
+const NUMBER_WORDS: Record<string, number> = {
+  zero: 0, oh: 0, one: 1, two: 2, three: 3, four: 4, five: 5,
+  six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12,
+  thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17,
+  eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50,
+  sixty: 60, seventy: 70, eighty: 80, ninety: 90,
+  ek: 1, eka: 1, aik: 1, ikk: 1, ik: 1, do: 2, dho: 2, teen: 3, tin: 3,
+  char: 4, chaar: 4, paanch: 5, panch: 5, paanchh: 5, cheh: 6,
+  chhe: 6, chhah: 6, chha: 6, saat: 7, sat: 7, aath: 8, ath: 8, nau: 9,
+  nao: 9, das: 10, dus: 10, gyarah: 11, gyaarah: 11, barah: 12, baarah: 12,
+  terah: 13, chaudah: 14, pandrah: 15, solah: 16, satrah: 17, atharah: 18,
+  unnis: 19, bees: 20, ikkis: 21, ikkees: 21, bais: 22, baees: 22, teis: 23,
+  chaubees: 24, pachis: 25, pachchis: 25, chhabis: 26, sattais: 27,
+  athais: 28, untis: 29, tees: 30, ikattis: 31, battis: 32, taintis: 33,
+  chauntis: 34, paintis: 35, chhattis: 36, saintis: 37, adtis: 38,
+  untalis: 39, chalis: 40, bayalis: 42, taintalis: 43, chawalis: 44,
+  paintalis: 45, chiyalis: 46, saintalis: 47, adtalis: 48, unchaas: 49,
+  pachaas: 50, pachhas: 50, ikyavan: 51, bavan: 52, tirpan: 53, chauvan: 54,
+  pachpan: 55, chhappan: 56, sattavan: 57, athavan: 58, unsath: 59,
+  saath: 60, sath: 60, iksath: 61, basath: 62, tirsath: 63, chaunsath: 64,
+  painsath: 65, chhiyasath: 66, sadsath: 67, adsath: 68, unhattar: 69,
+  sattar: 70, ikahattar: 71, bahattar: 72, tihattar: 73, chauhattar: 74,
+  pachhattar: 75, chhihattar: 76, satahattar: 77, athahattar: 78, unaasi: 79,
+  assi: 80, ikyasi: 81, bayasi: 82, tirasi: 83, chaurasi: 84, pachasi: 85,
+  chhiyasi: 86, sattasi: 87, athasi: 88, navasi: 89, nabbe: 90, ikyanve: 91,
+  baanve: 92, tiranve: 93, chauranve: 94, pachanve: 95, chhiyanve: 96,
+  satyanve: 97, athanve: 98, ninyanve: 99,
+  'एक': 1, 'इक': 1, 'दो': 2, 'तीन': 3, 'चार': 4, 'पाँच': 5, 'पांच': 5,
+  'छह': 6, 'छः': 6, 'सात': 7, 'आठ': 8, 'नौ': 9, 'दस': 10, 'ग्यारह': 11,
+  'बारह': 12, 'तेरह': 13, 'चौदह': 14, 'पंद्रह': 15, 'पन्द्रह': 15,
+  'सोलह': 16, 'सत्रह': 17, 'अठारह': 18, 'उन्नीस': 19, 'बीस': 20,
+  'इक्कीस': 21, 'बाईस': 22, 'बाइस': 22, 'तेईस': 23, 'चौबीस': 24,
+  'पच्चीस': 25, 'छब्बीस': 26, 'सत्ताईस': 27, 'अट्ठाईस': 28, 'उनतीस': 29,
+  'तीस': 30, 'चालीस': 40, 'पचास': 50, 'साठ': 60, 'सत्तर': 70, 'अस्सी': 80,
+  'नब्बे': 90,
+
+  // Common Mumbai/Hinglish spellings and alternate transliterations.
+  ikatees: 31, ekattis: 31, iktis: 31, baatis: 32, teintees: 33, chautis: 34, pantees: 35, chattis: 36, saintees: 37, adtees: 38, untaalis: 39, chaalis: 40, chalees: 40,
+  iktalis: 41, iktalees: 41, baalis: 42, taintalees: 43, chavalis: 44, paitalis: 45, paintaalis: 45, paitalees: 45, chhiyalis: 46, saintalees: 47, adtaalis: 48, unchas: 49, ikavan: 51, baavan: 52, tirpann: 53, chauwan: 54, pachpann: 55, chappan: 56, satavan: 57, atthavan: 58, unsaath: 59, iksathh: 61, 'ba-sath': 62, tirsaath: 63, chaunsathh: 64, 'pain-sath': 65, chiyasath: 66, sadsathh: 67, adsaath: 68, unahattar: 69, satttar: 70, ikattar: 71, bahttar: 72,
+  chauhatar: 74, pachattar: 75,
+  chhihatar: 76, satattar: 77,
+  athattar: 78, unasi: 79, asi: 80, ikasi: 81,
+  baasi: 82, tiraasi: 83,
+  choraasi: 84, pachaasi: 85,
+  chiyasi: 86, satasi: 87,
+  atthasi: 88, navaasi: 89,
+  nabay: 90, ikyanaway: 91,
+  banve: 92, tiraanve: 93,
+  chauranaway: 94, panchanve: 95,
+  chhiyanaway: 96, satyanaway: 97,
+  athanaway: 98, ninyaanve: 99,
+  'इकतीस': 31, 'इकत्तीस': 31, 'बत्तीस': 32, 'तैंतीस': 33, 'चौंतीस': 34,
+  'चौतीस': 34, 'पैंतीस': 35, 'छत्तीस': 36, 'सैंतीस': 37,
+  'अड़तीस': 38, 'अड़तीस': 38, 'उनतालीस': 39, 'उनचालीस': 39, 'इकतालीस': 41, 'इकतालिस': 41, 'बयालीस': 42, 'बयालिस': 42,
+  'तैंतालीस': 43, 'तैतालीस': 43, 'चवालीस': 44, 'चव्वालीस': 44,
+  'पैंतालीस': 45, 'पैतालीस': 45, 'छियालीस': 46, 'सैंतालीस': 47,
+  'अड़तालीस': 48, 'अड़तालीस': 48, 'उनचास': 49,
+  'इक्यावन': 51, 'बावन': 52, 'तिरपन': 53, 'चौवन': 54, 'पचपन': 55, 'छप्पन': 56, 'सत्तावन': 57, 'अट्ठावन': 58,
+  'उनसठ': 59, 'उनसट': 59, 'इकसठ': 61, 'बासठ': 62,
+  'तिरसठ': 63, 'चौंसठ': 64, 'पैंसठ': 65, 'छियासठ': 66,
+  'सड़सठ': 67, 'सड़सठ': 67, 'अड़सठ': 68, 'अड़सठ': 68, 'उनहत्तर': 69, 'इकहत्तर': 71, 'बहत्तर': 72, 'तिहत्तर': 73, 'चौहत्तर': 74,
+  'पचहत्तर': 75, 'छिहत्तर': 76, 'सतहत्तर': 77, 'अठहत्तर': 78,
+  'उन्नासी': 79, 'इक्यासी': 81, 'बयासी': 82,
+  'तिरासी': 83, 'चौरासी': 84, 'पचासी': 85, 'छियासी': 86,
+  'सतासी': 87, 'अट्ठासी': 88, 'नवासी': 89,
+  'इक्यानवे': 91, 'इक्यानबे': 91, 'बानवे': 92, 'बानबे': 92,
+  'तिरानवे': 93, 'तिरानबे': 93, 'चौरानवे': 94, 'चौरानबे': 94,
+  'पचानवे': 95, 'पंचानवे': 95, 'छियानवे': 96, 'छियानबे': 96,
+  'सत्तानवे': 97, 'सत्तानबे': 97, 'अट्ठानवे': 98, 'अट्ठानबे': 98,
+  'निन्यानवे': 99, 'निन्यानबे': 99,
+};
+
+const HUNDRED_WORDS = new Set(['hundred', 'sau', 'so', 'सौ']);
+const THOUSAND_WORDS = new Set(['thousand', 'hazaar', 'hazar', 'हज़ार', 'हजार']);
+const LAKH_WORDS = new Set(['lakh', 'lac', 'लाख']);
+const CRORE_WORDS = new Set(['crore', 'crores', 'karod', 'carod', 'करोड़', 'करोड']);
+const NUMBER_WORD_SET = new Set([
+  ...Object.keys(NUMBER_WORDS),
+  ...HUNDRED_WORDS,
+  ...THOUSAND_WORDS,
+  ...LAKH_WORDS,
+  ...CRORE_WORDS,
+]);
+
+function normalizeDigits(value: string): string {
+  const digitMap: Record<string, string> = {
+    '०': '0', '१': '1', '२': '2', '३': '3', '४': '4',
+    '५': '5', '६': '6', '७': '7', '८': '8', '९': '9',
+  };
+  return value.replace(/[०-९]/g, (digit) => digitMap[digit] || digit);
+}
+
+function parseWordNumber(words: string[]): number {
+  let total = 0;
+  let current = 0;
+  for (const raw of words) {
+    const word = raw.toLowerCase();
+    if (word === 'and' || word === 'और') continue;
+    if (/^[0-9]+(?:\.[0-9]+)?$/.test(word)) {
+      current += Number(word);
+    } else if (HUNDRED_WORDS.has(word)) {
+      current = (current || 1) * 100;
+    } else if (THOUSAND_WORDS.has(word)) {
+      total += (current || 1) * 1000;
+      current = 0;
+    } else if (LAKH_WORDS.has(word)) {
+      total += (current || 1) * 100000;
+      current = 0;
+    } else if (CRORE_WORDS.has(word)) {
+      total += (current || 1) * 10000000;
+      current = 0;
+    } else if (NUMBER_WORDS[word] !== undefined) {
+      current += NUMBER_WORDS[word];
+    } else {
+      return 0;
+    }
+  }
+  return total + current;
+}
+
+function findAmountSpans(text: string): AmountSpan[] {
+  const tokens: Array<{ value: string; start: number; end: number }> = [];
+  const tokenPattern = /[0-9०-९][0-9०-९,]*(?:\.[0-9]+)?|[a-z]+|[\u0900-\u097f]+/giu;
+  let tokenMatch: RegExpExecArray | null;
+  while ((tokenMatch = tokenPattern.exec(text)) !== null) {
+    tokens.push({
+      value: normalizeDigits(tokenMatch[0]).replace(/,/g, '').toLowerCase(),
+      start: tokenMatch.index,
+      end: tokenMatch.index + tokenMatch[0].length,
+    });
+  }
+
+  const spans: AmountSpan[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i];
+    if (/^[0-9]+(?:\.[0-9]+)?$/.test(token.value)) {
+      // Speech recognition may return scale numbers as digits ("1 crore",
+      // "2 lakh 50 thousand"). Keep the spoken amount together as one span.
+      const words = [token.value];
+      let sequenceEnd = token.end;
+      let hasScaleWord = false;
+      let j = i + 1;
+
+      while (j < tokens.length) {
+        const next = tokens[j];
+        const gap = text.slice(sequenceEnd, next.start);
+        if (/[,:;.!?]/u.test(gap)) break;
+
+        if (NUMBER_WORD_SET.has(next.value)) {
+          words.push(next.value);
+          if (
+            HUNDRED_WORDS.has(next.value) ||
+            THOUSAND_WORDS.has(next.value) ||
+            LAKH_WORDS.has(next.value) ||
+            CRORE_WORDS.has(next.value)
+          ) {
+            hasScaleWord = true;
+          }
+          sequenceEnd = next.end;
+          j++;
+          continue;
+        }
+
+        // Continue through a following digit only when a scale word makes
+        // it part of the same amount, e.g. "1 crore 1 rupee".
+        if (hasScaleWord && /^[0-9]+(?:\.[0-9]+)?$/.test(next.value)) {
+          words.push(next.value);
+          sequenceEnd = next.end;
+          j++;
+          continue;
+        }
+
+        if (
+          (next.value === 'and' || next.value === 'और') &&
+          j + 1 < tokens.length &&
+          NUMBER_WORD_SET.has(tokens[j + 1].value)
+        ) {
+          words.push(next.value, tokens[j + 1].value);
+          sequenceEnd = tokens[j + 1].end;
+          j += 2;
+          continue;
+        }
+        break;
+      }
+
+      const amount = words.length > 1 ? parseWordNumber(words) : Number(token.value);
+      if (Number.isFinite(amount) && amount > 0) {
+        spans.push({ start: token.start, end: sequenceEnd, amount: Math.round(amount) });
+      }
+      i = j - 1;
+      continue;
+    }
+
+    if (!NUMBER_WORD_SET.has(token.value)) continue;
+
+    const words = [token.value];
+    let endIndex = token.end;
+    let j = i + 1;
+    while (j < tokens.length) {
+      const next = tokens[j];
+      if (NUMBER_WORD_SET.has(next.value)) {
+        words.push(next.value);
+        endIndex = next.end;
+        j++;
+        continue;
+      }
+      if (
+        (next.value === 'and' || next.value === 'और') &&
+        j + 1 < tokens.length &&
+        NUMBER_WORD_SET.has(tokens[j + 1].value)
+      ) {
+        words.push(next.value);
+        endIndex = next.end;
+        j++;
+        continue;
+      }
+      break;
+    }
+
+    const amount = parseWordNumber(words);
+    if (amount > 0 && Number.isFinite(amount)) {
+      spans.push({ start: token.start, end: endIndex, amount: Math.round(amount) });
+      i = j - 1;
+    }
+  }
+  return spans;
+}
+
+function findMarkers(text: string): Span[] {
+  const patterns: Array<{ type: VoiceTransactionType; pattern: RegExp }> = [
+    { type: 'sale', pattern: /\b(?:sales?|sell|sold|bikri|bika|becha|bik\s+gaya|bik\s+gayi|bik\s+gaye|bech\s+(?:de|do|dena|deno|diya|diye?|di))\b|बिक्री|बिका|बेचा|बिक\s+गया|बिक\s+गई|बिक\s+गए|बिक\s+गये|बेच\s+दिया|बेच\s+दी|बेच\s+दिए|बेच\s+दिये|बेच\s+दे|बेच\s+दो|सेल/giu },
+    { type: 'expense', pattern: /\b(?:expenses?|kharch(?:a|aa)?)\b|खर्च|ख़र्च|खर्चा|व्यय/giu },
+    { type: 'udhaar', pattern: /\b(?:udhaar|udhar|udhari|credit)\b|उधार/giu },
+  ];
+
+  const markers: Span[] = [];
+  for (const item of patterns) {
+    let match: RegExpExecArray | null;
+    while ((match = item.pattern.exec(text)) !== null) {
+      markers.push({ type: item.type, start: match.index, end: match.index + match[0].length });
+    }
+  }
+  return markers.sort((a, b) => a.start - b.start);
+}
+
+function distanceBetween(a: AmountSpan, marker: Span): number {
+  if (a.end <= marker.start) return marker.start - a.end;
+  if (a.start >= marker.end) return a.start - marker.end;
+  return 0;
+}
+
+function getCustomerName(text: string): string | undefined {
+  const patterns = [
+    /\b([a-z][a-z'-]*(?:\s+[a-z][a-z'-]*){0,1})\s+(?:ko|ke naam (?:se|par|per|pe))\b/i,
+    /([\u0900-\u097f]+(?:\s+[\u0900-\u097f]+){0,1})\s+(?:को|के नाम (?:से|पर|पे))/u,
+    /\b(?:for|to|customer|named|name is)\s+([a-z][a-z'-]*(?:\s+[a-z][a-z'-]*){0,2})/i,
+    /(?:नाम है|को)\s*([\u0900-\u097f]+(?:\s+[\u0900-\u097f]+){0,2})/u,
+    /\b(?:naam|naam pe|naam par|naam per)\s+([a-z][a-z'-]*(?:\s+[a-z][a-z'-]*){0,2})/i,
+  ];
+  for (const pattern of patterns) {
+    const match = pattern.exec(text);
+    if (match?.[1]) {
+      let name = match[1].trim().replace(/\s+(?:rupees?|rupaye?|rs|udhaar|udhar|udhari|credit|add|jodo|karo|please).*$/i, '').trim();
+      const precedingText = text.slice(0, match.index ?? 0);
+      const quantityUnitImmediatelyBeforeName =
+        /\b(?:kilos?|kilograms?|kg|grams?|gm|g|litres?|liters?|ltr|packets?|packs?|pieces?|pcs?|units?|items?|bottles?|boxes?|dozen|dz)\s*$/iu.test(precedingText) ||
+        /(?:किलो|किलोग्राम|ग्राम|लीटर|लिटर|पैकेट|पीस|नग|बोतल|डिब्बा|डिब्बे|पाव|क्विंटल)\s*$/u.test(precedingText);
+
+      // In "do kilo aloo Raju ko", the recognizer's two-word capture
+      // can include the item as well as the customer. The unit directly
+      // before the capture is a signal to keep only the final name token.
+      if (quantityUnitImmediatelyBeforeName && name.split(/\s+/u).length === 2) {
+        name = name.split(/\s+/u).at(-1) || '';
+      }
+
+      const reserved = /^(?:rupees?|rupaye?|rs|add|sale|sales|expense|expenses|udhaar|udhar|credit)$/i.test(name) ||
+        /^(?:उधार|बिक्री|खर्च|जोड़ो|जोड़ें|डालो|दर्ज)$/u.test(name);
+      if (name && !reserved) return name.slice(0, 80);
+    }
+  }
+  return undefined;
+}
+
+interface ExpenseCategoryMatch {
+  category: string;
+  start: number;
+  end: number;
+}
+
+function findExpenseCategoryMatches(text: string): ExpenseCategoryMatch[] {
+  const patterns: Array<{ category: string; pattern: RegExp }> = [
+    {
+      category: 'rent',
+      pattern: /\b(?:rent|rental|kiraya|kiraye|kirayaa)\b|किराया|किराए|किराये/iu,
+    },
+    {
+      category: 'electricity',
+      pattern: /\b(?:electricity|electric|bijli|light bill|electric bill|power bill)\b|बिजली(?:\s+का)?\s*बिल?|लाइट\s*बिल/iu,
+    },
+    {
+      category: 'salary',
+      pattern: /\b(?:salary|salaries|wage|wages|payroll|staff payment|staff salary|employee payment|mazdoori|majduri|tankhwa|tankha|pagar|pagaar|vetan)\b|तनख़्वाह|तनख्वाह|वेतन|मजदूरी|मज़दूरी/iu,
+    },
+    {
+      category: 'transport',
+      pattern: /\b(?:transport|delivery|fuel|petrol|diesel|shipping|courier|freight|vehicle expense|travel expense|transportation)\b|ढुलाई|पेट्रोल|डीजल|डीज़ल|ईंधन|डिलीवरी|यातायात|ट्रांसपोर्ट/iu,
+    },
+    {
+      category: 'packaging',
+      pattern: /\b(?:packaging|packing|packing material|carry bags|package)\b|पैकिंग|पैकेजिंग|थैली|पैकिंग का सामान/iu,
+    },
+    {
+      category: 'maintenance',
+      pattern: /\b(?:maintenance|repair|repairs|repairing|servicing|service charge|plumbing)\b|मरम्मत|रिपेयर|मेंटेनेंस|सर्विसिंग/iu,
+    },
+    {
+      category: 'stock',
+      pattern: /\b(?:stock purchase|stock|inventory|goods purchase|purchase of goods|items purchase|purchase|goods|maal|saaman|samaan|saamaan|saman)\b|स्टॉक|सामान|माल|खरीदारी|माल खरीद/iu,
+    },
+  ];
+
+  return patterns.flatMap(({ category, pattern }) => {
+    const globalPattern = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g');
+    return [...text.matchAll(globalPattern)].map((match) => ({
+      category,
+      start: match.index ?? 0,
+      end: (match.index ?? 0) + match[0].length,
+    }));
+  });
+}
+
+function detectExpenseCategory(text: string, marker?: Span): string {
+  const matches = findExpenseCategoryMatches(text);
+  if (!matches.length) return 'other';
+
+  if (!marker) {
+    return matches.sort((a, b) => a.start - b.start)[0].category;
+  }
+
+  const distance = (match: ExpenseCategoryMatch) => {
+    if (match.end <= marker.start) return marker.start - match.end;
+    if (match.start >= marker.end) return match.start - marker.end;
+    return 0;
+  };
+  const closest = matches.sort((a, b) => distance(a) - distance(b))[0];
+  return distance(closest) <= 80 ? closest.category : 'other';
+}
+
+
+const MAX_VOICE_BATCH = 5;
+const MAX_VOICE_AMOUNT = 10_000_000;
+
+function matchQuantityUnit(after: string): { unit: string; length: number } | undefined {
+  const match = /^\s*(millilit(?:er|re)s?|ml|milligrams?|mg|kilograms?|kilos?|kgs?|kg|grams?|gms?|gm|g|litres?|liters?|ltr|lt|l|quintals?|tonnes?|tons?|meters?|metres?|m|cm|mm|packets?|packs?|pkts?|pieces?|pcs?|pc|units?|items?|bottles?|boxes?|dozen|dz|bags?|sacks?|pouches?|bundles?|strips?|jars?|cans?|pairs?|trays?|rolls?|sets?|plates?|cups?|glasses?|services?|किलोग्राम|किलो|ग्राम|मिलीलीटर|मिली|एमएल|एम[ ]*एल|लीटर|लिटर|पैकेट|पीस|नग|बोतल|डिब्बा|डिब्बे|दर्जन|पाव|क्विंटल)(?=\s|$|[,;])/iu.exec(after);
+  if (!match) return undefined;
+  const word = match[1].toLowerCase();
+  let unit = word;
+  if (/^(?:kilo|kilogram|kg)/iu.test(word) || word === 'किलो' || word === 'किलोग्राम') unit = 'kg';
+  else if (/^(?:gram|gm|gms|g)$/iu.test(word) || word === 'ग्राम') unit = 'g';
+  else if (/^(?:milliliter|millilitre|ml|मिलीलीटर|मिली|एमएल|एम एल)$/iu.test(word)) unit = 'ml';
+  else if (/^(?:liter|litre|ltr|lt|l)$/iu.test(word) || word === 'लीटर' || word === 'लिटर') unit = 'litre';
+  else if (/^(?:milligram|mg)$/iu.test(word)) unit = 'mg';
+  else if (/^quintal/iu.test(word) || word === 'क्विंटल') unit = 'quintal';
+  else if (/^(?:ton|tonne)/iu.test(word)) unit = 'tonne';
+  else if (/^(?:meter|metre|m)$/iu.test(word)) unit = 'metre';
+  else if (/^cm$/iu.test(word)) unit = 'cm';
+  else if (/^mm$/iu.test(word)) unit = 'mm';
+  else if (/^(?:packet|pack|pkt)/iu.test(word) || word === 'पैकेट') unit = 'packet';
+  else if (/^(?:piece|pc)/iu.test(word) || word === 'पीस' || word === 'नग') unit = 'piece';
+  else if (/^unit/iu.test(word)) unit = 'unit';
+  else if (/^item/iu.test(word)) unit = 'item';
+  else if (/^bottle/iu.test(word) || word === 'बोतल') unit = 'bottle';
+  else if (/^box/iu.test(word) || word === 'डिब्बा' || word === 'डिब्बे') unit = 'box';
+  else if (/^(?:dozen|dz)/iu.test(word) || word === 'दर्जन') unit = 'dozen';
+  else if (/^bag/iu.test(word)) unit = 'bag';
+  else if (/^sack/iu.test(word)) unit = 'sack';
+  else if (/^pouch/iu.test(word)) unit = 'pouch';
+  else if (/^bundle/iu.test(word)) unit = 'bundle';
+  else if (/^strip/iu.test(word)) unit = 'strip';
+  else if (/^jar/iu.test(word)) unit = 'jar';
+  else if (/^can/iu.test(word)) unit = 'can';
+  else if (/^pair/iu.test(word)) unit = 'pair';
+  else if (/^tray/iu.test(word)) unit = 'tray';
+  else if (/^roll/iu.test(word)) unit = 'roll';
+  else if (/^set/iu.test(word)) unit = 'set';
+  else if (/^plate/iu.test(word)) unit = 'plate';
+  else if (/^cup/iu.test(word)) unit = 'cup';
+  else if (/^glass/iu.test(word)) unit = 'glass';
+  else if (/^service/iu.test(word)) unit = 'service';
+  else if (word === 'पाव') unit = 'pav';
+  return { unit, length: match[0].length };
+}
+
+function isMeasureQuantityUnit(unit: string | undefined): boolean {
+  return Boolean(unit && ['kg', 'g', 'mg', 'ml', 'litre', 'quintal', 'tonne', 'metre', 'cm', 'mm', 'pav'].includes(unit));
+}
+
+function isQuantitySpan(span: AmountSpan, text: string): boolean {
+  const after = text.slice(span.end, span.end + 70);
+  const halfPacket = /^\s*(?:(?:aadhe?|aadha|aadhi|aadhay|half)\s+kilo\s+ke\s+packets?|half[- ]kilo\s+packets?|(?:aadhe?|aadha|half)\s+kilo\s+packets?)/iu.test(after);
+  return halfPacket || Boolean(matchQuantityUnit(after));
+}
+
+function isAttachedBrandNumber(span: AmountSpan, text: string): boolean {
+  const after = text.slice(span.end, span.end + 3);
+  if (!after || /^\s/.test(after)) return false;
+  if (/^\s*(?:₹|rs\.?|rupees?|rupay|rupaye|rupaya|rupiya|रुपये?|रुपया|रुपए)/iu.test(after)) return false;
+  return /^[a-z]/i.test(after);
+}
+
+function isPerUnitPriceLead(span: AmountSpan, text: string): boolean {
+  if (span.amount !== 1) return false;
+  const after = text.slice(span.end, span.end + 36);
+  return /^\s*(?:ki|kee|kii)\s+(?:kimat|keemat|qeemat|daam|price|rate)\b/iu.test(after);
+}
+
+function hasCurrencyPrefix(span: AmountSpan, text: string): boolean {
+  const before = text.slice(Math.max(0, span.start - 12), span.start);
+  return /(?:₹|rs\.?)\s*$/iu.test(before);
+}
+
+function isLikelyItemCountSpan(span: AmountSpan, allSpans: AmountSpan[], text: string): boolean {
+  if (isQuantitySpan(span, text) || isAttachedBrandNumber(span, text) || isPerUnitPriceLead(span, text)) return false;
+  if (hasCurrencyPrefix(span, text) || currencySuffixEnd(span, text) > span.end) return false;
+  const after = text.slice(span.end);
+  if (!/^\s*[\p{L}]/u.test(after)) return false;
+  return allSpans.some(other =>
+    other.start > span.end &&
+    !isQuantitySpan(other, text) &&
+    !isPerUnitPriceLead(other, text) &&
+    currencySuffixEnd(other, text) > other.end
+  ) || findMarkers(text).some(marker => marker.type === 'sale' && marker.start > span.end);
+}
+
+function isPerUnitPriceSpan(span: AmountSpan, text: string): boolean {
+  const before = text.slice(Math.max(0, span.start - 64), span.start);
+  const after = text.slice(currencySuffixEnd(span, text), Math.min(text.length, span.end + 42));
+  return /(?:\b(?:each|every|per|price|cost|rate|kimat|keemat|qeemat|daam)\b|(?:ek|one)\s+(?:ki|kee|kii)\s+(?:kimat|keemat|qeemat|daam|price|rate))/iu.test(before) ||
+    /^\s*(?:each|per|a piece|per item|per unit|each item)\b/iu.test(after);
+}
+
+function currencySuffixEnd(span: AmountSpan, text: string): number {
+  const after = text.slice(span.end);
+  const match = /^\s*(?:₹|rs\.?|rupees?|rupee|rupay(?:e)?|rupaye|rupaya|rupiya|rupaiya|रुपये?|रुपया|रुपए|रूपये?|रूपए|रुपिया|रुपइया|रुपिया|पैसे?)/iu.exec(after);
+  return span.end + (match ? match[0].length : 0);
+}
+
+function closestExpenseCategory(text: string, span: AmountSpan): ExpenseCategoryMatch | undefined {
+  const distanceToSpan = (match: { start: number; end: number }) => {
+    if (span.end <= match.start) return match.start - span.end;
+    if (span.start >= match.end) return span.start - match.end;
+    return 0;
+  };
+
+  const matches = findExpenseCategoryMatches(text).sort(
+    (a, b) => distanceToSpan(a) - distanceToSpan(b),
+  );
+  const nearestCategory = matches[0];
+  const nearestCategoryDistance = nearestCategory ? distanceToSpan(nearestCategory) : Number.POSITIVE_INFINITY;
+
+  // Specific "goods being sent/delivered" language means transport, but only
+  // when that phrase is closer to this amount than a separate stock mention.
+  const shippingPattern = /(?:saaman|samaan|saamaan|saman|maal)\s+(?:bhejne|bhejna|bhejane|bhejne\s+mein|bhejne\s+me)|सामान\s+भेजने|माल\s+भेजने|भेजने\s+में/giu;
+  const shippingMatches = [...text.matchAll(shippingPattern)].map((match) => ({
+    category: 'transport',
+    start: match.index ?? 0,
+    end: (match.index ?? 0) + match[0].length,
+  }));
+  shippingMatches.sort((a, b) => distanceToSpan(a) - distanceToSpan(b));
+  const nearestShipping = shippingMatches[0];
+  const shippingDistance = nearestShipping ? distanceToSpan(nearestShipping) : Number.POSITIVE_INFINITY;
+
+  if (nearestShipping && shippingDistance <= 90 && shippingDistance <= nearestCategoryDistance) {
+    return nearestShipping;
+  }
+  return nearestCategory && nearestCategoryDistance <= 90 ? nearestCategory : undefined;
+}
+
+function stripVoiceCommandWords(value: string): string {
+  return value
+    // Remove command/type tokens individually rather than cutting off everything
+    // after the first one. That preserves item names in phrases like
+    // "add sales: do kilo aloo 100 rupaye".
+    .replace(/\b(?:in\s+sab|sab\s+ka|sabka|sab\s+ki|please|add\s+it|add|record|enter|log|save|put|sale|sales|sell|sold|jod(?:o|na)?|daal(?:o)?|darj|jama|karo|kar\s+do|sales?|sell|sold|bikri|bika|becha|bech(?:a|i|\s+(?:de|do|dena|deno|diya|di|diye))|bik\s+gaya|bik\s+gayi|bik\s+gaye|expenses?|kharch(?:a|e|aa)?|udhaar|udhar|udhari|credit|maine|main|humne|abhi|aaj|toh|tha|thii|thi|hai|hain|gaya|gayi|gaye|are|is|was|were|been|have|has|for|the|an|i|we|they|he|she|alter|altered|alteration|stitch|stitched|stitching|kiye|kiya|karo|karwaye|karaye)\b/giu, ' ')
+    .replace(/जोड़(?:ो|ें|ना|िए)?|डाल(?:ो|िए)?|दर्ज|जमा|करो|करें|कर\s+दो|बिक्री|बिका|बेचा|बेच(?:ा|ी|\s+दिया|\s+दी|\s+दे|\s+दो)|बिक\s+गया|बिक\s+गई|खर्च(?:ा|े)?|उधार|ऐड|एड|मैंने|मैं|हमने|अभी|आज|था|थी|है|हैं|गया|गई|गये|गए|बेच(?:ा|ी|े|\s+दिया|\s+दी|\s+दिए|\s+दिये|\s+दे|\s+दो)|बिक(?:ा|ी|े|\s+गया|\s+गई|\s+गए|\s+गये)|किए|किया|करो|करें/gu, ' ')
+    .replace(/\b(?:in|mein|mai|me|and|aur|phir|then|total)\b/giu, ' ')
+    .replace(/\b(?:each|every)\s+(?:item|unit|piece)(?:'s)?\s+(?:price|cost|rate)\b/giu, ' ')
+    .replace(/\b(?:ek|one)\s+(?:ki|kee|kii)\s+(?:kimat|keemat|qeemat|daam|price|rate)\b/giu, ' ')
+    .replace(/\bper\s+(?:item|unit|piece|kg|kilo|kilogram|gram|g|litre|liter|ml)\b/giu, ' ')
+    .replace(/(?:में|मै|और|फिर|कुल)\s*$/gu, '')
+    .replace(/[,:;]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function parseLeadingQuantity(segment: string): {
+  quantity?: number;
+  quantityUnit?: string;
+  remainder: string;
+} {
+  let value = segment.trim().replace(/^[,;:\s]+/, '');
+  value = value.replace(/^(?:and|aur|phir|then|plus|और|फिर)\s+/iu, '');
+  const spans = findAmountSpans(value);
+  const first = spans[0];
+  if (!first || first.start > 3) return { remainder: value };
+
+  const after = value.slice(first.end);
+  const halfPacket = /^\s*(?:(?:aadhe?|aadha|aadhi|aadhay|half)\s+kilo\s+ke\s+packets?|half[- ]kilo\s+packets?|(?:aadhe?|aadha|half)\s+kilo\s+packets?)/iu.exec(after);
+  if (halfPacket) {
+    return {
+      quantity: first.amount,
+      quantityUnit: '500 g packet',
+      remainder: value.slice(first.end + halfPacket[0].length),
+    };
+  }
+
+  const unitMatch = matchQuantityUnit(after);
+  if (!unitMatch) return { remainder: value };
+  return {
+    quantity: first.amount,
+    quantityUnit: unitMatch.unit,
+    remainder: value.slice(first.end + unitMatch.length),
+  };
+}
+
+function cleanSaleItemName(segment: string): {
+  itemName: string;
+  numberOfItemsSold?: number;
+  quantity?: number;
+  quantityUnit?: string;
+  packageCount?: number;
+  packageUnit?: string;
+} {
+  const commandStripped = stripVoiceCommandWords(segment);
+  const parsed = parseLeadingQuantity(commandStripped);
+  let quantity = parsed.quantity;
+  let quantityUnit = parsed.quantityUnit;
+  let packageCount: number | undefined;
+  let packageUnit: string | undefined;
+  let numberOfItemsSold: number | undefined;
+  let remainder = parsed.remainder;
+
+  // A leading plain number such as "2 chargers" is an item count, not money.
+  if (!quantity && !quantityUnit) {
+    const firstNumber = findAmountSpans(commandStripped)[0];
+    if (firstNumber && firstNumber.start <= 3) {
+      const afterNumber = commandStripped.slice(firstNumber.end);
+      if (/^\s*[\p{L}]/u.test(afterNumber)) {
+        numberOfItemsSold = firstNumber.amount;
+        remainder = afterNumber.trim();
+      }
+    }
+  }
+
+  const additionalTerms = findAmountSpans(remainder)
+    .map(span => {
+      const unitMatch = matchQuantityUnit(remainder.slice(span.end));
+      return unitMatch
+        ? { span, end: span.end + unitMatch.length, amount: span.amount, unit: unitMatch.unit }
+        : undefined;
+    })
+    .filter((term): term is { span: AmountSpan; end: number; amount: number; unit: string } => Boolean(term));
+
+  const extraMeasure = additionalTerms.find(term => isMeasureQuantityUnit(term.unit));
+  const extraPackage = additionalTerms.find(term => !isMeasureQuantityUnit(term.unit));
+
+  if (quantity !== undefined && quantityUnit) {
+    if (isMeasureQuantityUnit(quantityUnit)) {
+      numberOfItemsSold ??= quantity;
+      if (extraPackage) {
+        packageCount = extraPackage.amount;
+        packageUnit = extraPackage.unit;
+        numberOfItemsSold = extraPackage.amount;
+      }
+    } else if (extraMeasure) {
+      packageCount = quantity;
+      packageUnit = quantityUnit;
+      numberOfItemsSold = quantity;
+      quantity = extraMeasure.amount;
+      quantityUnit = extraMeasure.unit;
+    } else {
+      numberOfItemsSold ??= quantity;
+    }
+  } else if (extraMeasure) {
+    quantity = extraMeasure.amount;
+    quantityUnit = extraMeasure.unit;
+    numberOfItemsSold ??= extraPackage?.amount ?? extraMeasure.amount;
+    if (extraPackage) {
+      packageCount = extraPackage.amount;
+      packageUnit = extraPackage.unit;
+    }
+  } else if (extraPackage) {
+    numberOfItemsSold = extraPackage.amount;
+  }
+
+  // Remove any extra quantity tokens from the product/service name. This lets
+  // "2 packets maida, 2 kg" save as item "maida", not "maida 2 kg".
+  for (const term of additionalTerms.sort((a, b) => b.span.start - a.span.start)) {
+    remainder = remainder.slice(0, term.span.start) + ' ' + remainder.slice(term.end);
+  }
+
+  let itemName = stripVoiceCommandWords(remainder);
+  itemName = itemName
+    .replace(/[₹]/g, ' ')
+    .replace(/\b(?:rupees?|rupee|rs|rupay|rupaye|rupaya|rupiya|रुपये?|रुपया|रुपए|रूपये?|रूपए)\b/giu, ' ')
+    .replace(/^(?:of|for|the|a|an|ka|ki|ke|kilo|kg|packet|pack|aur|and|में|की|का|के)\s+/iu, '')
+    .replace(/(?:से|में)\s*$/u, '')
+    .replace(/[,:;]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const itemAliases: Record<string, string> = {
+    chawal: 'rice', chaawal: 'rice', chaval: 'rice', 'चावल': 'rice',
+    sugar: 'sugar', shakkar: 'sugar', shakar: 'sugar', sakkar: 'sugar', 'शक्कर': 'sugar', 'चीनी': 'sugar',
+    bulb: 'bulb', bulbs: 'bulb', balb: 'bulb', 'बल्ब': 'bulb',
+  };
+  itemName = itemName.split(/\s+/u).map(word => itemAliases[word.toLowerCase()] || word).join(' ');
+
+  return { itemName, numberOfItemsSold, quantity, quantityUnit, packageCount, packageUnit };
+}
+
+function getNameFromContext(context: string): string | undefined {
+  const name = getCustomerName(context);
+  if (name) return name;
+  const devanagariName = /([\u0900-\u097f]+(?:\s+[\u0900-\u097f]+){0,1})\s+(?:को|के नाम से|के नाम पर)/u.exec(context);
+  if (devanagariName?.[1]) return devanagariName[1].trim().slice(0, 80);
+
+  // Accept a plain customer name only when the local amount segment resolves
+  // to one or two name-like tokens. Never substitute "Unknown" silently.
+  let candidate = stripVoiceCommandWords(context)
+    .replace(/[0-9०-९,₹.]+/gu, ' ')
+    .replace(/\b(?:rupees?|rupee|rs|rupay|rupaye|rupaya|rupiya|रुपये?|रुपया|रुपए|रूपये?|रूपए|पैसे?|udhaar|udhar|credit|उधार|को|नाम|पर|से|for|to|customer|named|name|is)\b/giu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const words = candidate.split(/\s+/u).filter(Boolean);
+  if (
+    words.length >= 1 &&
+    words.length <= 2 &&
+    words.every(word => /^[\p{L}][\p{L}'-]*$/u.test(word)) &&
+    !words.some(word => NUMBER_WORD_SET.has(word.toLowerCase())) &&
+    !/^(?:sales?|expense|expenses|sale|add|please|total|amount|and|or)$/iu.test(candidate)
+  ) {
+    return candidate.slice(0, 80);
+  }
+  return undefined;
+}
+
+function classifyVoiceTransaction(
+  text: string,
+  span: AmountSpan,
+  markers: Span[],
+  distinctTypes: Set<VoiceTransactionType>,
+  fallbackType: VoiceTransactionType,
+): VoiceTransactionType | undefined {
+  if (distinctTypes.size === 1) return fallbackType;
+  const category = closestExpenseCategory(text, span);
+  const nearbyMarkers = markers
+    .map(marker => ({
+      marker,
+      distance: span.end <= marker.start ? marker.start - span.end : span.start >= marker.end ? span.start - marker.end : 0,
+    }))
+    .filter(item => item.distance <= 58)
+    .sort((a, b) => a.distance - b.distance);
+  if (category && distinctTypes.has('expense')) {
+    const categoryDistance = span.end <= category.start ? category.start - span.end : span.start >= category.end ? span.start - category.end : 0;
+    if (!nearbyMarkers.length || nearbyMarkers[0].distance >= categoryDistance) return 'expense';
+  }
+  if (nearbyMarkers.length) {
+    const first = nearbyMarkers[0];
+    const conflicting = nearbyMarkers.find(item => item.marker.type !== first.marker.type && item.distance - first.distance < 10);
+    if (conflicting) return undefined;
+    return first.marker.type;
+  }
+  return undefined;
+}
+
+
+export function parseVoiceTransactions(input: string, shopType?: ShopType | null): VoiceParseResult {
+  const text = input.trim().replace(/\s+/g, ' ');
+  if (!text) return { transactions: [], error: 'not_command' };
+
+  const actionPattern =
+    /\b(?:add|record|enter|log|save|put|sale|sales|sell|sold|jod|jodo|jodna|likho?|likh|daal|dalo|dal|darj|jama|karo|kar do|kar do na|becha|bechi|bik\s+gaya|bik\s+gayi|bik\s+gaye|bech\s+(?:de|do|dena|deno|diya|diye?|di))\b|बिक गया|बिक गई|बिक गए|बिक गये|बेच दिया|बेच दी|बेच दिए|बेच दिये|बेच दे|बेच दो|बेचा|बेची|बेचे|जोड़|जोड़ो|जोड़ें|जोड़ना|जोड़िए|डाल|डालो|डालिए|दर्ज|लिख|जमा|ऐड|एड|करो|करें|करना|डाल दो/iu;
+  const questionPattern =
+    /\b(?:what|when|where|why|how|can|should|tell|show|kitna|kitne|kitni|kya|kaise|kyun|batao)\b|कितना|कितनी|कितने|क्या|कैसे|क्यों|बताओ/iu;
+  const numberSpans = findAmountSpans(text);
+  const quantitySpans = numberSpans.filter(span => isQuantitySpan(span, text));
+  const moneySpans = numberSpans.filter(span =>
+    !isQuantitySpan(span, text) &&
+    !isAttachedBrandNumber(span, text) &&
+    !isPerUnitPriceLead(span, text) &&
+    !isLikelyItemCountSpan(span, numberSpans, text),
+  );
+  const naturalSalePrefix = moneySpans.length ? text.slice(0, moneySpans[0].start) : '';
+  const naturalSaleItem = cleanSaleItemName(naturalSalePrefix);
+  const itemCountSpans = numberSpans.filter(span => isLikelyItemCountSpan(span, numberSpans, text));
+  const naturalSaleCandidate = (quantitySpans.length > 0 || itemCountSpans.length > 0) &&
+    moneySpans.some(span => hasCurrencyPrefix(span, text) || currencySuffixEnd(span, text) > span.end) &&
+    Boolean(naturalSaleItem.itemName && (
+      (naturalSaleItem.quantity && naturalSaleItem.quantityUnit) || naturalSaleItem.numberOfItemsSold
+    ));
+
+  // In the Home voice-entry flow, a complete "quantity + item + price" phrase
+  // is itself a clear sale command. Do not infer a sale from an amount alone.
+  if ((!actionPattern.test(text) && !naturalSaleCandidate) || questionPattern.test(text)) {
+    return { transactions: [], error: 'not_command' };
+  }
+
+  const markers = findMarkers(text);
+  const distinctTypes = new Set(markers.map(marker => marker.type));
+  const mentionedExpenseCategory = detectExpenseCategory(text);
+  if (!distinctTypes.size && mentionedExpenseCategory !== 'other') distinctTypes.add('expense');
+  if (!distinctTypes.size && naturalSaleCandidate) distinctTypes.add('sale');
+  if (!distinctTypes.size) return { transactions: [], error: 'no_type' };
+  const fallbackType = distinctTypes.size === 1
+    ? [...distinctTypes][0]
+    : undefined;
+  if (!moneySpans.length) return { transactions: [], error: 'missing_amount' };
+  if (moneySpans.length > MAX_VOICE_BATCH) {
+    return { transactions: [], error: 'too_many_entries' };
+  }
+  if (moneySpans.some(span => span.amount > MAX_VOICE_AMOUNT)) {
+    return { transactions: [], error: 'amount_out_of_range' };
+  }
+
+  const suffixEnds = moneySpans.map(span => currencySuffixEnd(span, text));
+  const firstLeft = text.slice(0, moneySpans[0].start);
+  const firstRight = text.slice(suffixEnds[0], moneySpans.length > 1 ? moneySpans[1].start : text.length);
+  const firstLeftItem = cleanSaleItemName(firstLeft).itemName;
+  const firstRightItem = cleanSaleItemName(firstRight).itemName;
+  const amountBeforeDescriptor = !firstLeftItem && Boolean(firstRightItem);
+
+  const transactions: VoiceTransaction[] = [];
+  for (let index = 0; index < moneySpans.length; index++) {
+    const span = moneySpans[index];
+    const leftStart = index === 0 ? 0 : suffixEnds[index - 1];
+    const left = text.slice(leftStart, span.start);
+    const right = text.slice(suffixEnds[index], index + 1 < moneySpans.length ? moneySpans[index + 1].start : text.length);
+    const descriptor = amountBeforeDescriptor ? right : left;
+    const descriptorCategorySpan: AmountSpan = amountBeforeDescriptor
+      ? { start: 0, end: 0, amount: span.amount }
+      : { start: descriptor.length, end: descriptor.length, amount: span.amount };
+    const descriptorExpenseCategory = closestExpenseCategory(
+      descriptor,
+      descriptorCategorySpan,
+    )?.category || 'other';
+    const descriptorHasExpenseCue = findMarkers(descriptor).some(marker => marker.type === 'expense');
+    const unambiguousExpenseCategories = new Set([
+      'rent', 'electricity', 'salary', 'transport', 'packaging', 'maintenance',
+    ]);
+    const descriptorItem = cleanSaleItemName(descriptor).itemName;
+
+    let type: VoiceTransactionType | undefined;
+    if (distinctTypes.size === 1) {
+      type = fallbackType;
+    } else if (
+      distinctTypes.has('expense') &&
+      descriptorExpenseCategory !== 'other' &&
+      (descriptorHasExpenseCue || unambiguousExpenseCategories.has(descriptorExpenseCategory))
+    ) {
+      // Use the category attached to this amount, never a nearby category
+      // belonging to the next or previous transaction.
+      type = 'expense';
+    } else if (distinctTypes.has('sale') && descriptorItem && descriptorExpenseCategory === 'other') {
+      type = 'sale';
+    } else {
+      type = classifyVoiceTransaction(text, span, markers, distinctTypes, 'sale');
+    }
+
+    if (!type) return { transactions: [], error: 'ambiguous_amount' };
+
+    if (type === 'sale') {
+      const parsedItem = cleanSaleItemName(descriptor);
+      if (!parsedItem.itemName) return { transactions: [], error: 'missing_item' };
+      const tracksMeasuredQuantity = shopType === undefined
+        ? true
+        : shopUsesMeasuredQuantity(shopType);
+      const numberOfItemsSold = parsedItem.numberOfItemsSold || parsedItem.packageCount || parsedItem.quantity || 1;
+      if (shopType === undefined && !parsedItem.quantity) {
+        return { transactions: [], error: 'missing_quantity' };
+      }
+      if (shopType !== undefined && tracksMeasuredQuantity && !parsedItem.quantity && !parsedItem.numberOfItemsSold) {
+        return { transactions: [], error: 'missing_quantity' };
+      }
+      const shouldSaveMeasuredQuantity = Boolean(
+        parsedItem.quantity && parsedItem.quantityUnit &&
+        (isMeasureQuantityUnit(parsedItem.quantityUnit) || shopType === undefined),
+      );
+      const totalAmount = isPerUnitPriceSpan(span, text)
+        ? span.amount * numberOfItemsSold
+        : span.amount;
+      transactions.push({
+        type,
+        amount: Math.round(totalAmount),
+        itemName: parsedItem.itemName,
+        ...(shopType !== undefined ? { numberOfItemsSold } : {}),
+        ...(shouldSaveMeasuredQuantity
+          ? { quantity: parsedItem.quantity, quantityUnit: parsedItem.quantityUnit }
+          : {}),
+        ...(parsedItem.packageCount && parsedItem.packageUnit
+          ? { packageCount: parsedItem.packageCount, packageUnit: parsedItem.packageUnit }
+          : {}),
+      });
+      continue;
+    }
+
+    if (type === 'udhaar') {
+      const name = getNameFromContext(left) || getNameFromContext(right);
+      if (!name) return { transactions: [], error: 'missing_customer' };
+      transactions.push({ type, amount: span.amount, customerName: name });
+      continue;
+    }
+
+    const expenseCategory = descriptorExpenseCategory;
+    const note = stripVoiceCommandWords(descriptor).slice(0, 100);
+    transactions.push({
+      type: 'expense',
+      amount: span.amount,
+      expenseCategory,
+      note: note || undefined,
+    });
+  }
+
+  if (transactions.length > MAX_VOICE_BATCH) return { transactions: [], error: 'too_many_entries' };
+  return { transactions };
+}
