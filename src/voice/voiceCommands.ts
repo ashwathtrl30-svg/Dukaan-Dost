@@ -223,7 +223,7 @@ function findAmountSpans(text: string): AmountSpan[] {
 
 function findMarkers(text: string): Span[] {
   const patterns: Array<{ type: VoiceTransactionType; pattern: RegExp }> = [
-    { type: 'sale', pattern: /\b(?:sales?|sell|sold|bikri|bika|becha)\b|बिक्री|बिका|बेचा|सेल/giu },
+    { type: 'sale', pattern: /\b(?:sales?|sell|sold|bikri|bika|becha|bik\s+gaya|bik\s+gayi|bik\s+gaye|bech\s+diya|bech\s+di)\b|बिक्री|बिका|बेचा|बिक\s+गया|बिक\s+गई|बेच\s+दिया|बेच\s+दी|सेल/giu },
     { type: 'expense', pattern: /\b(?:expenses?|kharch(?:a|aa)?)\b|खर्च|ख़र्च|खर्चा|व्यय/giu },
     { type: 'udhaar', pattern: /\b(?:udhaar|udhar|credit)\b|उधार/giu },
   ];
@@ -509,7 +509,7 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
   if (!text) return { transactions: [], error: 'not_command' };
 
   const actionPattern =
-    /\b(?:add|record|enter|log|save|put|jod|jodo|jodna|likho?|likh|daal|dalo|dal|darj|jama|karo|kar do|kar do na)\b|जोड़|जोड़ो|जोड़ें|जोड़ना|जोड़िए|डाल|डालो|डालिए|दर्ज|लिख|जमा|ऐड|एड|करो|करें|करना|डाल दो/iu;
+    /\b(?:add|record|enter|log|save|put|jod|jodo|jodna|likho?|likh|daal|dalo|dal|darj|jama|karo|kar do|kar do na|bik\s+gaya|bik\s+gayi|bik\s+gaye|bech\s+diya|bech\s+di)\b|बिक गया|बिक गई|बेच दिया|बेच दी|जोड़|जोड़ो|जोड़ें|जोड़ना|जोड़िए|डाल|डालो|डालिए|दर्ज|लिख|जमा|ऐड|एड|करो|करें|करना|डाल दो/iu;
   const questionPattern =
     /\b(?:what|when|where|why|how|can|should|tell|show|kitna|kitne|kitni|kya|kaise|kyun|batao)\b|कितना|कितनी|कितने|क्या|कैसे|क्यों|बताओ/iu;
   if (!actionPattern.test(text) || questionPattern.test(text)) {
