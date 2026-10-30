@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/voice-ledger-review-and-hindi-numbers
+      - feat/shop-notebook-stage-2
   pull_request:
     branches:
       - main
