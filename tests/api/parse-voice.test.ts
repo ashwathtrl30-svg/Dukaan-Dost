@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import handler from './parse-voice.ts';
+import handler from '../../api/parse-voice.ts';
 
 type ResponseSnapshot = { status?: number; body?: unknown; headers: Record<string, string> };
 
