@@ -167,3 +167,32 @@ test('recognizes Devanagari sold phrases as sale commands', () => {
   assert.equal(parsed.transactions[0]?.type, 'sale');
   assert.equal(parsed.transactions[0]?.amount, 70);
 });
+
+
+test('parses digit-form crore amounts as one amount and enforces the ₹1 crore cap', () => {
+  const oneCrore = parseVoiceTransactions('1 crore rent kharch add karo');
+  assert.equal(oneCrore.error, undefined);
+  assert.equal(oneCrore.transactions.length, 1);
+  assert.equal(oneCrore.transactions[0]?.amount, 10_000_000);
+
+  const overOneCrore = parseVoiceTransactions('1 crore 1 rupaya rent kharch add karo');
+  assert.equal(overOneCrore.error, 'amount_out_of_range');
+  assert.deepEqual(overOneCrore.transactions, []);
+});
+
+test('parses natural English sold-item speech', () => {
+  const parsed = parseVoiceTransactions('2 kg sugar sold 70 rupees');
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(
+    parsed.transactions.map(({ type, itemName, quantity, quantityUnit, amount }) => ({
+      type, itemName, quantity, quantityUnit, amount,
+    })),
+    [{ type: 'sale', itemName: 'sugar', quantity: 2, quantityUnit: 'kg', amount: 70 }],
+  );
+});
+
+test('accepts the common spoken spelling carod for crore', () => {
+  const parsed = parseVoiceTransactions('ek carod rent kharch add karo');
+  assert.equal(parsed.error, undefined);
+  assert.equal(parsed.transactions[0]?.amount, 10_000_000);
+});
