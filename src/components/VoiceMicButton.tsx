@@ -35,6 +35,7 @@ type VoiceMicButtonProps = {
   language: 'en' | 'hi';
   onTranscript: (transcript: string) => void;
   onStatus?: (status: string) => void;
+  onRecordingChange?: (recording: boolean) => void;
   disabled?: boolean;
   shape?: 'circle' | 'rounded';
   label?: string;
@@ -48,7 +49,9 @@ function speechStatus(code: string | undefined, language: 'en' | 'hi'): string {
       : 'Microphone access was denied. Allow it in your browser settings.';
   }
   if (code === 'no-speech') {
-    return hindi ? 'आवाज़ सुनाई नहीं दी। फिर कोशिश करें।' : 'No speech detected. Please try again.';
+    return hindi
+      ? 'आवाज़ साफ़ नहीं सुनाई दी। कृपया साफ़ बोलकर फिर कोशिश करें।'
+      : 'We did not hear you clearly. Please speak clearly and try again.';
   }
   if (code === 'network') {
     return hindi
@@ -61,21 +64,24 @@ function speechStatus(code: string | undefined, language: 'en' | 'hi'): string {
       : 'No microphone was found. Check your device settings.';
   }
   return hindi
-    ? 'आवाज़ पहचान नहीं पाए। कृपया फिर कोशिश करें या टाइप करें।'
-    : 'Could not recognise that speech. Please try again or type instead.';
+    ? 'आवाज़ साफ़ नहीं समझ आई। कृपया धीरे और साफ़ बोलें या टाइप करें।'
+    : 'We could not understand that clearly. Please speak slowly and clearly, or type instead.';
 }
 
 export function VoiceMicButton({
   language,
   onTranscript,
   onStatus,
+  onRecordingChange,
   disabled = false,
   shape = 'rounded',
   label,
 }: VoiceMicButtonProps) {
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<RecognitionLike | null>(null);
-  const handledRef = useRef(false);
+  const finalTranscriptRef = useRef('');
+  const currentTranscriptRef = useRef('');
+  const stoppingRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -92,15 +98,19 @@ export function VoiceMicButton({
           // The browser may already have closed the recognizer.
         }
       }
+      onRecordingChange?.(false);
     };
-  }, []);
+  }, [onRecordingChange]);
 
   const startListening = () => {
     if (listening) {
+      stoppingRef.current = true;
+      onStatus?.(language === 'hi' ? 'रिकॉर्डिंग पूरी हो रही है…' : 'Finishing recording…');
       try {
         recognitionRef.current?.stop();
       } catch {
         setListening(false);
+        onRecordingChange?.(false);
       }
       return;
     }
@@ -126,51 +136,65 @@ export function VoiceMicButton({
       return;
     }
 
-    handledRef.current = false;
+    finalTranscriptRef.current = '';
+    currentTranscriptRef.current = '';
+    stoppingRef.current = false;
     recognition.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    // Continuous mode gives shopkeepers time to say a whole list of entries.
+    // Nothing is sent or saved automatically when a recognition result arrives.
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 3;
     recognitionRef.current = recognition;
 
     recognition.onstart = () => {
       setListening(true);
-      onStatus?.(language === 'hi' ? 'सुन रहा हूँ… बोलिए।' : 'Listening… speak now.');
+      onRecordingChange?.(true);
+      onStatus?.(language === 'hi' ? 'सुन रहा हूँ… पूरा बोलें, फिर माइक्रोफ़ोन रोकें।' : 'Listening… finish your full message, then stop the microphone.');
     };
 
     recognition.onresult = (event) => {
-      if (handledRef.current) return;
-      const phrases: string[] = [];
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      const finalParts: string[] = [];
+      const interimParts: string[] = [];
+      for (let i = 0; i < event.results.length; i++) {
         const result = event.results[i];
-        if (result?.isFinal && result[0]?.transcript) phrases.push(result[0].transcript);
+        const phrase = result?.[0]?.transcript?.trim();
+        if (!phrase) continue;
+        if (result.isFinal) finalParts.push(phrase);
+        else interimParts.push(phrase);
       }
-      const transcript = phrases.join(' ').trim();
-      if (!transcript) return;
-
-      handledRef.current = true;
-      onStatus?.(language === 'hi' ? 'समझ रहा हूँ…' : 'Processing speech…');
-      onTranscript(transcript);
-      try {
-        recognition.stop();
-      } catch {
-        // The recognition session may already have stopped.
-      }
+      finalTranscriptRef.current = finalParts.join(' ').replace(/\s+/g, ' ').trim();
+      currentTranscriptRef.current = [finalTranscriptRef.current, interimParts.join(' ')]
+        .filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+      if (currentTranscriptRef.current) onTranscript(currentTranscriptRef.current);
     };
 
     recognition.onerror = (event) => {
       setListening(false);
-      if (!handledRef.current) onStatus?.(speechStatus(event.error, language));
+      onRecordingChange?.(false);
+      if (event.error !== 'aborted') onStatus?.(speechStatus(event.error, language));
+      recognitionRef.current = null;
     };
 
     recognition.onend = () => {
       setListening(false);
-      if (!handledRef.current) {
+      onRecordingChange?.(false);
+      const transcript = finalTranscriptRef.current || currentTranscriptRef.current;
+      if (transcript.trim()) {
+        onTranscript(transcript.trim());
         onStatus?.(
           language === 'hi'
-            ? 'आवाज़ नहीं मिली। माइक्रोफ़ोन दबाकर फिर बोलें।'
-            : 'No voice input was captured. Tap the microphone and try again.'
+            ? 'आवाज़ दर्ज हुई। अब टेक्स्ट जाँचें और भेजने/जोड़ने के लिए तीर या टिक दबाएँ।'
+            : 'Speech captured. Review the text, then press the arrow or checkmark to send or add it.'
         );
+      } else if (!stoppingRef.current) {
+        onStatus?.(language === 'hi'
+          ? 'हम आपकी बात साफ़ नहीं सुन पाए। कृपया साफ़ बोलकर फिर कोशिश करें।'
+          : 'We did not hear you clearly. Please speak clearly and try again.');
+      } else {
+        onStatus?.(language === 'hi'
+          ? 'कोई आवाज़ दर्ज नहीं हुई। कृपया साफ़ बोलकर फिर कोशिश करें।'
+          : 'No speech was captured. Please speak clearly and try again.');
       }
       recognitionRef.current = null;
     };
@@ -180,6 +204,7 @@ export function VoiceMicButton({
     } catch {
       recognitionRef.current = null;
       setListening(false);
+      onRecordingChange?.(false);
       onStatus?.(speechStatus(undefined, language));
     }
   };
@@ -187,12 +212,8 @@ export function VoiceMicButton({
   const buttonLabel =
     label ||
     (language === 'hi'
-      ? listening
-        ? 'आवाज़ रोकें'
-        : 'आवाज़ से पूछें'
-      : listening
-        ? 'Stop listening'
-        : 'Use voice');
+      ? listening ? 'रिकॉर्डिंग रोकें' : 'आवाज़ से पूछें'
+      : listening ? 'Stop recording' : 'Use voice');
 
   return (
     <button

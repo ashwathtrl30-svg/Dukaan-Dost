@@ -1,0 +1,27 @@
+name: Voice ledger CI
+
+on:
+  push:
+    branches:
+      - feat/voice-ledger-review-and-hindi-numbers
+  pull_request:
+    branches:
+      - main
+      - feat/voice-ledger-review-and-hindi-numbers
+
+jobs:
+  build-and-parser-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Build production bundle
+        run: npm run build
+      - name: Test voice parser examples
+        run: npx --yes tsx --test src/voice/voiceCommands.test.ts

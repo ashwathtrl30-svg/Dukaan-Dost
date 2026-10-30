@@ -35,6 +35,7 @@ export interface SaleEntry {
   itemName?: string;
   /** Units/pieces/services included in this sale; optional on legacy entries. */
   quantity?: number;
+  quantityUnit?: string;
   category?: string;
   paymentType: PaymentType;
   note?: string;

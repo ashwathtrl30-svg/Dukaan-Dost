@@ -271,7 +271,7 @@ export function HomeScreen() {
                         {entry.entryType === 'sale' ? (entry.itemName?.trim() || t('sale', lang)) : t(`ec_${(entry as any).category || 'other'}` as any, lang)}
                       </p>
                       <p className="text-small text-text-secondary">
-                        {entry.entryType === 'sale' && Number.isFinite(Number((entry as any).quantity)) && Number((entry as any).quantity) > 0 ? `${lang === 'hi' ? 'मात्रा' : 'Qty'}: ${Number((entry as any).quantity)} · ` : ''}{new Date(entry.date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' })}
+                        {entry.entryType === 'sale' && Number.isFinite(Number((entry as any).quantity)) && Number((entry as any).quantity) > 0 ? `${lang === 'hi' ? 'मात्रा' : 'Qty'}: ${Number((entry as any).quantity)} ${(entry as any).quantityUnit || 'unit'} · ` : ''}{new Date(entry.date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' })}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
@@ -384,7 +384,7 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
       const quantity = Number((entry as any).quantity);
       if (Number.isFinite(quantity) && quantity > 0) {
         const qtyLabel = lang === 'hi' ? 'मात्रा' : 'Qty';
-        return `${qtyLabel}: ${quantity}`;
+        return `${qtyLabel}: ${quantity} ${(entry as any).quantityUnit || 'unit'}`;
       }
       return lang === 'hi' ? 'बिक्री' : 'Sale entry';
     }
@@ -608,6 +608,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
   const lang = state.language!;
   const [itemName, setItemName] = useState('');
   const [quantity, setQuantity] = useState('1');
+  const [quantityUnit, setQuantityUnit] = useState('unit');
   const [amount, setAmount] = useState('');
   const [paymentType, setPaymentType] = useState<PaymentType>('cash');
   const [expenseCategory, setExpenseCategory] = useState('stock');
@@ -641,7 +642,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
     
     if (isSale) {
       const entry: SaleEntry = {
-        id, date: today, amount: numAmount, itemName: cleanedItemName, quantity: numQuantity, paymentType, createdAt: Date.now()
+        id, date: today, amount: numAmount, itemName: cleanedItemName, quantity: numQuantity, quantityUnit: quantityUnit.trim() || 'unit', paymentType, createdAt: Date.now()
       };
       dispatch({ type: 'ADD_SALE', payload: entry });
     } else if (isExpense) {
@@ -673,6 +674,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
     setAmount('');
     setItemName('');
     setQuantity('1');
+    setQuantityUnit('unit');
     setCustomerName('');
   };
   
@@ -764,6 +766,15 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
                 placeholder={lang === 'hi' ? 'जैसे 10' : 'e.g. 10'}
                 className="input-field"
                 aria-label={lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
+              />
+              <input
+                type="text"
+                value={quantityUnit}
+                onChange={(e) => setQuantityUnit(e.target.value.slice(0, 30))}
+                placeholder={lang === 'hi' ? 'इकाई जैसे किलो, पैकेट, लीटर, पीस' : 'Unit, e.g. kg, packet, litre, piece'}
+                className="input-field mt-2"
+                maxLength={30}
+                aria-label={lang === 'hi' ? 'मात्रा की इकाई' : 'Quantity unit'}
               />
               <p className="text-small text-text-secondary mt-1">
                 {lang === 'hi' ? 'एक बार में कई पीस/यूनिट दर्ज करें।' : 'Record multiple pieces or units in one sale.'}
@@ -874,6 +885,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
   const lang = state.language!;
   const [itemName, setItemName] = useState(String(entry.itemName || ''));
   const [quantity, setQuantity] = useState(String(entry.quantity ?? 1));
+  const [quantityUnit, setQuantityUnit] = useState(String(entry.quantityUnit || 'unit'));
   const [amount, setAmount] = useState(String(entry.amount));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
@@ -892,7 +904,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
     const newEntry = {
       ...entry,
       amount: numAmount,
-      ...(isSale ? { itemName: itemName.trim(), quantity: numQuantity } : {}),
+      ...(isSale ? { itemName: itemName.trim(), quantity: numQuantity, quantityUnit: quantityUnit.trim() || 'unit' } : {}),
       createdAt: Date.now(),
     };
     
@@ -967,6 +979,15 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
                 onChange={(e) => setQuantity(e.target.value)}
                 className="input-field"
                 aria-label={lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
+              />
+              <input
+                type="text"
+                value={quantityUnit}
+                onChange={(e) => setQuantityUnit(e.target.value.slice(0, 30))}
+                placeholder={lang === 'hi' ? 'इकाई जैसे किलो, पैकेट, लीटर, पीस' : 'Unit, e.g. kg, packet, litre, piece'}
+                className="input-field mt-2"
+                maxLength={30}
+                aria-label={lang === 'hi' ? 'मात्रा की इकाई' : 'Quantity unit'}
               />
             </div>
           )}
