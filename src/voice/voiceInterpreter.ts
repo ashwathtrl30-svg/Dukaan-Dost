@@ -1,4 +1,4 @@
-import type { ShopType } from '../types';
+import type { ShopType, Language } from '../types';
 import type { VoiceParseError, VoiceTransaction } from './voiceCommands';
 
 export interface VoiceInterpretation {
@@ -12,7 +12,7 @@ export interface InterpretVoiceOptions {
   transcript: string;
   candidates?: string[];
   shopType: ShopType | null;
-  language: 'en' | 'hi';
+  language: Language;
   signal?: AbortSignal;
 }
 
@@ -35,17 +35,140 @@ function asRecord(value: unknown): Record<string, unknown> | null {
     : null;
 }
 
-function parseTransactions(value: unknown): VoiceTransaction[] {
-  if (!Array.isArray(value) || value.length === 0 || value.length > 5) {
-    throw new Error('The AI returned an incomplete transaction list. Nothing was added.');
+function parseError(value: unknown): VoiceParseError {
+  return typeof value === 'string' && PARSE_ERRORS.has(value as VoiceParseError)
+    ? value as VoiceParseError
+    : 'unclear';
+}
+
+function parseTransaction(value: unknown): VoiceTransaction | null {
+  const item = asRecord(value);
+  if (!item) return null;
+
+  const type = item.type;
+  const amount = Number(item.amount);
+  if (!['sale', 'expense', 'udhaar'].includes(String(type))) return null;
+  if (!Number.isInteger(amount) || amount <= 0 || amount > 10_000_000) return null;
+
+  if (type === 'sale') {
+    const itemName = typeof item.itemName === 'string' ? item.itemName.trim().slice(0, 80) : '';
+    const numberOfItemsSold = Number(item.numberOfItemsSold);
+    const quantity = item.quantity === undefined ? undefined : Number(item.quantity);
+    const quantityUnit = typeof item.quantityUnit === 'string' ? item.quantityUnit.trim() : undefined;
+    const packageCount = item.packageCount === undefined ? undefined : Number(item.packageCount);
+    const packageUnit = typeof item.packageUnit === 'string' ? item.packageUnit.trim() : undefined;
+
+    if (!itemName || !Number.isFinite(numberOfItemsSold) || numberOfItemsSold <= 0) return null;
+    if (quantity !== undefined && (!Number.isFinite(quantity) || quantity <= 0 || !quantityUnit)) return null;
+    if (packageCount !== undefined && (!Number.isFinite(packageCount) || packageCount <= 0 || !packageUnit)) return null;
+
+    return {
+      type: 'sale',
+      amount,
+      itemName,
+      numberOfItemsSold,
+      ...(quantity !== undefined && quantityUnit ? { quantity, quantityUnit } : {}),
+      ...(packageCount !== undefined && packageUnit ? { packageCount, packageUnit } : {}),
+    };
   }
 
-  return value.map((entry, index) => {
-    const item = asRecord(entry);
-    if (!item) throw new Error('Transaction ' + (index + 1) + ' is not valid.');
+  if (type === 'udhaar') {
+    const customerName = typeof item.customerName === 'string' ? item.customerName.trim().slice(0, 80) : '';
+    if (!customerName) return null;
+    return { type: 'udhaar', amount, customerName };
+  }
 
-    const type = item.type;
-    const amount = Number(item.amount);
-    if (!['sale', 'expense', 'udhaar'].includes(String(type))) {
-      throw new Error('Transaction ' + (index + 1) + ' has an unknown type.');
-    ¶»§q«^u½¹ÍĞÉ•ÍÁ½¹Í”€ô…İ…¥Ğ™•Ñ  œ½…Á¤½Á…ÉÍ”µÙ½¥”œ°ì(€€€µ•Ñ¡½è€A=MPœ°(€€€¡•…‘•ÉÌèì€½¹Ñ•¹ĞµQåÁ”œè€…ÁÁ±¥…Ñ¥½¸½©Í½¸œô°(€€€Í¥¹…°°(€€€‰½‘äè)M=8¹ÍÑÉ¥¹¥™ä¡ì(€€€€€ÑÉ…¹ÍÉ¥ÁĞè±•…¹QÉ…¹ÍÉ¥ÁĞ°(€€€€€…¹‘¥‘…Ñ•ÌèÕ¹¥ÅÕ•…¹‘¥‘…Ñ•Ì°(€€€€€Í¡½ÁQåÁ”èÍ¡½ÁQåÁ”ñğ€½Ñ¡•Èœ°(€€€€€±…¹Õ…”°(€€€ô¤°(€ô¤ì((€½¹ÍĞ‘…Ñ„€ô…ÍI•½É¡…İ…¥ĞÉ•ÍÁ½¹Í”¹©Í½¸ ¤¹…Ñ   ¤€ôø¹Õ±°¤¤ì(€¥˜€ …É•ÍÁ½¹Í”¹½¬¤ì(€€€½¹ÍĞµ•ÍÍ…”€ôÑåÁ•½˜‘…Ñ„ü¹•ÉÉ½È€ôôô€ÍÑÉ¥¹œœ(€€€€€€ü‘…Ñ„¹•ÉÉ½È(€€€€€€è€$Ù½¥”¥¹Ñ•ÉÁÉ•Ñ…Ñ¥½¸¥ÌÕ¹…Ù…¥±…‰±”¸9½Ñ¡¥¹œİ…Ì…‘‘•¸œì(€€€Ñ¡É½Ü¹•ÜÉÉ½È¡µ•ÍÍ…”¤ì(€ô(€¥˜€ …‘…Ñ„¤Ñ¡É½Ü¹•ÜÉÉ½È $Ù½¥”¥¹Ñ•ÉÁÉ•Ñ…Ñ¥½¸É•ÑÕÉ¹•…¸¥¹Ù…±¥É•ÍÁ½¹Í”¸œ¤ì((€½¹ÍĞÍ•±•Ñ•‘QÉ…¹ÍÉ¥ÁĞ€ôÑåÁ•½˜‘…Ñ„¹Í•±•Ñ•‘QÉ…¹ÍÉ¥ÁĞ€ôôô€ÍÑÉ¥¹œœ(€€€€ü‘…Ñ„¹Í•±•Ñ•‘QÉ…¹ÍÉ¥ÁĞ¹ÑÉ¥´ ¤¹Í±¥” À°€ÄØÀÀ¤(€€€€è±•…¹QÉ…¹ÍÉ¥ÁĞì(€½¹ÍĞ•ÉÉ½È€ôÑåÁ•½˜‘…Ñ„¹•ÉÉ½È€ôôô€ÍÑÉ¥¹œœ€˜˜AIM}II=IL¹¡…Ì¡‘…Ñ„¹•ÉÉ½È…ÌY½¥•A…ÉÍ•ÉÉ½È¤(€€€€ü‘…Ñ„¹•ÉÉ½È…ÌY½¥•A…ÉÍ•ÉÉ½È(€€€€èÕ¹‘•™¥¹•ì(€½¹ÍĞ±…É¥™¥…Ñ¥½¸€ôÑåÁ•½˜‘…Ñ„¹±…É¥™¥…Ñ¥½¸€ôôô€ÍÑÉ¥¹œœ(€€€€ü‘…Ñ„¹±…É¥™¥…Ñ¥½¸¹ÑÉ¥´ ¤¹Í±¥” À°€ÌÀÀ¤(€€€€è€œœì((€¥˜€¡•ÉÉ½È¤ì(€€€É•ÑÕÉ¸ìÑÉ…¹Í…Ñ¥½¹Ìèmt°Í•±•Ñ•‘QÉ…¹ÍÉ¥ÁĞ°•ÉÉ½È°±…É¥™¥…Ñ¥½¸ôì(€ô((€É•ÑÕÉ¸ì(€€€ÑÉ…¹Í…Ñ¥½¹ÌèÁ…ÉÍ•QÉ…¹Í…Ñ¥½¹Ì¡‘…Ñ„¹ÑÉ…¹Í…Ñ¥½¹Ì¤°(€€€Í•±•Ñ•‘QÉ…¹ÍÉ¥ÁĞ°(€€€±…É¥™¥…Ñ¥½¸°(€ôì)ô
+  const allowedCategories = new Set([
+    'rent', 'electricity', 'salary', 'transport', 'packaging',
+    'maintenance', 'stock', 'other',
+  ]);
+  const expenseCategory = typeof item.expenseCategory === 'string' && allowedCategories.has(item.expenseCategory)
+    ? item.expenseCategory
+    : 'other';
+  const note = typeof item.note === 'string' ? item.note.trim().slice(0, 100) : '';
+  return { type: 'expense', amount, expenseCategory, ...(note ? { note } : {}) };
+}
+
+export async function interpretVoiceTransactions(
+  options: InterpretVoiceOptions,
+): Promise<VoiceInterpretation> {
+  const transcript = options.transcript.trim();
+  if (!transcript || transcript.length > 1600) {
+    return {
+      transactions: [],
+      error: 'unclear',
+      clarification: 'Enter a voice transcript of up to 1,600 characters.',
+    };
+  }
+
+  const candidates = Array.isArray(options.candidates)
+    ? [...new Set(options.candidates.filter((value) => typeof value === 'string' && value.trim()).map((value) => value.trim().slice(0, 1600)))].slice(0, 5)
+    : [];
+
+  const response = await fetch('/api/parse-voice', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      transcript,
+      candidates,
+      shopType: options.shopType || 'other',
+      language: options.language,
+    }),
+    ...(options.signal ? { signal: options.signal } : {}),
+  });
+
+  const payload = asRecord(await response.json().catch(() => null));
+  if (!payload) {
+    throw new Error('The voice interpretation service returned an unreadable response.');
+  }
+
+  const rawError = parseError(payload.error);
+  const clarification = typeof payload.clarification === 'string'
+    ? payload.clarification.trim().slice(0, 300)
+    : '';
+  const selectedTranscript = typeof payload.selectedTranscript === 'string' && payload.selectedTranscript.trim()
+    ? payload.selectedTranscript.trim().slice(0, 1600)
+    : transcript;
+
+  if (!response.ok) {
+    if (PARSE_ERRORS.has(payload.error as VoiceParseError)) {
+      return { transactions: [], error: rawError, clarification: clarification || 'Please repeat the entry more clearly.' };
+    }
+    const message = typeof payload.error === 'string' ? payload.error : 'The AI voice service is temporarily unavailable.';
+    throw new Error(message);
+  }
+
+  if (!Array.isArray(payload.transactions) || payload.transactions.length === 0) {
+    return {
+      transactions: [],
+      error: rawError,
+      selectedTranscript,
+      clarification: clarification || 'Please repeat the item or customer, amount, and transaction type.',
+    };
+  }
+
+  if (payload.transactions.length > 5) {
+    return {
+      transactions: [],
+      error: 'too_many_entries',
+      selectedTranscript,
+      clarification: 'Please split this into batches of five or fewer entries.',
+    };
+  }
+
+  const transactions = payload.transactions.map(parseTransaction);
+  if (transactions.some((transaction) => transaction === null)) {
+    return {
+      transactions: [],
+      error: 'unclear',
+      selectedTranscript,
+      clarification: 'I could not safely verify every field. Nothing was saved; please say the entry again.',
+    };
+  }
+
+  return {
+    transactions: transactions as VoiceTransaction[],
+    selectedTranscript,
+    clarification: clarification || undefined,
+  };
+}
