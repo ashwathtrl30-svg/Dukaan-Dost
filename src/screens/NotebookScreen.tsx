@@ -90,18 +90,18 @@ export function NotebookScreen({ onClose }: NotebookScreenProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-bg flex flex-col animate-fade-in">
-      <header className="px-4 py-3 border-b border-border bg-card flex items-center gap-3">
+      <header className="px-4 py-3 border-b border-border bg-card flex items-center gap-2">
         <button
           type="button"
           onClick={editorOpen ? cancelEditor : onClose}
-          className="w-11 h-11 rounded-full flex items-center justify-center hover:bg-bg"
+          className="w-11 h-11 rounded-full flex items-center justify-center hover:bg-bg shrink-0"
           aria-label={hindi ? 'वापस जाएँ' : 'Go back'}
         >
           <ArrowLeft size={21} />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-bold text-text">{hindi ? 'दुकान की नोटबुक' : 'Shop notebook'}</h1>
-          <p className="text-xs text-text-secondary">
+          <h1 className="text-lg font-bold text-text whitespace-nowrap">{hindi ? 'दुकान की नोटबुक' : 'Shop notebook'}</h1>
+          <p className="text-[10px] sm:text-xs text-text-secondary whitespace-nowrap tracking-tight">
             {hindi ? 'याद रखने वाली बातें यहाँ सेव करें' : 'Keep shop reminders and notes in one place'}
           </p>
         </div>
@@ -109,9 +109,11 @@ export function NotebookScreen({ onClose }: NotebookScreenProps) {
           <button
             type="button"
             onClick={openNewNote}
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary flex h-10 w-10 shrink-0 items-center justify-center p-0 sm:h-auto sm:w-auto sm:px-4"
+            aria-label={hindi ? 'नई नोट' : 'New note'}
+            title={hindi ? 'नई नोट' : 'New note'}
           >
-            <Plus size={18} /> {hindi ? 'नई नोट' : 'New note'}
+            <Plus size={18} /> <span className="hidden sm:inline">{hindi ? 'नई नोट' : 'New note'}</span>
           </button>
         )}
       </header>
