@@ -515,14 +515,14 @@ function parseLeadingQuantity(segment: string): {
   quantityUnit?: string;
   remainder: string;
 } {
-  let value = segment.trim().replace(/^[,;:\\s]+/, '');
-  value = value.replace(/^(?:and|aur|phir|then|plus|और|फिर)\\s+/iu, '');
+  let value = segment.trim().replace(/^[,;:\s]+/, '');
+  value = value.replace(/^(?:and|aur|phir|then|plus|और|फिर)\s+/iu, '');
   const spans = findAmountSpans(value);
   const first = spans[0];
   if (!first || first.start > 3) return { remainder: value };
 
   const after = value.slice(first.end);
-  const halfPacket = /^\\s*(?:(?:aadhe?|aadha|aadhi|aadhay|half)\\s+kilo\\s+ke\\s+packets?|half[- ]kilo\\s+packets?|(?:aadhe?|aadha|half)\\s+kilo\\s+packets?)/iu.exec(after);
+  const halfPacket = /^\s*(?:(?:aadhe?|aadha|aadhi|aadhay|half)\s+kilo\s+ke\s+packets?|half[- ]kilo\s+packets?|(?:aadhe?|aadha|half)\s+kilo\s+packets?)/iu.exec(after);
   if (halfPacket) {
     return {
       quantity: first.amount,
@@ -597,11 +597,11 @@ function cleanSaleItemName(segment: string): {
 
   let itemName = stripVoiceCommandWords(remainder);
   itemName = itemName
-    .replace(/\\b(?:rupees?|rupee|rs|rupay|rupaye|rupaya|rupiya|रुपये?|रुपया|रुपए|रूपये?|रूपए)\\b/giu, ' ')
-    .replace(/^(?:of|for|the|a|an|ka|ki|ke|kilo|kg|packet|pack|aur|and|में|की|का|के)\\s+/iu, '')
-    .replace(/(?:से|में)\\s*$/u, '')
+    .replace(/\b(?:rupees?|rupee|rs|rupay|rupaye|rupaya|rupiya|रुपये?|रुपया|रुपए|रूपये?|रूपए)\b/giu, ' ')
+    .replace(/^(?:of|for|the|a|an|ka|ki|ke|kilo|kg|packet|pack|aur|and|में|की|का|के)\s+/iu, '')
+    .replace(/(?:से|में)\s*$/u, '')
     .replace(/[,:;]+/g, ' ')
-    .replace(/\\s+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 
   return { itemName, quantity, quantityUnit, packageCount, packageUnit };
