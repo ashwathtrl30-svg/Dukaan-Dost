@@ -215,7 +215,7 @@ test('keeps explicit customer names when the credit description also mentions st
 
 test('classifies mixed sales and expenses only when each amount has a clear local cue', () => {
   const parsed = parseVoiceTransactions(
-    'aloo 100 rupaye, bijli 2000 rupaye, kaanda 250 rupaye sales aur expenses add karo',
+    'aloo 100 rupaye, bijli ka kharch 2000 rupaye, kaanda 250 rupaye sales aur expenses add karo',
   );
   assert.equal(parsed.error, undefined);
   assert.deepEqual(
