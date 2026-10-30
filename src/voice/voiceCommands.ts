@@ -402,13 +402,13 @@ const MAX_VOICE_BATCH = 5;
 const MAX_VOICE_AMOUNT = 10_000_000;
 
 function matchQuantityUnit(after: string): { unit: string; length: number } | undefined {
-  const match = /^\s*(millilit(?:er|re)s?|ml|milligrams?|mg|kilograms?|kilos?|kgs?|kg|grams?|gms?|gm|g|litres?|liters?|ltr|lt|l|quintals?|tonnes?|tons?|meters?|metres?|m|cm|mm|packets?|packs?|pkts?|pieces?|pcs?|pc|units?|items?|bottles?|boxes?|dozen|dz|bags?|sacks?|pouches?|bundles?|strips?|jars?|cans?|pairs?|trays?|rolls?|sets?|plates?|cups?|glasses?|services?|किलोग्राम|किलो|ग्राम|मिलीलीटर|लीटर|लिटर|पैकेट|पीस|नग|बोतल|डिब्बा|डिब्बे|दर्जन|पाव|क्विंटल)(?=\s|$|[,;])/iu.exec(after);
+  const match = /^\s*(millilit(?:er|re)s?|ml|milligrams?|mg|kilograms?|kilos?|kgs?|kg|grams?|gms?|gm|g|litres?|liters?|ltr|lt|l|quintals?|tonnes?|tons?|meters?|metres?|m|cm|mm|packets?|packs?|pkts?|pieces?|pcs?|pc|units?|items?|bottles?|boxes?|dozen|dz|bags?|sacks?|pouches?|bundles?|strips?|jars?|cans?|pairs?|trays?|rolls?|sets?|plates?|cups?|glasses?|services?|किलोग्राम|किलो|ग्राम|मिलीलीटर|मिली|एमएल|एम\\s*एल|लीटर|लिटर|पैकेट|पीस|नग|बोतल|डिब्बा|डिब्बे|दर्जन|पाव|क्विंटल)(?=\s|$|[,;])/iu.exec(after);
   if (!match) return undefined;
   const word = match[1].toLowerCase();
   let unit = word;
   if (/^(?:kilo|kilogram|kg)/iu.test(word) || word === 'किलो' || word === 'किलोग्राम') unit = 'kg';
   else if (/^(?:gram|gm|gms|g)$/iu.test(word) || word === 'ग्राम') unit = 'g';
-  else if (/^(?:milliliter|millilitre|ml|मिलीलीटर)$/iu.test(word)) unit = 'ml';
+  else if (/^(?:milliliter|millilitre|ml|मिलीलीटर|मिली|एमएल|एम एल)$/iu.test(word)) unit = 'ml';
   else if (/^(?:liter|litre|ltr|lt|l)$/iu.test(word) || word === 'लीटर' || word === 'लिटर') unit = 'litre';
   else if (/^(?:milligram|mg)$/iu.test(word)) unit = 'mg';
   else if (/^quintal/iu.test(word) || word === 'क्विंटल') unit = 'quintal';
