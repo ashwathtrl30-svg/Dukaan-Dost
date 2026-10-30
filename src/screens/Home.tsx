@@ -257,42 +257,64 @@ export function HomeScreen() {
               )}
             </div>
           </div>
-          {(state.sales.length > 0 || state.expenses.length > 0) ? (
+          {(state.sales.length > 0 || state.expenses.length > 0 || state.udhaar.length > 0) ? (
             <div className="space-y-2">
-              {[...state.sales.slice(0, 3).map(s => ({ ...s, entryType: 'sale' as const })),
-                ...state.expenses.slice(0, 2).map(e => ({ ...e, entryType: 'expense' as const }))]
-                .sort((a, b) => b.createdAt - a.createdAt)
+              {[
+                ...state.sales.map(entry => ({ ...entry, entryType: 'sale' as const })),
+                ...state.expenses.map(entry => ({ ...entry, entryType: 'expense' as const })),
+                ...state.udhaar.map(entry => ({ ...entry, entryType: 'udhaar' as const })),
+              ]
+                .sort((a, b) => (b.createdAt || new Date(b.date).getTime()) - (a.createdAt || new Date(a.date).getTime()))
                 .slice(0, 5)
-                .map((entry, i) => (
-                  <div key={i} className="card flex items-center gap-3 px-4 py-3">
+                .map(entry => (
+                  <div key={entry.entryType + '-' + entry.id} className="card flex items-center gap-3 px-4 py-3">
                     <span className="text-2xl flex-shrink-0">
-                      {entry.entryType === 'sale' ? '💰' : '📤'}
+                      {entry.entryType === 'sale' ? '💰' : entry.entryType === 'expense' ? '📤' : '📒'}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-body font-medium text-text">
-                        {entry.entryType === 'sale' ? (entry.itemName?.trim() || t('sale', lang)) : t(`ec_${(entry as any).category || 'other'}` as any, lang)}
+                      <p className="text-body font-medium text-text break-words">
+                        {entry.entryType === 'sale'
+                          ? (entry.itemName?.trim() || t('sale', lang))
+                          : entry.entryType === 'expense'
+                            ? (entry.note?.trim() || t(`ec_${entry.category || 'other'}` as any, lang))
+                            : (entry.customerName || (lang === 'hi' ? 'ग्राहक' : 'Customer'))}
                       </p>
                       <p className="text-small text-text-secondary">
-                        {entry.entryType === 'sale' && Number.isFinite(Number((entry as any).quantity)) && Number((entry as any).quantity) > 0 ? `${lang === 'hi' ? 'मात्रा' : 'Qty'}: ${Number((entry as any).quantity)} ${(entry as any).quantityUnit || 'unit'} · ` : ''}{new Date(entry.date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' })}
+                        {entry.entryType === 'sale' && Number.isFinite(Number(entry.quantity)) && Number(entry.quantity) > 0
+                          ? `${lang === 'hi' ? 'मात्रा' : 'Qty'}: ${Number(entry.quantity)} ${entry.quantityUnit || 'unit'} · `
+                          : ''}
+                        {entry.entryType === 'expense'
+                          ? `${t(`ec_${entry.category || 'other'}` as any, lang)} · `
+                          : ''}
+                        {entry.entryType === 'udhaar'
+                          ? `${entry.paid ? (lang === 'hi' ? 'चुकाया गया' : 'Paid') : (lang === 'hi' ? 'बाकी उधार' : 'Pending udhaar')} · `
+                          : ''}
+                        {new Date(entry.date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' })}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`text-body font-bold ${entry.entryType === 'sale' ? 'text-positive' : 'text-problem'}`}>
-                        {entry.entryType === 'sale' ? '+' : '-'}{formatRupee(entry.amount)}
+                      <span className={`text-body font-bold ${
+                        entry.entryType === 'sale' ? 'text-positive' : entry.entryType === 'expense' ? 'text-problem' : 'text-warning'
+                      }`}>
+                        {entry.entryType === 'sale' ? '+' : entry.entryType === 'expense' ? '−' : ''}{formatRupee(entry.amount)}
                       </span>
-                      <button
-                        onClick={() => setEditingEntry(entry)}
-                        className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"
-                      >
-                        <Edit2 size={16} className="text-primary" />
-                      </button>
+                      {entry.entryType !== 'udhaar' && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingEntry(entry)}
+                          className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"
+                          aria-label={lang === 'hi' ? 'एंट्री संपादित करें' : 'Edit entry'}
+                        >
+                          <Edit2 size={16} className="text-primary" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
             </div>
           ) : (
             <p className="text-small text-text-secondary py-2">
-              {lang === 'hi' ? 'अभी कोई बिक्री या खर्च दर्ज नहीं है।' : 'No sales or expense entries yet.'}
+              {lang === 'hi' ? 'अभी कोई बिक्री, खर्च या उधार दर्ज नहीं है।' : 'No sales, expenses or udhaar entries yet.'}
             </p>
           )}
         </div>
