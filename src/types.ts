@@ -33,9 +33,12 @@ export interface SaleEntry {
   date: string; // YYYY-MM-DD
   amount: number;
   itemName?: string;
-  /** Units/pieces/services included in this sale; optional on legacy entries. */
+  /** Measured or counted quantity sold, e.g. 500 ml, 2 kg or 3 packets. */
   quantity?: number;
   quantityUnit?: string;
+  /** Optional separate package count when a sale also records total weight/volume. */
+  packageCount?: number;
+  packageUnit?: string;
   category?: string;
   paymentType: PaymentType;
   note?: string;
