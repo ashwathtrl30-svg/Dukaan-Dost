@@ -208,7 +208,7 @@ function getTrackedQuantitySummary(sales: any[], lang: string): string {
     // Do not combine unlike units or treat legacy unitless values as measured quantities.
     if (!Number.isFinite(quantity) || quantity <= 0 || !unit) return;
 
-    const name = sale.itemName.trim().replace(/\\s+/g, ' ');
+    const name = sale.itemName.trim().replace(/\s+/g, ' ');
     const key = name.toLocaleLowerCase() + '|' + unit.toLocaleLowerCase();
     const item = byItemAndUnit.get(key) || { name, quantity: 0, unit };
     item.quantity += quantity;
@@ -225,8 +225,8 @@ function getTrackedQuantitySummary(sales: any[], lang: string): string {
   }).join(', ');
 
   return lang === 'hi'
-    ? '\\n\\n**पिछले 7 दिनों की दर्ज मात्रा (शीर्ष सामान/सेवाएँ):** ' + list + '। अलग-अलग इकाइयों को अलग रखा गया है। केवल सही इकाई वाली एंट्री शामिल हैं।'
-    : '\\n\\n**Tracked quantities, last 7 days (top items/services):** ' + list + '. Different units are kept separate; only entries with a recognized unit are included.';
+    ? '\n\n**पिछले 7 दिनों की दर्ज मात्रा (शीर्ष सामान/सेवाएँ):** ' + list + '। अलग-अलग इकाइयों को अलग रखा गया है। केवल सही इकाई वाली एंट्री शामिल हैं।'
+    : '\n\n**Tracked quantities, last 7 days (top items/services):** ' + list + '. Different units are kept separate; only entries with a recognized unit are included.';
 }
 
 function getShopInventoryAdvice(shopType: string | null | undefined, lang: string): string {
