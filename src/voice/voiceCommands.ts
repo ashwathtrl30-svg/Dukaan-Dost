@@ -603,7 +603,13 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
     const left = text.slice(leftStart, span.start);
     const right = text.slice(suffixEnds[index], index + 1 < moneySpans.length ? moneySpans[index + 1].start : text.length);
     const descriptor = amountBeforeDescriptor ? right : left;
-    const descriptorExpenseCategory = detectExpenseCategory(descriptor);
+    const descriptorCategorySpan: AmountSpan = amountBeforeDescriptor
+      ? { start: 0, end: 0, amount: span.amount }
+      : { start: descriptor.length, end: descriptor.length, amount: span.amount };
+    const descriptorExpenseCategory = closestExpenseCategory(
+      descriptor,
+      descriptorCategorySpan,
+    )?.category || 'other';
     const descriptorHasExpenseCue = findMarkers(descriptor).some(marker => marker.type === 'expense');
     const unambiguousExpenseCategories = new Set([
       'rent', 'electricity', 'salary', 'transport', 'packaging', 'maintenance',
@@ -649,10 +655,7 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
       continue;
     }
 
-    const categoryMatch = closestExpenseCategory(text, span);
-    const expenseCategory = descriptorExpenseCategory !== 'other'
-      ? descriptorExpenseCategory
-      : categoryMatch?.category || 'other';
+    const expenseCategory = descriptorExpenseCategory;
     const note = stripVoiceCommandWords(descriptor).slice(0, 100);
     transactions.push({
       type: 'expense',
