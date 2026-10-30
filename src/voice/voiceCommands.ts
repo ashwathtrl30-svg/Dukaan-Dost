@@ -745,12 +745,18 @@ export function parseVoiceTransactions(input: string): VoiceParseResult {
     if (type === 'sale') {
       const parsedItem = cleanSaleItemName(descriptor);
       if (!parsedItem.itemName) return { transactions: [], error: 'missing_item' };
+      if (!parsedItem.quantity || !parsedItem.quantityUnit) {
+        return { transactions: [], error: 'missing_quantity' };
+      }
       transactions.push({
         type,
         amount: span.amount,
         itemName: parsedItem.itemName,
         quantity: parsedItem.quantity,
         quantityUnit: parsedItem.quantityUnit,
+        ...(parsedItem.packageCount && parsedItem.packageUnit
+          ? { packageCount: parsedItem.packageCount, packageUnit: parsedItem.packageUnit }
+          : {}),
       });
       continue;
     }
