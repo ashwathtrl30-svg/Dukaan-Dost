@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useStore, formatRupee, getTodaySales, getTodayExpenses, getLast7DaysData, getWeekSales, getTotalUdhaar, generateId, getToday } from '../store';
 import { t } from '../i18n';
+import { NotebookScreen } from './NotebookScreen';
 import { SaleEntry, ExpenseEntry, UdhaarEntry, PaymentType } from '../types';
-import { Plus, ArrowLeft, X, Check, TrendingUp, TrendingDown, Edit2, MoreVertical, ClipboardList, CalendarDays } from 'lucide-react';
+import { parseSaleQuantityInput, formatSaleQuantityInput } from '../quantity';
+import { Plus, ArrowLeft, X, Check, TrendingUp, TrendingDown, Edit2, MoreVertical, ClipboardList, CalendarDays, Trash2 } from 'lucide-react';
 
 // ============ HOME SCREEN ============
 type DisplayEntry =
@@ -10,12 +12,23 @@ type DisplayEntry =
   | (ExpenseEntry & { entryType: 'expense' })
   | (UdhaarEntry & { entryType: 'udhaar' });
 
+function formatSaleQuantity(entry: any): string {
+  const quantity = Number(entry.quantity);
+  if (!Number.isFinite(quantity) || quantity <= 0 || !entry.quantityUnit) return '';
+  const main = quantity + ' ' + entry.quantityUnit;
+  const packageCount = Number(entry.packageCount);
+  return Number.isFinite(packageCount) && packageCount > 0 && entry.packageUnit
+    ? packageCount + ' ' + entry.packageUnit + ' · ' + main
+    : main;
+}
+
 export function HomeScreen() {
   const { state } = useStore();
   const lang = state.language!;
   const [entryType, setEntryType] = useState<string | null>(null);
   const [showEntriesMenu, setShowEntriesMenu] = useState(false);
   const [showAllEntries, setShowAllEntries] = useState(false);
+  const [showNotebook, setShowNotebook] = useState(false);
   const [showUdhaarMenu, setShowUdhaarMenu] = useState(false);
   const [showUdhaarList, setShowUdhaarList] = useState(false);
   const [editingEntry, setEditingEntry] = useState<any>(null);
@@ -255,46 +268,87 @@ export function HomeScreen() {
               )}
             </div>
           </div>
-          {(state.sales.length > 0 || state.expenses.length > 0) ? (
+          {(state.sales.length > 0 || state.expenses.length > 0 || state.udhaar.length > 0) ? (
             <div className="space-y-2">
-              {[...state.sales.slice(0, 3).map(s => ({ ...s, entryType: 'sale' as const })),
-                ...state.expenses.slice(0, 2).map(e => ({ ...e, entryType: 'expense' as const }))]
-                .sort((a, b) => b.createdAt - a.createdAt)
+              {[
+                ...state.sales.map(entry => ({ ...entry, entryType: 'sale' as const })),
+                ...state.expenses.map(entry => ({ ...entry, entryType: 'expense' as const })),
+                ...state.udhaar.map(entry => ({ ...entry, entryType: 'udhaar' as const })),
+              ]
+                .sort((a, b) => (b.createdAt || new Date(b.date).getTime()) - (a.createdAt || new Date(a.date).getTime()))
                 .slice(0, 5)
-                .map((entry, i) => (
-                  <div key={i} className="card flex items-center gap-3 px-4 py-3">
+                .map(entry => (
+                  <div key={entry.entryType + '-' + entry.id} className="card flex items-center gap-3 px-4 py-3">
                     <span className="text-2xl flex-shrink-0">
-                      {entry.entryType === 'sale' ? '💰' : '📤'}
+                      {entry.entryType === 'sale' ? '💰' : entry.entryType === 'expense' ? '📤' : '📒'}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-body font-medium text-text">
-                        {entry.entryType === 'sale' ? (entry.itemName?.trim() || t('sale', lang)) : t(`ec_${(entry as any).category || 'other'}` as any, lang)}
+                      <p className="text-body font-medium text-text break-words">
+                        {entry.entryType === 'sale'
+                          ? (entry.itemName?.trim() || t('sale', lang))
+                          : entry.entryType === 'expense'
+                            ? (entry.note?.trim() || t(`ec_${entry.category || 'other'}` as any, lang))
+                            : (entry.customerName || (lang === 'hi' ? 'ग्राहक' : 'Customer'))}
                       </p>
                       <p className="text-small text-text-secondary">
-                        {entry.entryType === 'sale' && Number.isFinite(Number((entry as any).quantity)) && Number((entry as any).quantity) > 0 ? `${lang === 'hi' ? 'मात्रा' : 'Qty'}: ${Number((entry as any).quantity)} · ` : ''}{new Date(entry.date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' })}
+                        {entry.entryType === 'sale' && formatSaleQuantity(entry)
+                          ? `${lang === 'hi' ? 'मात्रा' : 'Qty'}: ${formatSaleQuantity(entry)} · `
+                          : ''}
+                        {entry.entryType === 'expense'
+                          ? `${t(`ec_${entry.category || 'other'}` as any, lang)} · `
+                          : ''}
+                        {entry.entryType === 'udhaar'
+                          ? `${entry.paid ? (lang === 'hi' ? 'चुकाया गया' : 'Paid') : (lang === 'hi' ? 'बाकी उधार' : 'Pending udhaar')} · `
+                          : ''}
+                        {new Date(entry.date).toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'short' })}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className={`text-body font-bold ${entry.entryType === 'sale' ? 'text-positive' : 'text-problem'}`}>
-                        {entry.entryType === 'sale' ? '+' : '-'}{formatRupee(entry.amount)}
+                      <span className={`text-body font-bold ${
+                        entry.entryType === 'sale' ? 'text-positive' : entry.entryType === 'expense' ? 'text-problem' : 'text-warning'
+                      }`}>
+                        {entry.entryType === 'sale' ? '+' : entry.entryType === 'expense' ? '−' : ''}{formatRupee(entry.amount)}
                       </span>
-                      <button
-                        onClick={() => setEditingEntry(entry)}
-                        className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"
-                      >
-                        <Edit2 size={16} className="text-primary" />
-                      </button>
+                      {entry.entryType !== 'udhaar' && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingEntry(entry)}
+                          className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"
+                          aria-label={lang === 'hi' ? 'एंट्री संपादित करें' : 'Edit entry'}
+                        >
+                          <Edit2 size={16} className="text-primary" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
             </div>
           ) : (
             <p className="text-small text-text-secondary py-2">
-              {lang === 'hi' ? 'अभी कोई बिक्री या खर्च दर्ज नहीं है।' : 'No sales or expense entries yet.'}
+              {lang === 'hi' ? 'अभी कोई बिक्री, खर्च या उधार दर्ज नहीं है।' : 'No sales, expenses or udhaar entries yet.'}
             </p>
           )}
         </div>
         
+        {/* Shopkeeper's saved reminders notebook */}
+        <div className="px-5 py-2">
+          <button
+            type="button"
+            onClick={() => setShowNotebook(true)}
+            className="card w-full flex items-center gap-3 text-left active:scale-[0.99] transition-transform"
+            aria-label={lang === 'hi' ? 'दुकान की नोटबुक खोलें' : 'Open shop notebook'}
+          >
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-2xl flex-shrink-0">📝</div>
+            <div className="flex-1 min-w-0">
+              <p className="text-body font-semibold text-text">{lang === 'hi' ? 'दुकान की नोटबुक' : 'Shop notebook'}</p>
+              <p className="text-small text-text-secondary">
+                {lang === 'hi' ? 'ज़रूरी बातें और याद रखने वाली चीज़ें सेव करें' : 'Save reminders, stock to buy, and anything to remember'}
+              </p>
+            </div>
+            <ClipboardList size={20} className="text-primary flex-shrink-0" />
+          </button>
+        </div>
+
         <div className="h-24" />
       </div>
       
@@ -322,6 +376,10 @@ export function HomeScreen() {
       {showAllEntries && (
         <AllEntriesModal onClose={() => setShowAllEntries(false)} />
       )}
+
+      {showNotebook && (
+        <NotebookScreen onClose={() => setShowNotebook(false)} />
+      )}
     </div>
   );
 }
@@ -341,8 +399,18 @@ function QuickAddButton({ emoji, label, color, onClick }: { emoji: string; label
 
 // ============ ALL ENTRIES ============
 function AllEntriesModal({ onClose }: { onClose: () => void }) {
-  const { state } = useStore();
+  const { state, dispatch } = useStore();
   const lang = state.language || 'en';
+  const [entryToDelete, setEntryToDelete] = useState<DisplayEntry | null>(null);
+
+  const confirmDelete = () => {
+    if (!entryToDelete) return;
+    dispatch({
+      type: 'DELETE_ENTRY',
+      payload: { type: entryToDelete.entryType, id: entryToDelete.id },
+    });
+    setEntryToDelete(null);
+  };
   const locale = lang === 'hi' ? 'hi-IN' : 'en-IN';
 
   const entries: DisplayEntry[] = [
@@ -384,7 +452,7 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
       const quantity = Number((entry as any).quantity);
       if (Number.isFinite(quantity) && quantity > 0) {
         const qtyLabel = lang === 'hi' ? 'मात्रा' : 'Qty';
-        return `${qtyLabel}: ${quantity}`;
+        return `${qtyLabel}: ${formatSaleQuantity(entry)}`;
       }
       return lang === 'hi' ? 'बिक्री' : 'Sale entry';
     }
@@ -452,6 +520,15 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
                           : (lang === 'hi' ? 'बाकी' : 'Pending')}
                       </span>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setEntryToDelete(entry)}
+                      className="w-10 h-10 mt-1 rounded-full flex items-center justify-center text-problem bg-problem/10 hover:bg-problem/20 transition-colors"
+                      aria-label={lang === 'hi' ? 'यह एंट्री मिटाएँ' : 'Delete this entry'}
+                      title={lang === 'hi' ? 'एंट्री मिटाएँ' : 'Delete entry'}
+                    >
+                      <Trash2 size={17} />
+                    </button>
                   </div>
                 </div>
               );
@@ -459,6 +536,45 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
           </div>
         )}
       </div>
+
+      {entryToDelete && (
+        <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-5 animate-fade-in">
+          <div
+            className="bg-bg rounded-2xl p-6 max-w-sm w-full shadow-xl"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-entry-title"
+          >
+            <div className="w-12 h-12 rounded-full bg-problem/10 text-problem flex items-center justify-center mx-auto mb-3">
+              <Trash2 size={22} />
+            </div>
+            <h3 id="delete-entry-title" className="text-body-lg font-bold text-text text-center mb-2">
+              {lang === 'hi' ? 'यह एंट्री मिटाएँ?' : 'Delete this entry?'}
+            </h3>
+            <p className="text-body text-text-secondary text-center mb-1">
+              {entryToDelete.entryType === 'sale'
+                ? (lang === 'hi' ? 'बिक्री' : 'Sale')
+                : entryToDelete.entryType === 'expense'
+                  ? (lang === 'hi' ? 'खर्च' : 'Expense')
+                  : (lang === 'hi' ? 'उधार' : 'Udhaar')}
+              {' · '}{formatRupee(entryToDelete.amount)}
+            </p>
+            <p className="text-small text-text-secondary text-center mb-5">
+              {lang === 'hi'
+                ? 'यह एंट्री आपके हिसाब से हट जाएगी। इस काम को वापस नहीं किया जा सकता।'
+                : 'This entry will be removed from your records. This cannot be undone.'}
+            </p>
+            <div className="space-y-3">
+              <button type="button" onClick={confirmDelete} className="btn-primary bg-problem">
+                <Trash2 size={18} /> {lang === 'hi' ? 'हाँ, मिटाएँ' : 'Delete entry'}
+              </button>
+              <button type="button" onClick={() => setEntryToDelete(null)} className="btn-secondary">
+                {lang === 'hi' ? 'रद्द करें' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -607,7 +723,8 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
   const { state, dispatch } = useStore();
   const lang = state.language!;
   const [itemName, setItemName] = useState('');
-  const [quantity, setQuantity] = useState('1');
+  const [quantityText, setQuantityText] = useState('');
+  const parsedQuantity = parseSaleQuantityInput(quantityText);
   const [amount, setAmount] = useState('');
   const [paymentType, setPaymentType] = useState<PaymentType>('cash');
   const [expenseCategory, setExpenseCategory] = useState('stock');
@@ -632,16 +749,26 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
   
   const handleSave = () => {
     const numAmount = parseInt(amount, 10) || 0;
-    const numQuantity = Number(quantity);
     const cleanedItemName = itemName.trim();
-    if (numAmount <= 0 || (isSale && (!cleanedItemName || !Number.isFinite(numQuantity) || numQuantity <= 0))) return;
+    const saleQuantity = parseSaleQuantityInput(quantityText);
+    if (numAmount <= 0 || (isSale && (!cleanedItemName || !saleQuantity))) return;
     
     const id = generateId();
     const today = getToday();
     
     if (isSale) {
       const entry: SaleEntry = {
-        id, date: today, amount: numAmount, itemName: cleanedItemName, quantity: numQuantity, paymentType, createdAt: Date.now()
+        id,
+        date: today,
+        amount: numAmount,
+        itemName: cleanedItemName,
+        quantity: saleQuantity!.quantity,
+        quantityUnit: saleQuantity!.quantityUnit,
+        ...(saleQuantity!.packageCount && saleQuantity!.packageUnit
+          ? { packageCount: saleQuantity!.packageCount, packageUnit: saleQuantity!.packageUnit }
+          : {}),
+        paymentType,
+        createdAt: Date.now()
       };
       dispatch({ type: 'ADD_SALE', payload: entry });
     } else if (isExpense) {
@@ -672,7 +799,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
     
     setAmount('');
     setItemName('');
-    setQuantity('1');
+    setQuantityText('');
     setCustomerName('');
   };
   
@@ -752,22 +879,27 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
           {isSale && (
             <div className="mb-4">
               <label className="text-small font-medium text-text-secondary block mb-2">
-                {lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
+                {lang === 'hi' ? 'मात्रा * (संख्या + इकाई)' : 'Quantity * (number + unit)'}
               </label>
               <input
-                type="number"
-                inputMode="decimal"
-                min="0.01"
-                step="any"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                placeholder={lang === 'hi' ? 'जैसे 10' : 'e.g. 10'}
+                type="text"
+                value={quantityText}
+                onChange={(e) => setQuantityText(e.target.value.slice(0, 60))}
+                placeholder={lang === 'hi' ? 'जैसे 500 ग्राम, 1 लीटर, 2 किलो, 750 मिली, 1 पीस' : 'e.g. 500g, 1l, 2kg, 750ml, 1 piece'}
                 className="input-field"
-                aria-label={lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
+                maxLength={60}
+                aria-label={lang === 'hi' ? 'बेची गई मात्रा और इकाई' : 'Quantity sold and unit'}
               />
               <p className="text-small text-text-secondary mt-1">
-                {lang === 'hi' ? 'एक बार में कई पीस/यूनिट दर्ज करें।' : 'Record multiple pieces or units in one sale.'}
+                {lang === 'hi'
+                  ? 'संख्या के बाद एक सही इकाई लिखें। उदाहरण: 500 ग्राम, 1 लीटर, 2 किलो या 1 पीस। सिर्फ संख्या लिखने से बिक्री सेव नहीं होगी। पैकेट और कुल वज़न दोनों हों तो लिखें: 2 पैकेट, 2 किलो।'
+                  : 'Enter a number followed by one valid unit: 500g, 1l, 2kg, 750ml or 1 piece. A number alone is not accepted. For pack count plus total weight, enter: 2 packets, 2 kg.'}
               </p>
+              {quantityText.trim() && !parsedQuantity && (
+                <p className="text-small text-problem mt-1" role="alert">
+                  {lang === 'hi' ? 'संख्या के बाद सही इकाई लिखें, जैसे 500 ग्राम, 1 लीटर, 2 किलो या 1 पीस।' : 'Enter a number plus a valid unit, e.g. 500g, 1l, 2kg or 1 piece.'}
+                </p>
+              )}
             </div>
           )}
           <div className="text-center mb-4">
@@ -848,7 +980,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
         <div className="px-5 py-4 safe-bottom">
           <button
             onClick={handleSave}
-            disabled={!amount || parseInt(amount, 10) <= 0 || (isSale && (!itemName.trim() || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0))}
+            disabled={!amount || parseInt(amount, 10) <= 0 || (isSale && (!itemName.trim() || !parsedQuantity))}
             className="btn-primary text-body-lg"
           >
             <Check size={20} /> {t('save', lang)}
@@ -873,7 +1005,8 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
   const { state, dispatch } = useStore();
   const lang = state.language!;
   const [itemName, setItemName] = useState(String(entry.itemName || ''));
-  const [quantity, setQuantity] = useState(String(entry.quantity ?? 1));
+  const [quantityText, setQuantityText] = useState(formatSaleQuantityInput(entry));
+  const parsedQuantity = parseSaleQuantityInput(quantityText);
   const [amount, setAmount] = useState(String(entry.amount));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
@@ -882,8 +1015,8 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
   
   const handleSave = () => {
     const numAmount = parseInt(amount, 10) || 0;
-    const numQuantity = Number(quantity);
-    if (numAmount <= 0 || (isSale && (!itemName.trim() || !Number.isFinite(numQuantity) || numQuantity <= 0))) return;
+    const saleQuantity = parseSaleQuantityInput(quantityText);
+    if (numAmount <= 0 || (isSale && (!itemName.trim() || !saleQuantity))) return;
     
     // Delete old entry
     dispatch({ type: 'DELETE_ENTRY', payload: { type: entry.entryType, id: entry.id } });
@@ -892,7 +1025,13 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
     const newEntry = {
       ...entry,
       amount: numAmount,
-      ...(isSale ? { itemName: itemName.trim(), quantity: numQuantity } : {}),
+      ...(isSale ? {
+        itemName: itemName.trim(),
+        quantity: saleQuantity!.quantity,
+        quantityUnit: saleQuantity!.quantityUnit,
+        packageCount: saleQuantity!.packageCount,
+        packageUnit: saleQuantity!.packageUnit,
+      } : {}),
       createdAt: Date.now(),
     };
     
@@ -956,18 +1095,25 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
           {isSale && (
             <div className="mb-4">
               <label className="text-small font-medium text-text-secondary block mb-2">
-                {lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
+                {lang === 'hi' ? 'मात्रा * (संख्या + इकाई)' : 'Quantity * (number + unit)'}
               </label>
               <input
-                type="number"
-                inputMode="decimal"
-                min="0.01"
-                step="any"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
+                type="text"
+                value={quantityText}
+                onChange={(e) => setQuantityText(e.target.value.slice(0, 60))}
+                placeholder={lang === 'hi' ? 'जैसे 500 ग्राम, 1 लीटर, 2 किलो, 750 मिली, 1 पीस' : 'e.g. 500g, 1l, 2kg, 750ml, 1 piece'}
                 className="input-field"
-                aria-label={lang === 'hi' ? 'बेची गई मात्रा' : 'Quantity sold'}
+                maxLength={60}
+                aria-label={lang === 'hi' ? 'बेची गई मात्रा और इकाई' : 'Quantity sold and unit'}
               />
+              <p className="text-small text-text-secondary mt-1">
+                {lang === 'hi' ? 'उदाहरण: 500 ग्राम, 1 लीटर, 2 किलो, 1 पीस या 2 पैकेट, 2 किलो' : 'Examples: 500g, 1l, 2kg, 1 piece, or 2 packets, 2 kg.'}
+              </p>
+              {quantityText.trim() && !parsedQuantity && (
+                <p className="text-small text-problem mt-1" role="alert">
+                  {lang === 'hi' ? 'संख्या के बाद सही इकाई लिखें, जैसे 500 ग्राम, 1 लीटर, 2 किलो या 1 पीस।' : 'Enter a number plus a valid unit, e.g. 500g, 1l, 2kg or 1 piece.'}
+                </p>
+              )}
             </div>
           )}
           <div className="text-center mb-4">
@@ -1013,7 +1159,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
         <div className="px-5 py-4 safe-bottom space-y-3">
           <button
             onClick={handleSave}
-            disabled={!amount || parseInt(amount, 10) <= 0 || (isSale && (!itemName.trim() || !Number.isFinite(Number(quantity)) || Number(quantity) <= 0))}
+            disabled={!amount || parseInt(amount, 10) <= 0 || (isSale && (!itemName.trim() || !parsedQuantity))}
             className="btn-primary text-body-lg"
           >
             <Check size={20} /> {lang === 'hi' ? 'अपडेट करें' : 'Update'}

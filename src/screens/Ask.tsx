@@ -8,11 +8,6 @@ import { VoiceMicButton } from '../components/VoiceMicButton';
 import { detectVoiceLanguage, speakText } from '../voice/speech';
 import { getFestivalDateLabel, getFestivalName, getFestivalShopAdvice, getUpcomingFestivals } from '../festivals';
 
-// Helper: get today's date string
-function getTodayStr(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
 // Helper: format number with Indian grouping
 function fmt(n: number): string {
   return n.toLocaleString('en-IN');
@@ -40,8 +35,13 @@ function isYesterdayQuestion(q: string): boolean {
 }
 
 function getYesterdayStr(): string {
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  return yesterday.toISOString().split('T')[0];
+  // Use the shop-local ledger date instead of subtracting 24 hours from UTC.
+  const yesterday = new Date(getToday() + 'T12:00:00');
+  yesterday.setDate(yesterday.getDate() - 1);
+  const year = yesterday.getFullYear();
+  const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+  const day = String(yesterday.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
 }
 
 // Helper: detect if question is about this week
@@ -199,22 +199,27 @@ function getTrackedQuantitySummary(sales: any[], lang: string): string {
   const startDate = new Date(today + 'T12:00:00');
   startDate.setDate(startDate.getDate() - 6);
   const start = startDate.getFullYear() + '-' + String(startDate.getMonth() + 1).padStart(2, '0') + '-' + String(startDate.getDate()).padStart(2, '0');
-  const byItem = new Map<string, { name: string; quantity: number }>();
+  const byItem = new Map<string, { name: string; unit: string; quantity: number; packageCount: number; packageUnit: string; revenue: number }>();
   sales.forEach((sale) => {
     if (typeof sale.itemName !== 'string' || !sale.itemName.trim() || sale.date < start || sale.date > today) return;
     const quantity = Number(sale.quantity);
     // Older records do not contain quantity; do not invent it for this summary.
     if (!Number.isFinite(quantity) || quantity <= 0) return;
     const name = sale.itemName.trim().replace(/\s+/g, ' ');
-    const key = name.toLocaleLowerCase();
-    const item = byItem.get(key) || { name, quantity: 0 };
+    const unit = String(sale.quantityUnit || 'unit').trim() || 'unit';
+    const packageUnit = String(sale.packageUnit || '').trim();
+    const packageCount = Number(sale.packageCount);
+    const key = name.toLocaleLowerCase() + '|' + unit.toLocaleLowerCase() + '|' + packageUnit.toLocaleLowerCase();
+    const item = byItem.get(key) || { name, unit, quantity: 0, packageCount: 0, packageUnit, revenue: 0 };
     item.quantity += quantity;
+    if (Number.isFinite(packageCount) && packageCount > 0 && packageUnit) item.packageCount += packageCount;
+    item.revenue += Number(sale.amount) || 0;
     byItem.set(key, item);
   });
   const ranked = [...byItem.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 3);
   if (!ranked.length) return '';
   const total = ranked.reduce((sum, item) => sum + item.quantity, 0);
-  const list = ranked.map(item => item.name + ': ' + (Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 3 }))).join(', ');
+  const list = ranked.map(item => item.name + ': ' + (item.packageCount > 0 ? item.packageCount + ' ' + item.packageUnit + ' · ' : '') + (Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 3 })) + ' ' + item.unit + ' (avg ' + formatRupee(item.revenue / item.quantity) + '/' + item.unit + ')').join(', ');
   return lang === 'hi'
     ? '\n\n**पिछले 7 दिनों की दर्ज मात्रा (शीर्ष सामान/सेवाएँ):** ' + list + '। इन शीर्ष चीज़ों की कुल दर्ज मात्रा ' + total + ' यूनिट है। केवल मात्रा दर्ज वाली एंट्री शामिल हैं।'
     : '\n\n**Tracked quantities, last 7 days (top items/services):** ' + list + '. Total for these top items is ' + total + ' units. Only entries with a recorded quantity are included.';
@@ -286,7 +291,7 @@ function generateResponse(question: string, state: any, lang: string): string {
   const todayExpenses = getTodayExpenses(state.expenses);
   const todayProfit = todaySales - todayExpenses;
   const totalUdhaar = getTotalUdhaar(state.udhaar);
-  const today = getTodayStr();
+  const today = getToday();
   const shopType = state.shopProfile.shopType;
   
   // ===== GREETINGS =====
@@ -805,6 +810,7 @@ export function AskScreen() {
   const [input, setInput] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [voiceNotice, setVoiceNotice] = useState('');
+  const [voiceListening, setVoiceListening] = useState(false);
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [audioErrorMessageId, setAudioErrorMessageId] = useState<string | null>(null);
   const speechRequestIdRef = useRef(0);
@@ -830,11 +836,11 @@ export function AskScreen() {
     }
   }, [messages, isSending]);
   
-  const handleSend = async (text?: string, fromVoice = false) => {
+  const handleSend = async (text?: string) => {
     const message = (text || input.trim()).trim();
-    if (!message || isSending) return;
+    if (!message || isSending || voiceListening) return;
 
-    const responseLang = fromVoice ? detectVoiceLanguage(message, lang) : lang;
+    const responseLang = detectVoiceLanguage(message, lang);
 
     const userMsg: ChatMessage = {
       id: generateId(),
@@ -1178,24 +1184,26 @@ export function AskScreen() {
             placeholder={t('askPlaceholder', lang)}
             className="input-field flex-1 text-body"
           />
-          <button
-            onClick={() => handleSend()}
-            disabled={!input.trim() || isSending}
-            className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
-          >
-            <Send size={20} />
-          </button>
           <VoiceMicButton
             language={lang}
             shape="rounded"
             disabled={isSending}
-            label={lang === 'hi' ? 'आवाज़ से सवाल पूछें' : 'Ask by voice'}
-            onTranscript={(transcript) => {
-              setInput(transcript);
-              void handleSend(transcript, true);
-            }}
+            label={voiceListening
+              ? (lang === 'hi' ? 'रिकॉर्डिंग रोकें' : 'Stop recording')
+              : (lang === 'hi' ? 'आवाज़ से सवाल पूछें' : 'Ask by voice')}
+            onTranscript={(transcript) => setInput(transcript)}
+            onRecordingChange={setVoiceListening}
             onStatus={setVoiceNotice}
           />
+          <button
+            onClick={() => handleSend()}
+            disabled={!input.trim() || isSending || voiceListening}
+            aria-label={lang === 'hi' ? 'सवाल भेजें' : 'Send question'}
+            title={lang === 'hi' ? 'सवाल भेजें' : 'Send question'}
+            className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
+          >
+            <Send size={20} />
+          </button>
         </div>
         {voiceNotice && (
           <p className="mt-2 text-xs leading-snug text-text-secondary" role="status" aria-live="polite">

@@ -764,16 +764,21 @@ export function InsightsScreen() {
   const quantityWeekStartDate = new Date(quantityToday + 'T12:00:00');
   quantityWeekStartDate.setDate(quantityWeekStartDate.getDate() - 6);
   const quantityWeekStart = quantityWeekStartDate.getFullYear() + '-' + String(quantityWeekStartDate.getMonth() + 1).padStart(2, '0') + '-' + String(quantityWeekStartDate.getDate()).padStart(2, '0');
-  const quantitiesByItem = new Map<string, { name: string; quantity: number }>();
+  const quantitiesByItem = new Map<string, { name: string; unit: string; quantity: number; packageCount: number; packageUnit: string; revenue: number }>();
   state.sales.forEach((sale) => {
     if (!sale.itemName?.trim() || sale.date < quantityWeekStart || sale.date > quantityToday) return;
     const quantity = Number(sale.quantity);
     // Older sales have no stored quantity and must not be treated as measured units.
     if (!Number.isFinite(quantity) || quantity <= 0) return;
     const name = sale.itemName.trim().replace(/\s+/g, ' ');
-    const key = name.toLocaleLowerCase();
-    const current = quantitiesByItem.get(key) || { name, quantity: 0 };
+    const unit = String(sale.quantityUnit || 'unit').trim() || 'unit';
+    const packageUnit = String(sale.packageUnit || '').trim();
+    const packageCount = Number(sale.packageCount);
+    const key = name.toLocaleLowerCase() + '|' + unit.toLocaleLowerCase() + '|' + packageUnit.toLocaleLowerCase();
+    const current = quantitiesByItem.get(key) || { name, unit, quantity: 0, packageCount: 0, packageUnit, revenue: 0 };
     current.quantity += quantity;
+    if (Number.isFinite(packageCount) && packageCount > 0 && packageUnit) current.packageCount += packageCount;
+    current.revenue += Number(sale.amount) || 0;
     quantitiesByItem.set(key, current);
   });
   const topQuantityItems = [...quantitiesByItem.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 3);
@@ -850,10 +855,15 @@ export function InsightsScreen() {
                   </div>
                   <div className="space-y-2">
                     {topQuantityItems.map((item) => (
-                      <div key={item.name.toLocaleLowerCase()} className="flex items-center justify-between gap-3 text-small">
+                      <div key={item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase() + '|' + item.packageUnit.toLocaleLowerCase()} className="flex items-start justify-between gap-3 text-small">
                         <span className="text-text-secondary break-words">{item.name}</span>
-                        <span className="font-semibold text-text shrink-0">
-                          {Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} {lang === 'hi' ? 'यूनिट' : (item.quantity === 1 ? 'unit' : 'units')}
+                        <span className="text-right shrink-0">
+                          <span className="font-semibold text-text block">
+                            {item.packageCount > 0 ? `${item.packageCount} ${item.packageUnit} · ` : ''}{Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} {item.unit}
+                          </span>
+                          <span className="text-[10px] text-text-secondary block">
+                            {lang === 'hi' ? 'औसत' : 'Avg'} {formatRupee(item.revenue / item.quantity)} / {item.unit}
+                          </span>
                         </span>
                       </div>
                     ))}

@@ -391,16 +391,21 @@ function StockReorderTool() {
     sale.date >= startKey &&
     sale.date <= todayKey,
   );
-  const totals = new Map<string, { name: string; amount: number; quantity: number; quantityEntries: number; untrackedQuantityEntries: number; entries: number; lastSold: string }>();
+  const totals = new Map<string, { name: string; unit: string; packageCount: number; packageUnit: string; amount: number; quantity: number; quantityRevenue: number; quantityEntries: number; untrackedQuantityEntries: number; entries: number; lastSold: string }>();
   namedSales.forEach((sale) => {
     const name = sale.itemName!.trim().replace(/\s+/g, ' ');
-    const key = name.toLocaleLowerCase();
-    const current = totals.get(key) || { name, amount: 0, quantity: 0, quantityEntries: 0, untrackedQuantityEntries: 0, entries: 0, lastSold: sale.date };
+    const unit = String(sale.quantityUnit || 'unit').trim() || 'unit';
+    const packageUnit = String(sale.packageUnit || '').trim();
+    const key = name.toLocaleLowerCase() + '|' + unit.toLocaleLowerCase() + '|' + packageUnit.toLocaleLowerCase();
+    const current = totals.get(key) || { name, unit, packageCount: 0, packageUnit, amount: 0, quantity: 0, quantityRevenue: 0, quantityEntries: 0, untrackedQuantityEntries: 0, entries: 0, lastSold: sale.date };
     current.amount += Number(sale.amount) || 0;
     const recordedQuantity = Number(sale.quantity);
     if (Number.isFinite(recordedQuantity) && recordedQuantity > 0) {
       current.quantity += recordedQuantity;
+      current.quantityRevenue += Number(sale.amount) || 0;
       current.quantityEntries += 1;
+      const packageCount = Number(sale.packageCount);
+      if (Number.isFinite(packageCount) && packageCount > 0 && packageUnit) current.packageCount += packageCount;
     } else {
       // Older sales have no quantity; don't invent a unit count for them.
       current.untrackedQuantityEntries += 1;
@@ -434,17 +439,24 @@ function StockReorderTool() {
       {ranked.length > 0 ? (
         <div className="space-y-2">
           {ranked.map((item, index) => (
-            <div key={item.name.toLocaleLowerCase()} className="card flex items-center gap-3 px-4 py-3">
+            <div key={item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase() + '|' + item.packageUnit.toLocaleLowerCase()} className="card flex items-center gap-3 px-4 py-3">
               <div className="w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold">
                 {index + 1}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-text break-words">{item.name}</p>
                 <p className="text-small text-text-secondary">
-                  {item.quantityEntries > 0 ? `${Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} ${lang === 'hi' ? 'यूनिट दर्ज' : (item.quantity === 1 ? 'unit recorded' : 'units recorded')}` : (lang === 'hi' ? 'मात्रा दर्ज नहीं' : 'quantity not recorded')} · {item.entries} {lang === 'hi' ? 'एंट्री' : (item.entries === 1 ? 'entry' : 'entries')}{item.untrackedQuantityEntries > 0 ? ` · ${item.untrackedQuantityEntries} ${lang === 'hi' ? 'पुरानी बिना मात्रा' : 'older without quantity'}` : ''}
+                  {item.quantityEntries > 0 ? `${item.packageCount > 0 ? item.packageCount + ' ' + item.packageUnit + ' · ' : ''}${Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} ${item.unit} ${lang === 'hi' ? 'दर्ज' : 'recorded'}` : (lang === 'hi' ? 'मात्रा दर्ज नहीं' : 'quantity not recorded')} · {item.entries} {lang === 'hi' ? 'एंट्री' : (item.entries === 1 ? 'entry' : 'entries')}{item.untrackedQuantityEntries > 0 ? ` · ${item.untrackedQuantityEntries} ${lang === 'hi' ? 'पुरानी बिना मात्रा' : 'older without quantity'}` : ''}
                 </p>
               </div>
-              <p className="font-bold text-positive whitespace-nowrap">{formatRupee(item.amount)}</p>
+              <div className="flex flex-col items-end gap-1">
+                <p className="font-bold text-positive whitespace-nowrap">{formatRupee(item.amount)}</p>
+                {item.quantityEntries > 0 && item.quantity > 0 && (
+                  <p className="text-[10px] text-text-secondary whitespace-nowrap">
+                    {lang === 'hi' ? 'औसत' : 'Avg'} {formatRupee(item.quantityRevenue / item.quantity)} / {item.unit}
+                  </p>
+                )}
+              </div>
             </div>
           ))}
         </div>

@@ -33,8 +33,12 @@ export interface SaleEntry {
   date: string; // YYYY-MM-DD
   amount: number;
   itemName?: string;
-  /** Units/pieces/services included in this sale; optional on legacy entries. */
+  /** Measured or counted quantity sold, e.g. 500 ml, 2 kg or 3 packets. */
   quantity?: number;
+  quantityUnit?: string;
+  /** Optional separate package count when a sale also records total weight/volume. */
+  packageCount?: number;
+  packageUnit?: string;
   category?: string;
   paymentType: PaymentType;
   note?: string;
@@ -58,6 +62,14 @@ export interface UdhaarEntry {
   dueDate?: string;
   paid: boolean;
   createdAt: number;
+}
+
+export interface NotebookNote {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface ChatMessage {
@@ -104,6 +116,7 @@ export interface AppState {
   sales: SaleEntry[];
   expenses: ExpenseEntry[];
   udhaar: UdhaarEntry[];
+  notebookNotes: NotebookNote[];
   chatSessions: ChatSession[];
   activeSessionId: string | null;
   insights: Insight[];

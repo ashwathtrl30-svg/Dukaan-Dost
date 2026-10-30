@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { AppState, Language, Theme, ShopProfile, SaleEntry, ExpenseEntry, UdhaarEntry, ChatMessage, ChatSession, Insight } from './types';
+import { AppState, Language, Theme, ShopProfile, SaleEntry, ExpenseEntry, UdhaarEntry, NotebookNote, ChatMessage, ChatSession, Insight } from './types';
 
 const initialState: AppState = {
   language: null,
@@ -21,6 +21,7 @@ const initialState: AppState = {
   sales: [],
   expenses: [],
   udhaar: [],
+  notebookNotes: [],
   chatSessions: [],
   activeSessionId: null,
   insights: [],
@@ -50,6 +51,9 @@ type Action =
   | { type: 'ADD_SALE'; payload: SaleEntry }
   | { type: 'ADD_EXPENSE'; payload: ExpenseEntry }
   | { type: 'ADD_UDHAAR'; payload: UdhaarEntry }
+  | { type: 'ADD_NOTE'; payload: NotebookNote }
+  | { type: 'UPDATE_NOTE'; payload: NotebookNote }
+  | { type: 'DELETE_NOTE'; payload: string }
   | { type: 'TOGGLE_UDHAAR_PAID'; payload: string }
   | { type: 'DELETE_ENTRY'; payload: { type: 'sale' | 'expense' | 'udhaar'; id: string } }
   | { type: 'ADD_CHAT_MESSAGE'; payload: ChatMessage }
@@ -88,6 +92,20 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, expenses: [action.payload, ...state.expenses] };
     case 'ADD_UDHAAR':
       return { ...state, udhaar: [action.payload, ...state.udhaar] };
+    case 'ADD_NOTE':
+      return { ...state, notebookNotes: [action.payload, ...(state.notebookNotes || [])] };
+    case 'UPDATE_NOTE':
+      return {
+        ...state,
+        notebookNotes: (state.notebookNotes || []).map(note =>
+          note.id === action.payload.id ? action.payload : note
+        ),
+      };
+    case 'DELETE_NOTE':
+      return {
+        ...state,
+        notebookNotes: (state.notebookNotes || []).filter(note => note.id !== action.payload),
+      };
     case 'TOGGLE_UDHAAR_PAID':
       return {
         ...state,
@@ -214,6 +232,7 @@ function loadState(): AppState {
       if (parsed.activeSessionId === undefined) parsed.activeSessionId = null;
       
       const hydratedState: AppState = { ...initialState, ...parsed };
+      if (!Array.isArray(hydratedState.notebookNotes)) hydratedState.notebookNotes = [];
 
       // Start each full website visit with a fresh Ask conversation while
       // keeping completed conversations available in Chat History.
