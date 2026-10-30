@@ -3,6 +3,7 @@ name: Voice ledger CI
 on:
   push:
     branches:
+      - main
       - feat/voice-ledger-review-and-hindi-numbers
       - feat/shop-notebook-stage-2
   pull_request:
@@ -26,6 +27,8 @@ jobs:
         run: npm run build
       - name: Test voice parser examples
         run: npx --yes tsx --test src/voice/voiceCommands.test.ts
+      - name: Test AI interpreter and API proxy
+        run: npx --yes tsx --test src/voice/voiceInterpreter.test.ts api/parse-voice.test.ts
       - name: Report dependency audit findings
         run: |
           npm audit --json > npm-audit.json || true
