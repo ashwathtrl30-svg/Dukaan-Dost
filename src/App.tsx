@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { StoreProvider, useStore, generateId, getToday, formatRupee } from './store';
 import { VoiceMicButton } from './components/VoiceMicButton';
 import { interpretVoiceTransactions } from './voice/voiceInterpreter';
@@ -25,6 +25,7 @@ function AppContent() {
   const [homeVoiceDraft, setHomeVoiceDraft] = useState('');
   const [homeVoiceListening, setHomeVoiceListening] = useState(false);
   const [homeVoiceParsing, setHomeVoiceParsing] = useState(false);
+  const homeVoiceRequestVersion = useRef(0);
   const [homeVoiceAIResult, setHomeVoiceAIResult] = useState<VoiceInterpretation | null>(null);
   const [voiceUndoEntries, setVoiceUndoEntries] = useState<Array<{ type: 'sale' | 'expense' | 'udhaar'; id: string }>>([]);
   const lang = state.language || 'en';
@@ -37,6 +38,8 @@ function AppContent() {
   };
 
   const handleHomeVoiceTranscript = (transcript: string) => {
+    // Any new speech invalidates an interpretation already in flight.
+    homeVoiceRequestVersion.current += 1;
     setHomeVoiceDraft(transcript);
     setHomeVoiceAIResult(null);
   };
@@ -67,13 +70,16 @@ function AppContent() {
 
     // Interpret first, then require a separate user confirmation before saving.
     if (!homeVoiceAIResult || homeVoiceAIResult.error || !homeVoiceAIResult.transactions.length) {
+      const requestVersion = ++homeVoiceRequestVersion.current;
+      const requestedTranscript = homeVoiceDraft;
       setHomeVoiceParsing(true);
       try {
         const result = await interpretVoiceTransactions({
-          transcript: homeVoiceDraft,
+          transcript: requestedTranscript,
           shopType: state.shopProfile.shopType,
           language: lang,
         });
+        if (requestVersion !== homeVoiceRequestVersion.current) return;
         setHomeVoiceAIResult(result);
         if (!result.transactions.length || result.error) {
           showTemporaryVoiceStatus(result.clarification || voiceErrorMessage(result.error));
@@ -85,6 +91,7 @@ function AppContent() {
           );
         }
       } catch {
+        if (requestVersion !== homeVoiceRequestVersion.current) return;
         setHomeVoiceAIResult({
           transactions: [],
           error: 'unclear',
@@ -279,11 +286,11 @@ function AppContent() {
               <p className="font-semibold text-text">{lang === 'hi' ? 'एंट्री जोड़ने से पहले जाँचें' : 'Review before adding entries'}</p>
               <p className="text-xs text-text-secondary">{lang === 'hi' ? 'नीचे सुना गया टेक्स्ट ठीक करें। टिक दबाने पर ही एंट्री जोड़ी जाएगी।' : 'Correct the transcript if needed. Entries are added only after you press the checkmark.'}</p>
             </div>
-            <button type="button" aria-label={lang === 'hi' ? 'रद्द करें' : 'Cancel voice entry'} onClick={() => { setHomeVoiceDraft(''); setHomeVoiceAIResult(null); }} className="w-9 h-9 rounded-full flex items-center justify-center bg-bg text-text-secondary"><X size={18}/></button>
+            <button type="button" aria-label={lang === 'hi' ? 'रद्द करें' : 'Cancel voice entry'} onClick={() => { homeVoiceRequestVersion.current += 1; setHomeVoiceDraft(''); setHomeVoiceAIResult(null); }} className="w-9 h-9 rounded-full flex items-center justify-center bg-bg text-text-secondary"><X size={18}/></button>
           </div>
           <textarea
             value={homeVoiceDraft}
-            onChange={(event) => { setHomeVoiceDraft(event.target.value); setHomeVoiceAIResult(null); }}
+            onChange={(event) => { homeVoiceRequestVersion.current += 1; setHomeVoiceDraft(event.target.value); setHomeVoiceAIResult(null); }}
             rows={2}
             className="input-field w-full text-sm"
             aria-label={lang === 'hi' ? 'आवाज़ से पहचाना गया टेक्स्ट' : 'Recognized voice transcript'}
