@@ -235,3 +235,13 @@ test('does not silently reuse a previous customer for an unnamed udhaar entry', 
   assert.equal(parsed.error, 'missing_customer');
   assert.deepEqual(parsed.transactions, []);
 });
+
+
+test('does not absorb a product name into a customer name spoken after the product', () => {
+  const parsed = parseVoiceTransactions('do kilo aloo Raju ko 100 rupaye udhaar add karo');
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(
+    parsed.transactions.map(({ customerName, amount }) => ({ customerName, amount })),
+    [{ customerName: 'Raju', amount: 100 }],
+  );
+});
