@@ -245,3 +245,44 @@ test('does not absorb a product name into a customer name spoken after the produ
     [{ customerName: 'Raju', amount: 100 }],
   );
 });
+
+
+test('parses every common Hindi and Hinglish amount ending in 5 or 0 from 5 to 95', () => {
+  const samples: Array<[string, number]> = [
+    ['paanch', 5], ['das', 10], ['pandrah', 15], ['bees', 20],
+    ['pachis', 25], ['tees', 30], ['paintis', 35], ['chalis', 40],
+    ['paitalis', 45], ['pachaas', 50], ['pachpan', 55], ['saath', 60],
+    ['painsath', 65], ['sattar', 70], ['pachhattar', 75], ['assi', 80],
+    ['pachasi', 85], ['nabbe', 90], ['pachanve', 95],
+    ['पाँच', 5], ['दस', 10], ['पंद्रह', 15], ['बीस', 20],
+    ['पच्चीस', 25], ['तीस', 30], ['पैंतीस', 35], ['चालीस', 40],
+    ['पैंतालीस', 45], ['पचास', 50], ['पचपन', 55], ['साठ', 60],
+    ['पैंसठ', 65], ['सत्तर', 70], ['पचहत्तर', 75], ['अस्सी', 80],
+    ['पचासी', 85], ['नब्बे', 90], ['पचानवे', 95],
+  ];
+  for (const [spoken, expected] of samples) {
+    const parsed = parseVoiceTransactions(spoken + ' rupaye rent kharch add karo');
+    assert.equal(parsed.error, undefined, spoken);
+    assert.equal(parsed.transactions.length, 1, spoken);
+    assert.equal(parsed.transactions[0]?.amount, expected, spoken);
+  }
+});
+
+test('combines spoken hundreds, thousands and lakhs without splitting amounts', () => {
+  const samples: Array<[string, number]> = [
+    ['ek sau pachaas', 150],
+    ['paanch sau pachpan', 555],
+    ['ek hazar paanch sau pachaas', 1550],
+    ['do hazar paanch sau pachpan', 2555],
+    ['ek lakh pachaas hazar paanch sau pachpan', 150555],
+    ['do lakh pachaas hazar pachaas', 250050],
+    ['2 lakh 50 thousand 50', 250050],
+    ['1,00,000', 100000],
+  ];
+  for (const [spoken, expected] of samples) {
+    const parsed = parseVoiceTransactions(spoken + ' rupaye rent kharch add karo');
+    assert.equal(parsed.error, undefined, spoken);
+    assert.equal(parsed.transactions.length, 1, spoken);
+    assert.equal(parsed.transactions[0]?.amount, expected, spoken);
+  }
+});
