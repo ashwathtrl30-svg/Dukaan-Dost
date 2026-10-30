@@ -855,7 +855,7 @@ export function InsightsScreen() {
                   </div>
                   <div className="space-y-2">
                     {topQuantityItems.map((item) => (
-                      <div key={item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase()} className="flex items-start justify-between gap-3 text-small">
+                      <div key={item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase() + '|' + item.packageUnit.toLocaleLowerCase()} className="flex items-start justify-between gap-3 text-small">
                         <span className="text-text-secondary break-words">{item.name}</span>
                         <span className="text-right shrink-0">
                           <span className="font-semibold text-text block">
