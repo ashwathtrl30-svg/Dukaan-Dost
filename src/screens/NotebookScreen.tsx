@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { ArrowLeft, Check, Edit2, Plus, Save, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Edit2, Plus, Save, Trash2, X } from 'lucide-react';
 import { VoiceMicButton } from '../components/VoiceMicButton';
 import { generateId, useStore } from '../store';
 import { NotebookNote } from '../types';
