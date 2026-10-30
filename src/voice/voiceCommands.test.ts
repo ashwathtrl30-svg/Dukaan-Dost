@@ -132,3 +132,38 @@ test('rejects amounts above ₹1 crore instead of recording a guessed number', (
   assert.equal(parsed.error, 'amount_out_of_range');
   assert.deepEqual(parsed.transactions, []);
 });
+
+
+test('understands a spoken sale described as already sold, without an explicit add command', () => {
+  const parsed = parseVoiceTransactions('do kilo sugar bik gaya sattar rupaye');
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(
+    parsed.transactions.map(({ type, itemName, quantity, quantityUnit, amount }) => ({
+      type, itemName, quantity, quantityUnit, amount,
+    })),
+    [{ type: 'sale', itemName: 'sugar', quantity: 2, quantityUnit: 'kg', amount: 70 }],
+  );
+});
+
+test('parses two naturally spoken sold-item entries in one batch', () => {
+  const parsed = parseVoiceTransactions(
+    'do kilo sugar bik gaya sattar rupaye, paanch kilo aloo bik gaya do sau pachaas rupaye',
+  );
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(
+    parsed.transactions.map(({ itemName, quantity, quantityUnit, amount }) => ({
+      itemName, quantity, quantityUnit, amount,
+    })),
+    [
+      { itemName: 'sugar', quantity: 2, quantityUnit: 'kg', amount: 70 },
+      { itemName: 'aloo', quantity: 5, quantityUnit: 'kg', amount: 250 },
+    ],
+  );
+});
+
+test('recognizes Devanagari sold phrases as sale commands', () => {
+  const parsed = parseVoiceTransactions('दो किलो चीनी बिक गई सत्तर रुपये');
+  assert.equal(parsed.error, undefined);
+  assert.equal(parsed.transactions[0]?.type, 'sale');
+  assert.equal(parsed.transactions[0]?.amount, 70);
+});
