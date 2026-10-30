@@ -196,3 +196,37 @@ test('accepts the common spoken spelling carod for crore', () => {
   assert.equal(parsed.error, undefined);
   assert.equal(parsed.transactions[0]?.amount, 10_000_000);
 });
+
+
+test('does not mistake a product quantity and item for an udhaar customer name', () => {
+  const parsed = parseVoiceTransactions('do kilo aloo 100 rupaye udhaar add karo');
+  assert.equal(parsed.error, 'missing_customer');
+  assert.deepEqual(parsed.transactions, []);
+});
+
+test('keeps explicit customer names when the credit description also mentions stock', () => {
+  const parsed = parseVoiceTransactions('Raju ko do kilo aloo ke 100 rupaye udhaar add karo');
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(
+    parsed.transactions.map(({ customerName, amount }) => ({ customerName, amount })),
+    [{ customerName: 'Raju', amount: 100 }],
+  );
+});
+
+test('rejects a mixed transaction batch when an amount cannot be tied to a type', () => {
+  const parsed = parseVoiceTransactions(
+    'aloo 100 rupaye, bijli 2000 rupaye, kaanda 250 rupaye sales aur expenses add karo',
+  );
+  assert.ok(parsed.error === 'ambiguous_amount' || parsed.error === 'missing_item');
+  assert.deepEqual(parsed.transactions, []);
+});
+
+test('does not allow the same customer amount to be silently duplicated', () => {
+  const parsed = parseVoiceTransactions('Raju ko 500 rupaye udhaar aur 500 rupaye udhaar add karo');
+  assert.equal(parsed.error, undefined);
+  assert.equal(parsed.transactions.length, 2);
+  assert.deepEqual(parsed.transactions.map(({ customerName, amount }) => ({ customerName, amount })), [
+    { customerName: 'Raju', amount: 500 },
+    { customerName: 'Raju', amount: 500 },
+  ]);
+});
