@@ -28,7 +28,7 @@ jobs:
       - name: Test voice parser examples
         run: npx --yes tsx --test src/voice/voiceCommands.test.ts
       - name: Test AI interpreter and API proxy
-        run: npx --yes tsx --test src/voice/voiceInterpreter.test.ts api/parse-voice.test.ts
+        run: npx --yes tsx --test src/voice/voiceInterpreter.test.ts tests/api/parse-voice.test.ts
       - name: Report dependency audit findings
         run: |
           npm audit --json > npm-audit.json || true
