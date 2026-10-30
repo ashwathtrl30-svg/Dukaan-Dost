@@ -307,7 +307,19 @@ function getCustomerName(text: string): string | undefined {
   for (const pattern of patterns) {
     const match = pattern.exec(text);
     if (match?.[1]) {
-      const name = match[1].trim().replace(/\s+(?:rupees?|rupaye?|rs|udhaar|udhar|credit|add|jodo|karo|please).*$/i, '').trim();
+      let name = match[1].trim().replace(/\s+(?:rupees?|rupaye?|rs|udhaar|udhar|credit|add|jodo|karo|please).*$/i, '').trim();
+      const precedingText = text.slice(0, match.index ?? 0);
+      const quantityUnitImmediatelyBeforeName =
+        /\b(?:kilos?|kilograms?|kg|grams?|gm|g|litres?|liters?|ltr|packets?|packs?|pieces?|pcs?|units?|items?|bottles?|boxes?|dozen|dz)\s*$/iu.test(precedingText) ||
+        /(?:किलो|किलोग्राम|ग्राम|लीटर|लिटर|पैकेट|पीस|नग|बोतल|डिब्बा|डिब्बे|पाव|क्विंटल)\s*$/u.test(precedingText);
+
+      // In "do kilo aloo Raju ko", the recognizer's two-word capture
+      // can include the item as well as the customer. The unit directly
+      // before the capture is a signal to keep only the final name token.
+      if (quantityUnitImmediatelyBeforeName && name.split(/\s+/u).length === 2) {
+        name = name.split(/\s+/u).at(-1) || '';
+      }
+
       const reserved = /^(?:rupees?|rupaye?|rs|add|sale|sales|expense|expenses|udhaar|udhar|credit)$/i.test(name) ||
         /^(?:उधार|बिक्री|खर्च|जोड़ो|जोड़ें|डालो|दर्ज)$/u.test(name);
       if (name && !reserved) return name.slice(0, 80);
