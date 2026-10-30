@@ -9,6 +9,7 @@ const requestWindows = new Map<string, { count: number; start: number }>();
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_MINUTE = 20;
 const MAX_TRANSCRIPT_LENGTH = 1600;
+
 const ALLOWED_SHOP_TYPES = new Set([
   'kirana', 'medical', 'bakery', 'sweet', 'tailor', 'salon',
   'hardware', 'mobile', 'vegetable', 'tea', 'restaurant', 'other',
@@ -44,4 +45,68 @@ export default async function handler(req: any, res: any) {
   }
 
   if (isRateLimited(getClientAddress(req))) {
-    return res.st¶»§q«^uÉÉ½È¥¹ÍÑ…¹•½˜ÉÉ½È€ü•ÉÉ½È¹µ•ÍÍ…”€è€U¹­¹½Ý¸•ÉÉ½Èœ°(€€€€¤ì(€€€É•ÑÕÉ¸É•Ì¹ÍÑ…ÑÕÌ ÔÀÈ¤¹©Í½¸¡ì(€€€€€•ÉÉ½Èè€$Ù½¥”¥¹Ñ•ÉÁÉ•Ñ…Ñ¥½¸¥ÌÑ•µÁ½É…É¥±äÕ¹…Ù…¥±…‰±”¸9½Ñ¡¥¹œÝ…Ì…‘‘•¸œ°(€€€ô¤ì(€ô)ô(
+    return res.status(429).json({ error: 'Too many voice requests. Please wait a minute.' });
+  }
+
+  const body = typeof req.body === 'string'
+    ? (() => { try { return JSON.parse(req.body); } catch { return null; } })()
+    : req.body;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return res.status(400).json({ error: 'Invalid JSON request.' });
+  }
+
+  const transcript = typeof body.transcript === 'string' ? body.transcript.trim() : '';
+  if (!transcript || transcript.length > MAX_TRANSCRIPT_LENGTH) {
+    return res.status(400).json({ error: 'Enter a voice transcript of up to 1,600 characters.' });
+  }
+
+  const requestedShopType = typeof body.shopType === 'string' && body.shopType.trim()
+    ? body.shopType.trim()
+    : 'other';
+  if (!ALLOWED_SHOP_TYPES.has(requestedShopType)) {
+    return res.status(400).json({ error: 'Unknown shop type.' });
+  }
+
+  const candidates = Array.isArray(body.candidates)
+    ? body.candidates
+      .filter((value: unknown) => typeof value === 'string' && value.trim())
+      .slice(0, 5)
+      .map((value: string) => value.trim().slice(0, MAX_TRANSCRIPT_LENGTH))
+    : [];
+  const language = body.language === 'hi' ? 'hi' : 'en';
+
+  const supabaseUrl = getEnv('SUPABASE_URL');
+  const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY');
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('Voice proxy configuration is incomplete.');
+    return res.status(503).json({ error: 'The voice interpretation service is not configured.' });
+  }
+
+  const endpoint = supabaseUrl.replace(/\/+$/, '') + '/functions/v1/parse-voice-entry';
+  try {
+    const upstream = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + supabaseAnonKey,
+        'apikey': supabaseAnonKey,
+      },
+      body: JSON.stringify({
+        transcript,
+        candidates,
+        shopType: requestedShopType,
+        language,
+      }),
+    });
+
+    const data = await upstream.json().catch(() => null);
+    if (!data || typeof data !== 'object') {
+      console.error('Voice interpreter returned a non-JSON response.');
+      return res.status(502).json({ error: 'The voice interpretation service returned an invalid response.' });
+    }
+    return res.status(upstream.status).json(data);
+  } catch {
+    console.error('Voice interpreter could not be reached.');
+    return res.status(502).json({ error: 'The voice interpretation service is temporarily unavailable.' });
+  }
+}
