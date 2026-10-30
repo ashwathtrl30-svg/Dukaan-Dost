@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseVoiceTransactions } from './voiceCommands.ts';
-import { parseSaleQuantityInput, formatSaleQuantityInput } from '../quantity';
+import { parseSaleQuantityInput, formatSaleQuantityInput, getSaleCountCopy, getSaleNameLabel } from '../quantity';
 
 test('parses three named sales with unit quantities from natural Hinglish', () => {
   const parsed = parseVoiceTransactions(
@@ -405,4 +405,47 @@ test('hardware and salon sales use item counts without measured quantities', () 
   assert.equal(salon.transactions[0]?.numberOfItemsSold, 1);
   assert.equal(salon.transactions[0]?.quantity, undefined);
   assert.equal(salon.transactions[0]?.amount, 300);
+});
+
+test('uses work-specific count labels for tailor, salon, restaurant, and tea businesses', () => {
+  assert.equal(getSaleCountCopy('tailor', 'en').inputLabel, 'Number of dresses altered *');
+  assert.equal(getSaleCountCopy('salon', 'en').inputLabel, 'Number of services completed *');
+  assert.equal(getSaleCountCopy('restaurant', 'en').inputLabel, 'Number of servings sold *');
+  assert.equal(getSaleCountCopy('tea', 'en').inputLabel, 'Number of cups / glasses sold *');
+  assert.equal(getSaleCountCopy('hardware', 'en').inputLabel, 'Number of items sold *');
+  assert.equal(getSaleCountCopy('medical', 'en').inputLabel, 'Number of items sold *');
+  assert.equal(getSaleCountCopy('tailor', 'hi').inputLabel, 'अल्टर किए गए कपड़ों की संख्या *');
+});
+
+test('cleans English grammar from counted-item voice sales', () => {
+  const parsed = parseVoiceTransactions('2 bulbs are sold for 200 rupees', 'hardware');
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(parsed.transactions.map(({ itemName, numberOfItemsSold, quantity, amount }) => ({ itemName, numberOfItemsSold, quantity, amount })), [{ itemName: 'bulb', numberOfItemsSold: 2, quantity: undefined, amount: 200 }]);
+});
+
+test('parses Roman Hindi counted-item sale as two bulbs for two hundred rupees', () => {
+  const parsed = parseVoiceTransactions('do bulb do sau rupaye mein bik gaye', 'hardware');
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(parsed.transactions.map(({ itemName, numberOfItemsSold, quantity, amount }) => ({ itemName, numberOfItemsSold, quantity, amount })), [{ itemName: 'bulb', numberOfItemsSold: 2, quantity: undefined, amount: 200 }]);
+});
+
+test('parses Devanagari counted-item sale as two bulbs for two hundred rupees', () => {
+  const parsed = parseVoiceTransactions('मैंने दो बल्ब दो सौ रुपये में बेच दिए', 'hardware');
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(parsed.transactions.map(({ itemName, numberOfItemsSold, quantity, amount }) => ({ itemName, numberOfItemsSold, quantity, amount })), [{ itemName: 'bulb', numberOfItemsSold: 2, quantity: undefined, amount: 200 }]);
+});
+
+test('uses count-only natural voice descriptions for salon services and tailor alterations', () => {
+  const salon = parseVoiceTransactions('maine do haircut kiye 500 rupaye', 'salon');
+  assert.equal(salon.error, undefined);
+  assert.deepEqual(salon.transactions.map(({ itemName, numberOfItemsSold, quantity, amount }) => ({ itemName, numberOfItemsSold, quantity, amount })), [{ itemName: 'haircut', numberOfItemsSold: 2, quantity: undefined, amount: 500 }]);
+  const tailor = parseVoiceTransactions('maine teen dress alter kiye 900 rupaye', 'tailor');
+  assert.equal(tailor.error, undefined);
+  assert.deepEqual(tailor.transactions.map(({ itemName, numberOfItemsSold, quantity, amount }) => ({ itemName, numberOfItemsSold, quantity, amount })), [{ itemName: 'dress', numberOfItemsSold: 3, quantity: undefined, amount: 900 }]);
+});
+
+test('uses service and alteration wording for salon and tailor name fields', () => {
+  assert.equal(getSaleNameLabel('salon', 'en'), 'Service name');
+  assert.equal(getSaleNameLabel('tailor', 'en'), 'Garment / alteration type');
+  assert.equal(getSaleNameLabel('kirana', 'en'), 'Item or service name');
 });

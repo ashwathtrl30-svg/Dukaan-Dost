@@ -3,7 +3,7 @@ import { useStore, formatRupee, getTodaySales, getTodayExpenses, getLast7DaysDat
 import { t } from '../i18n';
 import { NotebookScreen } from './NotebookScreen';
 import { SaleEntry, ExpenseEntry, UdhaarEntry, PaymentType } from '../types';
-import { parseSaleQuantityInput, isMeasuredSaleQuantity, shopUsesMeasuredQuantity } from '../quantity';
+import { parseSaleQuantityInput, isMeasuredSaleQuantity, shopUsesMeasuredQuantity, getSaleCountCopy, getSaleNameLabel } from '../quantity';
 import { Plus, ArrowLeft, X, Check, TrendingUp, TrendingDown, Edit2, MoreVertical, ClipboardList, CalendarDays, Trash2 } from 'lucide-react';
 
 // ============ HOME SCREEN ============
@@ -19,10 +19,11 @@ function formatSaleQuantity(entry: any): string {
   return isMeasuredSaleQuantity(parsed) ? quantity + ' ' + entry.quantityUnit : '';
 }
 
-function formatSaleDetails(entry: any, lang: string): string {
+function formatSaleDetails(entry: any, lang: string, shopType: any): string {
   const count = Number(entry.numberOfItemsSold ?? entry.packageCount ?? entry.quantity);
+  const countCopy = getSaleCountCopy(shopType, lang as 'en' | 'hi');
   const itemCount = Number.isFinite(count) && count > 0
-    ? `${lang === 'hi' ? 'आइटम' : 'Items'}: ${count}`
+    ? `${countCopy.displayLabel}: ${count}`
     : '';
   const quantity = formatSaleQuantity(entry);
   const measured = quantity
@@ -300,7 +301,7 @@ export function HomeScreen() {
                             : (entry.customerName || (lang === 'hi' ? 'ग्राहक' : 'Customer'))}
                       </p>
                       <p className="text-small text-text-secondary">
-                        {entry.entryType === 'sale' ? formatSaleDetails(entry, lang) + (formatSaleDetails(entry, lang) ? ' · ' : '') : ''}
+                        {entry.entryType === 'sale' ? formatSaleDetails(entry, lang, state.shopProfile.shopType) + (formatSaleDetails(entry, lang) ? ' · ' : '') : ''}
                         {entry.entryType === 'expense'
                           ? `${t(`ec_${entry.category || 'other'}` as any, lang)} · `
                           : ''}
@@ -724,6 +725,8 @@ function UdhaarList({ onClose }: { onClose: () => void }) {
 function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
   const { state, dispatch } = useStore();
   const lang = state.language!;
+  const saleCountCopy = getSaleCountCopy(state.shopProfile.shopType, lang);
+  const saleNameLabel = getSaleNameLabel(state.shopProfile.shopType, lang);
   const [itemName, setItemName] = useState('');
   const [numberOfItemsText, setNumberOfItemsText] = useState('1');
   const [quantityText, setQuantityText] = useState('');
@@ -847,7 +850,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
           {isSale && (
             <div className="mb-4">
               <label className="text-small font-medium text-text-secondary block mb-2">
-                {lang === 'hi' ? 'सामान या सेवा का नाम' : 'Item or service name'}
+                {saleNameLabel}
               </label>
               <input
                 type="text"
@@ -888,7 +891,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
           {isSale && (
             <div className="mb-4">
               <label className="text-small font-medium text-text-secondary block mb-2">
-                {lang === 'hi' ? 'बेची गई चीज़ों की संख्या *' : 'Number of items sold *'}
+                {saleCountCopy.inputLabel}
               </label>
               <input
                 type="number"
@@ -899,7 +902,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
                 onChange={(e) => setNumberOfItemsText(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder={lang === 'hi' ? 'जैसे 2' : 'e.g. 2'}
                 className="input-field"
-                aria-label={lang === 'hi' ? 'बेची गई चीज़ों की संख्या' : 'Number of items sold'}
+                aria-label={saleCountCopy.inputLabel.replace(/ \*$/, '')}
               />
             </div>
           )}
@@ -1036,6 +1039,8 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
 function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void }) {
   const { state, dispatch } = useStore();
   const lang = state.language!;
+  const saleCountCopy = getSaleCountCopy(state.shopProfile.shopType, lang);
+  const saleNameLabel = getSaleNameLabel(state.shopProfile.shopType, lang);
   const [itemName, setItemName] = useState(String(entry.itemName || ''));
   const [numberOfItemsText, setNumberOfItemsText] = useState(String(entry.numberOfItemsSold ?? entry.packageCount ?? entry.quantity ?? 1));
   const [quantityText, setQuantityText] = useState(entry.quantity && entry.quantityUnit && isMeasuredSaleQuantity(parseSaleQuantityInput(`${entry.quantity} ${entry.quantityUnit}`)) ? `${entry.quantity} ${entry.quantityUnit}` : '');

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StoreProvider, useStore, generateId, getToday, formatRupee } from './store';
 import { VoiceMicButton } from './components/VoiceMicButton';
 import { parseVoiceTransactions } from './voice/voiceCommands';
+import { getSaleCountCopy } from './quantity';
 import { t } from './i18n';
 import { LanguageScreen, WelcomeScreen, PhoneScreen, InterviewScreen, ProfileSummaryScreen, TourScreen } from './screens/Onboarding';
 import { HomeScreen } from './screens/Home';
@@ -97,7 +98,7 @@ function AppContent() {
         const quantitySummary = transaction.quantity && transaction.quantityUnit
           ? quantity + ' ' + transaction.quantityUnit
           : '';
-        const countSummary = (transaction.numberOfItemsSold || quantity || 1) + (lang === 'hi' ? ' आइटम' : ' items');
+        const countSummary = (transaction.numberOfItemsSold || quantity || 1) + ' ' + getSaleCountCopy(state.shopProfile.shopType, lang).summaryLabel;
         summaries.push(
           (transaction.itemName || 'Sale') + ' · ' + countSummary +
           (quantitySummary ? ' · ' + quantitySummary : '') + ' · ' + formatRupee(transaction.amount),
@@ -264,7 +265,7 @@ function AppContent() {
                           </p>
                           {transaction.type === 'sale' && (
                             <p className="text-xs text-text-secondary">
-                              {transaction.numberOfItemsSold || transaction.quantity || 1} {lang === 'hi' ? 'आइटम' : 'items'}
+                              {transaction.numberOfItemsSold || transaction.quantity || 1} {getSaleCountCopy(state.shopProfile.shopType, lang).summaryLabel}
                               {transaction.quantity && transaction.quantityUnit
                                 ? ` · ${transaction.quantity} ${transaction.quantityUnit}`
                                 : ''}

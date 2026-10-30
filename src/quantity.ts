@@ -27,6 +27,55 @@ export function isMeasuredSaleQuantity(value: ParsedSaleQuantity | null): value 
   return Boolean(value && MEASUREMENT_UNITS.has(value.quantityUnit) && !value.packageCount);
 }
 
+export function getSaleNameLabel(shopType: ShopType | null | undefined, language: 'en' | 'hi'): string {
+  if (shopType === 'salon') {
+    return language === 'hi' ? 'सेवा का नाम' : 'Service name';
+  }
+  if (shopType === 'tailor') {
+    return language === 'hi' ? 'कपड़े / अल्टरेशन का प्रकार' : 'Garment / alteration type';
+  }
+  return language === 'hi' ? 'सामान या सेवा का नाम' : 'Item or service name';
+}
+
+export interface SaleCountCopy {
+  inputLabel: string;
+  summaryLabel: string;
+  displayLabel: string;
+}
+
+/** Business-specific wording for the count of goods, services, or jobs recorded in a sale. */
+export function getSaleCountCopy(shopType: ShopType | null | undefined, language: 'en' | 'hi'): SaleCountCopy {
+  const hindi = language === 'hi';
+  if (shopType === 'tailor') {
+    return hindi
+      ? { inputLabel: 'अल्टर किए गए कपड़ों की संख्या *', summaryLabel: 'अल्टर किए कपड़े', displayLabel: 'अल्टर किए कपड़े' }
+      : { inputLabel: 'Number of dresses altered *', summaryLabel: 'dresses altered', displayLabel: 'Dresses altered' };
+  }
+  if (shopType === 'salon') {
+    return hindi
+      ? { inputLabel: 'पूरी की गई सेवाओं की संख्या *', summaryLabel: 'सेवाएँ पूरी', displayLabel: 'पूरी की गई सेवाएँ' }
+      : { inputLabel: 'Number of services completed *', summaryLabel: 'services completed', displayLabel: 'Services completed' };
+  }
+  if (shopType === 'restaurant') {
+    return hindi
+      ? { inputLabel: 'बेची गई सर्विंग की संख्या *', summaryLabel: 'सर्विंग बेची', displayLabel: 'बेची गई सर्विंग' }
+      : { inputLabel: 'Number of servings sold *', summaryLabel: 'servings sold', displayLabel: 'Servings sold' };
+  }
+  if (shopType === 'tea') {
+    return hindi
+      ? { inputLabel: 'बेचे गए कप / गिलास की संख्या *', summaryLabel: 'कप / गिलास बेचे', displayLabel: 'कप / गिलास' }
+      : { inputLabel: 'Number of cups / glasses sold *', summaryLabel: 'cups / glasses sold', displayLabel: 'Cups / glasses sold' };
+  }
+  if (shopType === 'other') {
+    return hindi
+      ? { inputLabel: 'बेची गई इकाइयों की संख्या *', summaryLabel: 'इकाइयाँ बेची', displayLabel: 'बेची गई इकाइयाँ' }
+      : { inputLabel: 'Number of units sold *', summaryLabel: 'units sold', displayLabel: 'Units sold' };
+  }
+  return hindi
+    ? { inputLabel: 'बेची गई चीज़ों की संख्या *', summaryLabel: 'आइटम बेचे', displayLabel: 'बेचे गए आइटम' }
+    : { inputLabel: 'Number of items sold *', summaryLabel: 'items sold', displayLabel: 'Items sold' };
+}
+
 const UNIT_ALIASES: Record<string, NormalizedUnit> = {
   kg: { unit: 'kg', kind: 'measure' }, kgs: { unit: 'kg', kind: 'measure' },
   kilo: { unit: 'kg', kind: 'measure' }, kilos: { unit: 'kg', kind: 'measure' },

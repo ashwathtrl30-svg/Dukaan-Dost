@@ -284,7 +284,7 @@ function findAmountSpans(text: string): AmountSpan[] {
 
 function findMarkers(text: string): Span[] {
   const patterns: Array<{ type: VoiceTransactionType; pattern: RegExp }> = [
-    { type: 'sale', pattern: /\b(?:sales?|sell|sold|bikri|bika|becha|bik\s+gaya|bik\s+gayi|bik\s+gaye|bech\s+diya|bech\s+diye?|bech\s+di)\b|बिक्री|बिका|बेचा|बिक\s+गया|बिक\s+गई|बेच\s+दिया|बेच\s+दी|सेल/giu },
+    { type: 'sale', pattern: /\b(?:sales?|sell|sold|bikri|bika|becha|bik\s+gaya|bik\s+gayi|bik\s+gaye|bech\s+diya|bech\s+diye?|bech\s+di)\b|बिक्री|बिका|बेचा|बिक\s+गया|बिक\s+गई|बिक\s+गए|बिक\s+गये|बेच\s+दिया|बेच\s+दी|बेच\s+दिए|बेच\s+दिये|सेल/giu },
     { type: 'expense', pattern: /\b(?:expenses?|kharch(?:a|aa)?)\b|खर्च|ख़र्च|खर्चा|व्यय/giu },
     { type: 'udhaar', pattern: /\b(?:udhaar|udhar|credit)\b|उधार/giu },
   ];
@@ -532,8 +532,8 @@ function stripVoiceCommandWords(value: string): string {
     // Remove command/type tokens individually rather than cutting off everything
     // after the first one. That preserves item names in phrases like
     // "add sales: do kilo aloo 100 rupaye".
-    .replace(/\b(?:in\s+sab|sab\s+ka|sabka|sab\s+ki|please|add\s+it|add|record|enter|log|save|put|sale|sales|sell|sold|jod(?:o|na)?|daal(?:o)?|darj|jama|karo|kar\s+do|sales?|sell|sold|bikri|bika|becha|bech(?:a|i|\s+diya|\s+di|\s+diye)|bik\s+gaya|bik\s+gayi|bik\s+gaye|expenses?|kharch(?:a|e|aa)?|udhaar|udhar|credit|maine|main|humne|abhi|aaj|toh|tha|thii|thi|hai|hain|gaya|gayi|gaye)\b/giu, ' ')
-    .replace(/जोड़(?:ो|ें|ना|िए)?|डाल(?:ो|िए)?|दर्ज|जमा|करो|करें|कर\s+दो|बिक्री|बिका|बेचा|बेच(?:ा|ी|\s+दिया|\s+दी)|बिक\s+गया|बिक\s+गई|खर्च(?:ा|े)?|उधार|ऐड|एड|मैंने|मैं|अभी|आज|था|थी|है|हैं|गया|गई|गये/gu, ' ')
+    .replace(/\b(?:in\s+sab|sab\s+ka|sabka|sab\s+ki|please|add\s+it|add|record|enter|log|save|put|sale|sales|sell|sold|jod(?:o|na)?|daal(?:o)?|darj|jama|karo|kar\s+do|sales?|sell|sold|bikri|bika|becha|bech(?:a|i|\s+diya|\s+di|\s+diye)|bik\s+gaya|bik\s+gayi|bik\s+gaye|expenses?|kharch(?:a|e|aa)?|udhaar|udhar|credit|maine|main|humne|abhi|aaj|toh|tha|thii|thi|hai|hain|gaya|gayi|gaye|are|is|was|were|been|have|has|for|the|an|i|we|they|he|she|alter|altered|alteration|stitch|stitched|stitching|kiye|kiya|karo|karwaye|karaye)\b/giu, ' ')
+    .replace(/जोड़(?:ो|ें|ना|िए)?|डाल(?:ो|िए)?|दर्ज|जमा|करो|करें|कर\s+दो|बिक्री|बिका|बेचा|बेच(?:ा|ी|\s+दिया|\s+दी)|बिक\s+गया|बिक\s+गई|खर्च(?:ा|े)?|उधार|ऐड|एड|मैंने|मैं|हमने|अभी|आज|था|थी|है|हैं|गया|गई|गये|गए|बेच(?:ा|ी|े|\s+दिया|\s+दी|\s+दिए|\s+दिये)|बिक(?:ा|ी|े|\s+गया|\s+गई|\s+गए|\s+गये)|किए|किया|करो|करें/gu, ' ')
     .replace(/\b(?:in|mein|mai|me|and|aur|phir|then|total)\b/giu, ' ')
     .replace(/\b(?:each|every)\s+(?:item|unit|piece)(?:'s)?\s+(?:price|cost|rate)\b/giu, ' ')
     .replace(/\b(?:ek|one)\s+(?:ki|kee|kii)\s+(?:kimat|keemat|qeemat|daam|price|rate)\b/giu, ' ')
@@ -659,10 +659,11 @@ function cleanSaleItemName(segment: string): {
     .replace(/\s+/g, ' ')
     .trim();
 
-  const groceryAliases: Record<string, string> = {
+  const itemAliases: Record<string, string> = {
     chawal: 'rice', chaawal: 'rice', chaval: 'rice', 'चावल': 'rice',
+    bulb: 'bulb', bulbs: 'bulb', balb: 'bulb', 'बल्ब': 'bulb',
   };
-  itemName = itemName.split(/\s+/u).map(word => groceryAliases[word.toLowerCase()] || word).join(' ');
+  itemName = itemName.split(/\s+/u).map(word => itemAliases[word.toLowerCase()] || word).join(' ');
 
   return { itemName, numberOfItemsSold, quantity, quantityUnit, packageCount, packageUnit };
 }
@@ -728,7 +729,7 @@ export function parseVoiceTransactions(input: string, shopType?: ShopType | null
   if (!text) return { transactions: [], error: 'not_command' };
 
   const actionPattern =
-    /\b(?:add|record|enter|log|save|put|sale|sales|sell|sold|jod|jodo|jodna|likho?|likh|daal|dalo|dal|darj|jama|karo|kar do|kar do na|becha|bechi|bik\s+gaya|bik\s+gayi|bik\s+gaye|bech\s+diya|bech\s+diye?|bech\s+di)\b|बिक गया|बिक गई|बेच दिया|बेच दी|जोड़|जोड़ो|जोड़ें|जोड़ना|जोड़िए|डाल|डालो|डालिए|दर्ज|लिख|जमा|ऐड|एड|करो|करें|करना|डाल दो/iu;
+    /\b(?:add|record|enter|log|save|put|sale|sales|sell|sold|jod|jodo|jodna|likho?|likh|daal|dalo|dal|darj|jama|karo|kar do|kar do na|becha|bechi|bik\s+gaya|bik\s+gayi|bik\s+gaye|bech\s+diya|bech\s+diye?|bech\s+di)\b|बिक गया|बिक गई|बिक गए|बिक गये|बेच दिया|बेच दी|बेच दिए|बेच दिये|बेचा|बेची|बेचे|जोड़|जोड़ो|जोड़ें|जोड़ना|जोड़िए|डाल|डालो|डालिए|दर्ज|लिख|जमा|ऐड|एड|करो|करें|करना|डाल दो/iu;
   const questionPattern =
     /\b(?:what|when|where|why|how|can|should|tell|show|kitna|kitne|kitni|kya|kaise|kyun|batao)\b|कितना|कितनी|कितने|क्या|कैसे|क्यों|बताओ/iu;
   const numberSpans = findAmountSpans(text);
@@ -741,9 +742,12 @@ export function parseVoiceTransactions(input: string, shopType?: ShopType | null
   );
   const naturalSalePrefix = moneySpans.length ? text.slice(0, moneySpans[0].start) : '';
   const naturalSaleItem = cleanSaleItemName(naturalSalePrefix);
-  const naturalSaleCandidate = quantitySpans.length > 0 &&
+  const itemCountSpans = numberSpans.filter(span => isLikelyItemCountSpan(span, numberSpans, text));
+  const naturalSaleCandidate = (quantitySpans.length > 0 || itemCountSpans.length > 0) &&
     moneySpans.some(span => currencySuffixEnd(span, text) > span.end) &&
-    Boolean(naturalSaleItem.itemName && naturalSaleItem.quantity && naturalSaleItem.quantityUnit);
+    Boolean(naturalSaleItem.itemName && (
+      (naturalSaleItem.quantity && naturalSaleItem.quantityUnit) || naturalSaleItem.numberOfItemsSold
+    ));
 
   // In the Home voice-entry flow, a complete "quantity + item + price" phrase
   // is itself a clear sale command. Do not infer a sale from an amount alone.
