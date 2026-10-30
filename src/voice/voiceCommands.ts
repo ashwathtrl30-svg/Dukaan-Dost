@@ -120,7 +120,7 @@ const NUMBER_WORDS: Record<string, number> = {
 const HUNDRED_WORDS = new Set(['hundred', 'sau', 'सौ']);
 const THOUSAND_WORDS = new Set(['thousand', 'hazaar', 'hazar', 'हज़ार', 'हजार']);
 const LAKH_WORDS = new Set(['lakh', 'lac', 'लाख']);
-const CRORE_WORDS = new Set(['crore', 'karod', 'करोड़', 'करोड']);
+const CRORE_WORDS = new Set(['crore', 'crores', 'karod', 'carod', 'करोड़', 'करोड']);
 const NUMBER_WORD_SET = new Set([
   ...Object.keys(NUMBER_WORDS),
   ...HUNDRED_WORDS,
@@ -143,7 +143,9 @@ function parseWordNumber(words: string[]): number {
   for (const raw of words) {
     const word = raw.toLowerCase();
     if (word === 'and' || word === 'और') continue;
-    if (HUNDRED_WORDS.has(word)) {
+    if (/^[0-9]+(?:\.[0-9]+)?$/.test(word)) {
+      current += Number(word);
+    } else if (HUNDRED_WORDS.has(word)) {
       current = (current || 1) * 100;
     } else if (THOUSAND_WORDS.has(word)) {
       total += (current || 1) * 1000;
@@ -179,10 +181,60 @@ function findAmountSpans(text: string): AmountSpan[] {
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
     if (/^[0-9]+(?:\.[0-9]+)?$/.test(token.value)) {
-      const amount = Number(token.value);
-      if (Number.isFinite(amount) && amount > 0) {
-        spans.push({ start: token.start, end: token.end, amount: Math.round(amount) });
+      // Speech recognition may return scale numbers as digits ("1 crore",
+      // "2 lakh 50 thousand"). Keep the spoken amount together as one span.
+      const words = [token.value];
+      let sequenceEnd = token.end;
+      let hasScaleWord = false;
+      let j = i + 1;
+
+      while (j < tokens.length) {
+        const next = tokens[j];
+        const gap = text.slice(sequenceEnd, next.start);
+        if (/[,:;.!?]/u.test(gap)) break;
+
+        if (NUMBER_WORD_SET.has(next.value)) {
+          words.push(next.value);
+          if (
+            HUNDRED_WORDS.has(next.value) ||
+            THOUSAND_WORDS.has(next.value) ||
+            LAKH_WORDS.has(next.value) ||
+            CRORE_WORDS.has(next.value)
+          ) {
+            hasScaleWord = true;
+          }
+          sequenceEnd = next.end;
+          j++;
+          continue;
+        }
+
+        // Continue through a following digit only when a scale word makes
+        // it part of the same amount, e.g. "1 crore 1 rupee".
+        if (hasScaleWord && /^[0-9]+(?:\.[0-9]+)?$/.test(next.value)) {
+          words.push(next.value);
+          sequenceEnd = next.end;
+          j++;
+          continue;
+        }
+
+        if (
+          (next.value === 'and' || next.value === 'और') &&
+          j + 1 < tokens.length &&
+          NUMBER_WORD_SET.has(tokens[j + 1].value)
+        ) {
+          words.push(next.value, tokens[j + 1].value);
+          sequenceEnd = tokens[j + 1].end;
+          j += 2;
+          continue;
+        }
+        break;
       }
+
+      const amount = words.length > 1 ? parseWordNumber(words) : Number(token.value);
+      if (Number.isFinite(amount) && amount > 0) {
+        spans.push({ start: token.start, end: sequenceEnd, amount: Math.round(amount) });
+      }
+      i = j - 1;
       continue;
     }
 
@@ -387,7 +439,7 @@ function stripVoiceCommandWords(value: string): string {
     // Remove command/type tokens individually rather than cutting off everything
     // after the first one. That preserves item names in phrases like
     // "add sales: do kilo aloo 100 rupaye".
-    .replace(/\b(?:in\s+sab|sab\s+ka|sabka|sab\s+ki|please|add\s+it|add|record|enter|log|save|put|jod(?:o|na)?|daal(?:o)?|darj|jama|karo|kar\s+do|sales?|sell|sold|bikri|bika|becha|bech\s+diya|bik\s+gaya|bik\s+gayi|expenses?|kharch(?:a|e|aa)?|udhaar|udhar|credit)\b/giu, ' ')
+    .replace(/\b(?:in\s+sab|sab\s+ka|sabka|sab\s+ki|please|add\s+it|add|record|enter|log|save|put|sale|sales|sell|sold|jod(?:o|na)?|daal(?:o)?|darj|jama|karo|kar\s+do|sales?|sell|sold|bikri|bika|becha|bech\s+diya|bik\s+gaya|bik\s+gayi|expenses?|kharch(?:a|e|aa)?|udhaar|udhar|credit)\b/giu, ' ')
     .replace(/जोड़(?:ो|ें|ना|िए)?|डाल(?:ो|िए)?|दर्ज|जमा|करो|करें|कर\s+दो|बिक्री|बिका|बेचा|बेच\s+दिया|बिक\s+गया|बिक\s+गई|खर्च(?:ा|े)?|उधार|ऐड|एड/gu, ' ')
     .replace(/\b(?:in|mein|mai|me|and|aur|phir|then|total)\b/giu, ' ')
     .replace(/(?:में|मै|और|फिर|कुल)\s*$/gu, '')
