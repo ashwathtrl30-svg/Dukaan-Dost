@@ -8,11 +8,6 @@ import { VoiceMicButton } from '../components/VoiceMicButton';
 import { detectVoiceLanguage, speakText } from '../voice/speech';
 import { getFestivalDateLabel, getFestivalName, getFestivalShopAdvice, getUpcomingFestivals } from '../festivals';
 
-// Helper: get today's date string
-function getTodayStr(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
 // Helper: format number with Indian grouping
 function fmt(n: number): string {
   return n.toLocaleString('en-IN');
@@ -40,8 +35,13 @@ function isYesterdayQuestion(q: string): boolean {
 }
 
 function getYesterdayStr(): string {
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  return yesterday.toISOString().split('T')[0];
+  // Use the shop-local ledger date instead of subtracting 24 hours from UTC.
+  const yesterday = new Date(getToday() + 'T12:00:00');
+  yesterday.setDate(yesterday.getDate() - 1);
+  const year = yesterday.getFullYear();
+  const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+  const day = String(yesterday.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
 }
 
 // Helper: detect if question is about this week
@@ -288,7 +288,7 @@ function generateResponse(question: string, state: any, lang: string): string {
   const todayExpenses = getTodayExpenses(state.expenses);
   const todayProfit = todaySales - todayExpenses;
   const totalUdhaar = getTotalUdhaar(state.udhaar);
-  const today = getTodayStr();
+  const today = getToday();
   const shopType = state.shopProfile.shopType;
   
   // ===== GREETINGS =====
