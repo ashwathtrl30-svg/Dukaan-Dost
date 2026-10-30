@@ -213,20 +213,25 @@ test('keeps explicit customer names when the credit description also mentions st
   );
 });
 
-test('rejects a mixed transaction batch when an amount cannot be tied to a type', () => {
+test('classifies mixed sales and expenses only when each amount has a clear local cue', () => {
   const parsed = parseVoiceTransactions(
     'aloo 100 rupaye, bijli 2000 rupaye, kaanda 250 rupaye sales aur expenses add karo',
   );
-  assert.ok(parsed.error === 'ambiguous_amount' || parsed.error === 'missing_item');
-  assert.deepEqual(parsed.transactions, []);
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(
+    parsed.transactions.map(({ type, itemName, amount, expenseCategory }) => ({
+      type, itemName, amount, expenseCategory,
+    })),
+    [
+      { type: 'sale', itemName: 'aloo', amount: 100, expenseCategory: undefined },
+      { type: 'expense', itemName: undefined, amount: 2000, expenseCategory: 'electricity' },
+      { type: 'sale', itemName: 'kaanda', amount: 250, expenseCategory: undefined },
+    ],
+  );
 });
 
-test('does not allow the same customer amount to be silently duplicated', () => {
+test('does not silently reuse a previous customer for an unnamed udhaar entry', () => {
   const parsed = parseVoiceTransactions('Raju ko 500 rupaye udhaar aur 500 rupaye udhaar add karo');
-  assert.equal(parsed.error, undefined);
-  assert.equal(parsed.transactions.length, 2);
-  assert.deepEqual(parsed.transactions.map(({ customerName, amount }) => ({ customerName, amount })), [
-    { customerName: 'Raju', amount: 500 },
-    { customerName: 'Raju', amount: 500 },
-  ]);
+  assert.equal(parsed.error, 'missing_customer');
+  assert.deepEqual(parsed.transactions, []);
 });
