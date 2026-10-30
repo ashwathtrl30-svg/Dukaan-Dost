@@ -1041,7 +1041,6 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
               </label>
               <input
                 type="text"
-                inputMode="decimal"
                 value={quantityText}
                 onChange={(e) => setQuantityText(e.target.value.slice(0, 60))}
                 placeholder={lang === 'hi' ? 'जैसे 500 मिली, 2 किलो, 3 पैकेट' : 'e.g. 500 ml, 2 kg, 1 litre, 3 packets'}
