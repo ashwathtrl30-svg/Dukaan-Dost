@@ -80,7 +80,6 @@ export function VoiceMicButton({
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<RecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
-  const stoppingRef = useRef(false);
   const fatalErrorRef = useRef<string | null>(null);
   const committedTranscriptRef = useRef('');
   const sessionFinalTranscriptRef = useRef('');
@@ -122,7 +121,6 @@ export function VoiceMicButton({
 
   const stopAndPublish = (message?: string) => {
     shouldListenRef.current = false;
-    stoppingRef.current = true;
     clearRestartTimer();
     const transcript = getTranscript();
     if (transcript) onTranscriptRef.current(transcript);
@@ -265,7 +263,6 @@ export function VoiceMicButton({
 
   const startListening = () => {
     if (listening || shouldListenRef.current) {
-      stoppingRef.current = true;
       shouldListenRef.current = false;
       setStatus(languageRef.current === 'hi' ? 'रिकॉर्डिंग पूरी हो रही है…' : 'Finishing recording…');
       clearRestartTimer();
@@ -286,7 +283,6 @@ export function VoiceMicButton({
     committedTranscriptRef.current = '';
     sessionFinalTranscriptRef.current = '';
     fatalErrorRef.current = null;
-    stoppingRef.current = false;
     shouldListenRef.current = true;
     notifyRecording(true);
     createRecognitionSession();
