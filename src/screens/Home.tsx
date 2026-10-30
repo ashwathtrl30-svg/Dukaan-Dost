@@ -4,7 +4,7 @@ import { t } from '../i18n';
 import { NotebookScreen } from './NotebookScreen';
 import { SaleEntry, ExpenseEntry, UdhaarEntry, PaymentType } from '../types';
 import { parseSaleQuantityInput, formatSaleQuantityInput } from '../quantity';
-import { Plus, ArrowLeft, X, Check, TrendingUp, TrendingDown, Edit2, MoreVertical, ClipboardList, CalendarDays } from 'lucide-react';
+import { Plus, ArrowLeft, X, Check, TrendingUp, TrendingDown, Edit2, MoreVertical, ClipboardList, CalendarDays, Trash2 } from 'lucide-react';
 
 // ============ HOME SCREEN ============
 type DisplayEntry =
@@ -399,8 +399,18 @@ function QuickAddButton({ emoji, label, color, onClick }: { emoji: string; label
 
 // ============ ALL ENTRIES ============
 function AllEntriesModal({ onClose }: { onClose: () => void }) {
-  const { state } = useStore();
+  const { state, dispatch } = useStore();
   const lang = state.language || 'en';
+  const [entryToDelete, setEntryToDelete] = useState<DisplayEntry | null>(null);
+
+  const confirmDelete = () => {
+    if (!entryToDelete) return;
+    dispatch({
+      type: 'DELETE_ENTRY',
+      payload: { type: entryToDelete.entryType, id: entryToDelete.id },
+    });
+    setEntryToDelete(null);
+  };
   const locale = lang === 'hi' ? 'hi-IN' : 'en-IN';
 
   const entries: DisplayEntry[] = [
@@ -510,6 +520,15 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
                           : (lang === 'hi' ? 'बाकी' : 'Pending')}
                       </span>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setEntryToDelete(entry)}
+                      className="w-10 h-10 mt-1 rounded-full flex items-center justify-center text-problem bg-problem/10 hover:bg-problem/20 transition-colors"
+                      aria-label={lang === 'hi' ? 'यह एंट्री मिटाएँ' : 'Delete this entry'}
+                      title={lang === 'hi' ? 'एंट्री मिटाएँ' : 'Delete entry'}
+                    >
+                      <Trash2 size={17} />
+                    </button>
                   </div>
                 </div>
               );
@@ -517,6 +536,45 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
           </div>
         )}
       </div>
+
+      {entryToDelete && (
+        <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-5 animate-fade-in">
+          <div
+            className="bg-bg rounded-2xl p-6 max-w-sm w-full shadow-xl"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-entry-title"
+          >
+            <div className="w-12 h-12 rounded-full bg-problem/10 text-problem flex items-center justify-center mx-auto mb-3">
+              <Trash2 size={22} />
+            </div>
+            <h3 id="delete-entry-title" className="text-body-lg font-bold text-text text-center mb-2">
+              {lang === 'hi' ? 'यह एंट्री मिटाएँ?' : 'Delete this entry?'}
+            </h3>
+            <p className="text-body text-text-secondary text-center mb-1">
+              {entryToDelete.entryType === 'sale'
+                ? (lang === 'hi' ? 'बिक्री' : 'Sale')
+                : entryToDelete.entryType === 'expense'
+                  ? (lang === 'hi' ? 'खर्च' : 'Expense')
+                  : (lang === 'hi' ? 'उधार' : 'Udhaar')}
+              {' · '}{formatRupee(entryToDelete.amount)}
+            </p>
+            <p className="text-small text-text-secondary text-center mb-5">
+              {lang === 'hi'
+                ? 'यह एंट्री आपके हिसाब से हट जाएगी। इस काम को वापस नहीं किया जा सकता।'
+                : 'This entry will be removed from your records. This cannot be undone.'}
+            </p>
+            <div className="space-y-3">
+              <button type="button" onClick={confirmDelete} className="btn-primary bg-problem">
+                <Trash2 size={18} /> {lang === 'hi' ? 'हाँ, मिटाएँ' : 'Delete entry'}
+              </button>
+              <button type="button" onClick={() => setEntryToDelete(null)} className="btn-secondary">
+                {lang === 'hi' ? 'रद्द करें' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
