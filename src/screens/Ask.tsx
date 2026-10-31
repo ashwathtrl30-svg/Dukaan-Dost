@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useStore, formatRupee, getToday, getTodaySales, getTodayExpenses, getTotalUdhaar, generateId, getWeekSales, getWeekExpenses } from '../store';
 import { t } from '../i18n';
-import { ChatMessage, ChatSession } from '../types';
+import { ChatMessage, ChatSession, SaleEntry } from '../types';
+import { aggregateProductSales } from '../insights/productSales';
 import { Send, MoreVertical, Plus, ArrowLeft, Trash2, MessageCircle, Clock, Volume2, Square } from 'lucide-react';
 import { findKnowledgeEntry } from '../knowledgeBase';
 import { VoiceMicButton } from '../components/VoiceMicButton';
@@ -194,35 +195,33 @@ function getTimeContext(): string {
 }
 
 
-function getTrackedQuantitySummary(sales: any[], lang: string): string {
+function getTrackedQuantitySummary(sales: SaleEntry[], lang: string): string {
   const today = getToday();
   const startDate = new Date(today + 'T12:00:00');
   startDate.setDate(startDate.getDate() - 6);
   const start = startDate.getFullYear() + '-' + String(startDate.getMonth() + 1).padStart(2, '0') + '-' + String(startDate.getDate()).padStart(2, '0');
-  const byItem = new Map<string, { name: string; unit: string; quantity: number; packageCount: number; packageUnit: string; revenue: number }>();
-  sales.forEach((sale) => {
-    if (typeof sale.itemName !== 'string' || !sale.itemName.trim() || sale.date < start || sale.date > today) return;
-    const quantity = Number(sale.quantity);
-    // Older records do not contain quantity; do not invent it for this summary.
-    if (!Number.isFinite(quantity) || quantity <= 0) return;
-    const name = sale.itemName.trim().replace(/\s+/g, ' ');
-    const unit = String(sale.quantityUnit || 'unit').trim() || 'unit';
-    const packageUnit = String(sale.packageUnit || '').trim();
-    const packageCount = Number(sale.packageCount);
-    const key = name.toLocaleLowerCase() + '|' + unit.toLocaleLowerCase() + '|' + packageUnit.toLocaleLowerCase();
-    const item = byItem.get(key) || { name, unit, quantity: 0, packageCount: 0, packageUnit, revenue: 0 };
-    item.quantity += quantity;
-    if (Number.isFinite(packageCount) && packageCount > 0 && packageUnit) item.packageCount += packageCount;
-    item.revenue += Number(sale.amount) || 0;
-    byItem.set(key, item);
-  });
-  const ranked = [...byItem.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 3);
+
+  // Use the same strict product identity and sold-pack counting as Insights.
+  // Different measured sizes are reported separately, never summed as weight.
+  const ranked = aggregateProductSales(sales, { start, end: today })
+    .sort((a, b) => b.unitsSold - a.unitsSold)
+    .slice(0, 3);
   if (!ranked.length) return '';
-  const total = ranked.reduce((sum, item) => sum + item.quantity, 0);
-  const list = ranked.map(item => item.name + ': ' + (item.packageCount > 0 ? item.packageCount + ' ' + item.packageUnit + ' · ' : '') + (Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString('en-IN', { maximumFractionDigits: 3 })) + ' ' + item.unit + ' (avg ' + formatRupee(item.revenue / item.quantity) + '/' + item.unit + ')').join(', ');
+
+  const list = ranked.map(item => {
+    const sizeDetails = item.sizes.length > 0
+      ? ' [' + item.sizes
+          .slice()
+          .sort((a, b) => b.unitsSold - a.unitsSold)
+          .map(size => size.label + ' × ' + size.unitsSold)
+          .join(', ') + ']'
+      : '';
+    return item.name + ': ' + item.unitsSold + ' items/packs sold' + sizeDetails;
+  }).join('; ');
+
   return lang === 'hi'
-    ? '\n\n**पिछले 7 दिनों की दर्ज मात्रा (शीर्ष सामान/सेवाएँ):** ' + list + '। इन शीर्ष चीज़ों की कुल दर्ज मात्रा ' + total + ' यूनिट है। केवल मात्रा दर्ज वाली एंट्री शामिल हैं।'
-    : '\n\n**Tracked quantities, last 7 days (top items/services):** ' + list + '. Total for these top items is ' + total + ' units. Only entries with a recorded quantity are included.';
+    ? '\n\n**पिछले 7 दिनों में सबसे ज़्यादा बिके दर्ज उत्पाद:** ' + list + '। ब्रांड वाला नाम और बिना ब्रांड वाला नाम अलग उत्पाद माने जाते हैं। अलग-अलग पैक आकारों की गिनती एक उत्पाद में जुड़ती है, लेकिन ग्राम और किलो का वज़न आपस में नहीं जोड़ा जाता।'
+    : '\n\n**Best-selling recorded products, last 7 days:** ' + list + '. Branded and unbranded names remain separate products. Different pack sizes count toward the same exact product name, but gram and kilogram amounts are never added together.';
 }
 
 function getShopInventoryAdvice(shopType: string | null | undefined, lang: string): string {
