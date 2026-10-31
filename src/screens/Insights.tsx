@@ -233,7 +233,8 @@ function getInsightCards(
   const slowProductInsight = (metrics: PeriodMetrics): BusinessInsight => {
     const items = productSales(metrics.range).sort((a, b) => a.quantity - b.quantity);
     if (items.length < 2) {
-      return make(metrics.period, 'info',
+      const trend = productTrendInsight(metrics);
+      return items.length === 1 ? trend : make(metrics.period, 'info',
         lang === 'hi' ? 'धीमी बिक्री का संकेत अभी उपलब्ध नहीं' : 'Not enough item data to identify a slow seller',
         lang === 'hi'
           ? 'कम से कम दो अलग-अलग चीज़ों की मात्रा दर्ज होने पर ही उनकी बिक्री की तुलना की जा सकती है।'
@@ -241,11 +242,29 @@ function getInsightCards(
     }
     const slow = items[0];
     const best = items[items.length - 1];
+    const previous = productSales(metrics.previousRange);
+    const previousByKey = new Map<string, ProductPerformance>(previous.map(item => [
+      item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase(), item,
+    ] as [string, ProductPerformance]));
+    const movement = items.map(item => {
+      const prior = previousByKey.get(item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase());
+      if (!prior || prior.quantity <= 0) return null;
+      return { item, prior, change: Math.round(((item.quantity - prior.quantity) / prior.quantity) * 100) };
+    }).filter((value): value is { item: ProductPerformance; prior: ProductPerformance; change: number } =>
+      value !== null && Math.abs(value.change) >= 20 && Math.abs(value.item.quantity - value.prior.quantity) >= 1,
+    ).sort((a, b) =>
+      Math.abs(b.item.quantity - b.prior.quantity) - Math.abs(a.item.quantity - a.prior.quantity),
+    )[0];
+    const movementText = movement
+      ? (lang === 'hi'
+          ? ' साथ ही, ' + movement.item.name + ' की दर्ज बिक्री पिछली समान अवधि से ' + Math.abs(movement.change) + '% ' + (movement.change > 0 ? 'बढ़ी' : 'घटी') + ' है।'
+          : ' Also, recorded sales of ' + movement.item.name + ' are ' + Math.abs(movement.change) + '% ' + (movement.change > 0 ? 'higher' : 'lower') + ' than the previous comparable period.')
+      : '';
     return make(metrics.period, 'warning',
-      lang === 'hi' ? 'सबसे कम दर्ज बिक्री वाली चीज़' : 'Lowest-selling item in recorded sales',
+      lang === 'hi' ? 'कम बिकने वाली चीज़ और उत्पाद ट्रेंड' : 'Slowest recorded seller and product movement',
       lang === 'hi'
-        ? slow.name + ' की ' + formatQuantity(slow.quantity) + ' ' + slow.unit + ' बिक्री दर्ज हुई, जबकि ' + best.name + ' की ' + formatQuantity(best.quantity) + ' ' + best.unit + ' दर्ज हुई। यह केवल दर्ज मात्रा की तुलना है; उपलब्ध स्टॉक की जानकारी नहीं।'
-        : slow.name + ' has the lowest recorded quantity at ' + formatQuantity(slow.quantity) + ' ' + slow.unit + ', compared with ' + best.name + ' at ' + formatQuantity(best.quantity) + ' ' + best.unit + '. This compares recorded sales only; it does not confirm whether stock was available.');
+        ? slow.name + ' की ' + formatQuantity(slow.quantity) + ' ' + slow.unit + ' बिक्री दर्ज हुई, जबकि ' + best.name + ' की ' + formatQuantity(best.quantity) + ' ' + best.unit + ' दर्ज हुई। यह केवल दर्ज मात्रा की तुलना है; उपलब्ध स्टॉक की जानकारी नहीं।' + movementText
+        : slow.name + ' has the lowest recorded quantity at ' + formatQuantity(slow.quantity) + ' ' + slow.unit + ', compared with ' + best.name + ' at ' + formatQuantity(best.quantity) + ' ' + best.unit + '.' + movementText + ' This compares recorded sales only; it does not confirm whether stock was available.');
   };
 
   const productTrendInsight = (metrics: PeriodMetrics): BusinessInsight => {
