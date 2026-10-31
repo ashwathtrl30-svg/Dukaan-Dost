@@ -149,10 +149,8 @@ test('products without recorded quantities are not falsely ranked by revenue', (
   ];
   const cards = build(sales);
   const productInsight = cards.find(card => card.period === 'week' && card.title === 'Best-selling products cannot be identified yet');
-  assert.equal(productInsight, undefined);
-  const weekInsight = cards.find(card => card.period === 'week' && /cannot be identified yet/.test(card.title));
-  assert.ok(weekInsight);
-  assert.match(weekInsight.description, /revenue alone does not determine a bestseller/i);
+  assert.ok(productInsight);
+  assert.match(productInsight.description, /revenue alone does not determine a bestseller/i);
 });
 
 test('service businesses receive service-specific peak-hour and weekly performance wording', () => {
