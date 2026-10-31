@@ -451,11 +451,7 @@ function StockReorderTool() {
               </div>
               <div className="flex flex-col items-end gap-1">
                 <p className="font-bold text-positive whitespace-nowrap">{formatRupee(item.amount)}</p>
-                {item.quantityEntries > 0 && item.quantity > 0 && (
-                  <p className="text-[10px] text-text-secondary whitespace-nowrap">
-                    {lang === 'hi' ? 'औसत' : 'Avg'} {formatRupee(item.quantityRevenue / item.quantity)} / {item.unit}
-                  </p>
-                )}
+
               </div>
             </div>
           ))}
