@@ -27,6 +27,8 @@ jobs:
         run: npm run build
       - name: Test product identity and pack-size aggregation
         run: npx --yes tsx --test src/insights/productSales.test.ts
+      - name: Test dynamic business insights and udhaar alternatives
+        run: npx --yes tsx --test src/insights/insightEngine.test.ts
       - name: Test voice parser examples
         run: npx --yes tsx --test src/voice/voiceCommands.test.ts
       - name: Test AI interpreter and API proxy
