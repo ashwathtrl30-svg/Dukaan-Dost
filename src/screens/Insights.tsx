@@ -14,20 +14,9 @@ import { useStore, formatRupee, getToday } from '../store';
 import { t } from '../i18n';
 import { formatInsightsDateRange, getInsightsDashboard } from '../insights/analytics';
 import type { InsightsPeriod, PeriodMetrics } from '../insights/analytics';
-import type { ExpenseEntry, SaleEntry, UdhaarEntry } from '../types';
-import { aggregateProductSales } from '../insights/productSales';
+import { buildBusinessInsights, type BusinessInsight } from '../insights/insightEngine';
 
 type Language = 'en' | 'hi';
-type InsightTone = 'warning' | 'positive' | 'info';
-
-interface BusinessInsight {
-  period: InsightsPeriod;
-  tone: InsightTone;
-  title: string;
-  description: string;
-  priority: number;
-}
-
 function periodName(period: InsightsPeriod, lang: Language): string {
   if (lang === 'hi') {
     return period === 'day' ? 'आज' : period === 'week' ? 'इस हफ़्ते' : 'इस महीने';
@@ -163,252 +152,6 @@ function getShopAction(shopType: string | null | undefined, scenario: ShopAction
   }
 
   return lang === 'hi' ? hi[scenario] : en[scenario];
-}
-
-function getInsightCards(
-  today: PeriodMetrics,
-  week: PeriodMetrics,
-  month: PeriodMetrics,
-  lang: Language,
-  sales: SaleEntry[],
-  expenses: ExpenseEntry[],
-  udhaar: UdhaarEntry[],
-): BusinessInsight[] {
-  const make = (period: InsightsPeriod, tone: InsightTone, title: string, description: string): BusinessInsight =>
-    ({ period, tone, title, description, priority: 0 });
-
-  const formatQuantity = (value: number) =>
-    value.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 2 });
-
-  // Products are grouped by their entered identity only. Brand + product
-  // stays distinct from a generic product name; size is a breakdown, not a key.
-  const productSales = (dateRange: PeriodMetrics['range']) =>
-    aggregateProductSales(sales, dateRange);
-
-  const productSizeText = (item: ReturnType<typeof productSales>[number]): string => {
-    if (item.sizes.length === 0) return '';
-    const details = item.sizes
-      .slice()
-      .sort((a, b) => b.unitsSold - a.unitsSold)
-      .map(size => size.label + ' × ' + formatQuantity(size.unitsSold))
-      .join(', ');
-    return lang === 'hi' ? ' पैक आकार: ' + details + '।' : ' Recorded sizes: ' + details + '.';
-  };
-
-  const salesTrendInsight = (metrics: PeriodMetrics): BusinessInsight => {
-    const label = periodName(metrics.period, lang);
-    if (metrics.salesChange === null) {
-      return make(metrics.period, 'info',
-        lang === 'hi' ? label + ' बिक्री की तुलना उपलब्ध नहीं' : label + ' sales comparison unavailable',
-        lang === 'hi'
-          ? 'पिछली समान अवधि का रिकॉर्ड उपलब्ध नहीं है। नियमित एंट्री जारी रखें ताकि सही तुलना बन सके।'
-          : 'There is no recorded-sales baseline for the previous comparable period yet. Keep recording sales to establish a reliable comparison.');
-    }
-    const change = metrics.salesChange;
-    return make(metrics.period, change < 0 ? 'warning' : change > 0 ? 'positive' : 'info',
-      lang === 'hi' ? label + ' बिक्री का ट्रेंड' : label + ' sales trend',
-      lang === 'hi'
-        ? 'पिछली समान अवधि के मुकाबले दर्ज बिक्री ' + Math.abs(change) + '% ' + (change > 0 ? 'बढ़ी' : change < 0 ? 'घटी' : 'बदली नहीं') + ' है। एंट्री पूरी हैं या नहीं, यह भी जाँचें।'
-        : 'Recorded sales are ' + (change > 0 ? 'up' : change < 0 ? 'down' : 'unchanged') + ' ' + Math.abs(change) + '% versus the equivalent previous period. Check that entries are complete before acting on the trend.');
-  };
-
-  const bestProductInsight = (metrics: PeriodMetrics): BusinessInsight => {
-    const items = productSales(metrics.range).sort((a, b) => b.unitsSold - a.unitsSold);
-    if (items.length === 0) return salesTrendInsight(metrics);
-    const best = items[0];
-    return make(metrics.period, 'positive',
-      lang === 'hi' ? periodName(metrics.period, lang) + ' सबसे ज़्यादा बिका' : periodName(metrics.period, lang) + ' best-selling recorded product',
-      lang === 'hi'
-        ? best.name + ' के ' + formatQuantity(best.unitsSold) + ' आइटम/पैक बिके।' + productSizeText(best) + ' अलग-अलग पैक आकारों को एक ही उत्पाद में गिना गया है; ग्राम और किलो को जोड़कर रैंक नहीं किया गया।'
-        : best.name + ' leads with ' + formatQuantity(best.unitsSold) + ' items/packs sold.' + productSizeText(best) + ' Different pack sizes are counted under this one product; grams and kilograms are not added together.');
-  };
-
-  const slowProductInsight = (metrics: PeriodMetrics): BusinessInsight => {
-    const items = productSales(metrics.range).sort((a, b) => a.unitsSold - b.unitsSold);
-    if (items.length < 2) {
-      const trend = productTrendInsight(metrics);
-      return items.length === 1 ? trend : make(metrics.period, 'info',
-        lang === 'hi' ? 'धीमी बिक्री का संकेत अभी उपलब्ध नहीं' : 'Not enough item data to identify a slow seller',
-        lang === 'hi'
-          ? 'कम से कम दो अलग-अलग उत्पादों की बिक्री संख्या दर्ज होने पर ही तुलना की जा सकती है।'
-          : 'Record sold-item counts for at least two distinct products before comparing their recorded sales. Different pack sizes of the same product are grouped together.');
-    }
-    const slow = items[0];
-    const best = items[items.length - 1];
-    const previous = productSales(metrics.previousRange);
-    const previousByKey = new Map(previous.map(item => [item.key, item] as const));
-    const movement = items.map(item => {
-      const prior = previousByKey.get(item.key);
-      if (!prior || prior.unitsSold <= 0) return null;
-      return { item, prior, change: Math.round(((item.unitsSold - prior.unitsSold) / prior.unitsSold) * 100) };
-    }).filter((value): value is { item: typeof items[number]; prior: typeof items[number]; change: number } =>
-      value !== null && Math.abs(value.change) >= 20 && Math.abs(value.item.unitsSold - value.prior.unitsSold) >= 1,
-    ).sort((a, b) =>
-      Math.abs(b.item.unitsSold - b.prior.unitsSold) - Math.abs(a.item.unitsSold - a.prior.unitsSold),
-    )[0];
-    const movementText = movement
-      ? (lang === 'hi'
-          ? ' साथ ही, ' + movement.item.name + ' की बिकने वाली संख्या पिछली समान अवधि से ' + Math.abs(movement.change) + '% ' + (movement.change > 0 ? 'बढ़ी' : 'घटी') + ' है।'
-          : ' Also, recorded units sold for ' + movement.item.name + ' are ' + Math.abs(movement.change) + '% ' + (movement.change > 0 ? 'higher' : 'lower') + ' than the previous comparable period.')
-      : '';
-    return make(metrics.period, 'warning',
-      lang === 'hi' ? 'कम बिकने वाला उत्पाद और ट्रेंड' : 'Slowest recorded product and product movement',
-      lang === 'hi'
-        ? slow.name + ' के ' + formatQuantity(slow.unitsSold) + ' आइटम/पैक बिके, जबकि ' + best.name + ' के ' + formatQuantity(best.unitsSold) + ' बिके।' + productSizeText(slow) + ' अलग-अलग नाम वाले उत्पाद अलग रखे गए हैं।' + movementText
-        : slow.name + ' has the lowest recorded count at ' + formatQuantity(slow.unitsSold) + ' items/packs, compared with ' + best.name + ' at ' + formatQuantity(best.unitsSold) + '.' + productSizeText(slow) + ' Separately named products remain separate.' + movementText);
-  };
-
-  const productTrendInsight = (metrics: PeriodMetrics): BusinessInsight => {
-    const current = productSales(metrics.range);
-    const previous = productSales(metrics.previousRange);
-    const previousByKey = new Map(previous.map(item => [item.key, item] as const));
-    const changes = current.map(item => {
-      const prior = previousByKey.get(item.key);
-      if (!prior || prior.unitsSold <= 0) return null;
-      return {
-        item,
-        prior,
-        change: Math.round(((item.unitsSold - prior.unitsSold) / prior.unitsSold) * 100),
-      };
-    }).filter((value): value is { item: typeof current[number]; prior: typeof previous[number]; change: number } =>
-      value !== null && Math.abs(value.change) >= 20 && Math.abs(value.item.unitsSold - value.prior.unitsSold) >= 1,
-    ).sort((a, b) =>
-      Math.abs(b.item.unitsSold - b.prior.unitsSold) - Math.abs(a.item.unitsSold - a.prior.unitsSold),
-    );
-
-    if (changes.length > 0) {
-      const trend = changes[0];
-      const rising = trend.change > 0;
-      return make(metrics.period, rising ? 'positive' : 'warning',
-        lang === 'hi' ? 'उत्पाद की बिक्री में बदलाव' : 'A product sales trend is changing',
-        lang === 'hi'
-          ? trend.item.name + ' के बिकने वाले आइटम/पैक ' + formatQuantity(trend.prior.unitsSold) + ' से ' + formatQuantity(trend.item.unitsSold) + ' हुए (' + (rising ? '+' : '') + trend.change + '%)।' + productSizeText(trend.item) + ' पैक आकार बदलने पर भी उत्पाद की पहचान एक ही रखी गई है।'
-          : trend.item.name + ' moved from ' + formatQuantity(trend.prior.unitsSold) + ' to ' + formatQuantity(trend.item.unitsSold) + ' items/packs sold (' + (rising ? '+' : '') + trend.change + '%).' + productSizeText(trend.item) + ' Pack-size changes do not create a new product identity.');
-    }
-    if (current.length > 0 && previous.length > 0) {
-      return make(metrics.period, 'info',
-        lang === 'hi' ? 'उत्पाद बिक्री लगभग स्थिर' : 'Recorded product sales are broadly steady',
-        lang === 'hi'
-          ? 'पिछली समान अवधि से तुलना में किसी दर्ज उत्पाद की बिक्री संख्या में बड़ा बदलाव नहीं दिखा। ब्रांड सहित दर्ज उत्पाद नामों की अलग-अलग तुलना की गई है।'
-          : 'No large change stands out in the recorded units sold for products appearing in both comparable periods. Product names, including their brand wording, are compared separately.');
-    }
-    return make(metrics.period, 'info',
-      lang === 'hi' ? 'उत्पाद ट्रेंड के लिए और रिकॉर्ड चाहिए' : 'More item history is needed for product trends',
-      lang === 'hi'
-        ? 'उत्पाद की बिक्री संख्या पिछली समान अवधि में भी दर्ज होनी चाहिए। ब्रांड वाला नाम और बिना ब्रांड वाला नाम अलग उत्पाद माने जाएँगे।'
-        : 'Product counts need to be recorded in both comparable periods. A branded name and an unbranded name are treated as separate products.');
-  };
-
-  const expenseInsight = (metrics: PeriodMetrics): BusinessInsight => {
-    const currentByCategory = new Map<string, number>();
-    const previousByCategory = new Map<string, number>();
-    expenses.forEach(entry => {
-      const amount = Number(entry.amount);
-      if (!Number.isFinite(amount) || amount <= 0) return;
-      const category = entry.category || 'other';
-      if (entry.date >= metrics.range.start && entry.date <= metrics.range.end) {
-        currentByCategory.set(category, (currentByCategory.get(category) || 0) + amount);
-      } else if (entry.date >= metrics.previousRange.start && entry.date <= metrics.previousRange.end) {
-        previousByCategory.set(category, (previousByCategory.get(category) || 0) + amount);
-      }
-    });
-
-    const minimumIncrease = metrics.period === 'day' ? 50 : 100;
-    const risingCategory = [...currentByCategory.entries()].map(([category, amount]) => {
-      const previousAmount = previousByCategory.get(category) || 0;
-      const increase = amount - previousAmount;
-      const change = previousAmount > 0 ? Math.round((increase / previousAmount) * 100) : null;
-      return { category, amount, previousAmount, increase, change };
-    }).filter(item =>
-      item.change !== null && item.change >= 30 && item.increase >= minimumIncrease,
-    ).sort((a, b) => b.increase - a.increase)[0];
-
-    if (risingCategory && risingCategory.change !== null) {
-      const categoryName = t(('ec_' + risingCategory.category) as any, lang);
-      return make(metrics.period, 'warning',
-        lang === 'hi' ? categoryName + ' का खर्च तेज़ी से बढ़ा' : categoryName + ' expenses are rising',
-        lang === 'hi'
-          ? 'इस अवधि में ' + categoryName + ' पर ' + formatRupee(risingCategory.amount) + ' खर्च हुए, जबकि पिछली समान अवधि में ' + formatRupee(risingCategory.previousAmount) + ' थे (' + risingCategory.change + '% ज़्यादा)। बिल और खरीद की वजह जाँचें।'
-          : categoryName + ' spending reached ' + formatRupee(risingCategory.amount) + ', up from ' + formatRupee(risingCategory.previousAmount) + ' in the comparable period (+' + risingCategory.change + '%). Check the bills and whether the increase was planned.');
-    }
-
-    if (metrics.expensesChange !== null && metrics.expensesChange >= 25 &&
-        metrics.expenses - metrics.previousExpenses >= minimumIncrease) {
-      return make(metrics.period, 'warning',
-        lang === 'hi' ? 'कुल खर्च तेज़ी से बढ़ रहे हैं' : 'Total recorded expenses are rising quickly',
-        lang === 'hi'
-          ? 'दर्ज खर्च पिछली समान अवधि से ' + metrics.expensesChange + '% बढ़े हैं। बिक्री के मुकाबले खर्च की रफ़्तार और खरीद के बिल जाँचें।'
-          : 'Recorded expenses are up ' + metrics.expensesChange + '% versus the comparable period. Check which bills or purchases are driving the increase, and compare it with sales growth.');
-    }
-
-    const largest = [...currentByCategory.entries()].sort((a, b) => b[1] - a[1])[0];
-    if (largest) {
-      const categoryName = t(('ec_' + largest[0]) as any, lang);
-      return make(metrics.period, 'info',
-        lang === 'hi' ? periodName(metrics.period, lang) + ' सबसे बड़ा खर्च' : periodName(metrics.period, lang) + ' largest expense',
-        lang === 'hi'
-          ? categoryName + ' पर ' + formatRupee(largest[1]) + ' खर्च दर्ज हुआ। यह ज़रूरी खर्च हो सकता है; अगली बार बिल से मिलान करें।'
-          : categoryName + ' is the largest recorded expense category at ' + formatRupee(largest[1]) + '. It may be necessary spending; check it against the bill before deciding to cut costs.');
-    }
-
-    return make(metrics.period, 'info',
-      lang === 'hi' ? 'खर्च का पैटर्न अभी उपलब्ध नहीं' : 'No expense pattern to report yet',
-      lang === 'hi'
-        ? 'इस अवधि में खर्च की एंट्री नहीं है। खर्च दर्ज होते ही उनकी तुलना की जा सकेगी।'
-        : 'There are no expense entries in this period to analyse. Record expenses as they occur to identify unusual increases.');
-  };
-
-  const outstandingUdhaar = udhaar.filter(entry => !entry.paid && Number(entry.amount) > 0);
-  const outstandingAmount = outstandingUdhaar.reduce((sum, entry) => {
-    const amount = Number(entry.amount);
-    return sum + (Number.isFinite(amount) && amount > 0 ? amount : 0);
-  }, 0);
-  const udhaarInsight = (): BusinessInsight => {
-    const overdue = outstandingUdhaar.filter(entry =>
-      typeof entry.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(entry.dueDate) && entry.dueDate < getToday(),
-    );
-    return make('day', 'warning',
-      lang === 'hi' ? 'दुकान का बकाया उधार ₹1,000 से ज़्यादा है' : 'Outstanding shop udhaar is above ₹1,000',
-      lang === 'hi'
-        ? 'कुल ' + formatRupee(outstandingAmount) + ' का उधार ' + outstandingUdhaar.length + ' ग्राहकों से बाकी है' + (overdue.length > 0 ? '। इनमें ' + overdue.length + ' ग्राहकों की तय तारीख़ निकल चुकी है' : '') + '। बड़े बकाये पर समय रहते विनम्रता से फ़ॉलो-अप करें।'
-        : formatRupee(outstandingAmount) + ' remains unpaid across ' + outstandingUdhaar.length + ' customer balance(s)' + (overdue.length > 0 ? ', including ' + overdue.length + ' that are past their due date' : '') + '. Follow up politely before the balance grows further.');
-  };
-
-  const monthlyMarginInsight = (): BusinessInsight => {
-    if (month.profitMargin === null) {
-      return make('month', 'info',
-        lang === 'hi' ? 'मासिक मुनाफ़ा प्रतिशत उपलब्ध नहीं' : 'Monthly profit margin is unavailable',
-        lang === 'hi' ? 'मुनाफ़ा प्रतिशत निकालने के लिए इस महीने बिक्री की एंट्री चाहिए।'
-          : 'Recorded sales are needed to calculate the monthly profit margin. Check that sales entries are complete.');
-    }
-    if (month.previousProfitMargin === null) {
-      return make('month', 'info',
-        lang === 'hi' ? 'मासिक मुनाफ़ा प्रतिशत' : 'Monthly profit margin',
-        lang === 'hi'
-          ? 'दर्ज खर्च के बाद मुनाफ़ा प्रतिशत ' + month.profitMargin + '% है। पिछली समान अवधि का आधार उपलब्ध नहीं है।'
-          : 'Profit after recorded expenses is ' + month.profitMargin + '% of sales. There is no previous-period margin baseline yet to show whether it improved.');
-    }
-    const difference = month.profitMargin - month.previousProfitMargin;
-    return make('month', difference <= -5 ? 'warning' : difference >= 5 ? 'positive' : 'info',
-      lang === 'hi' ? 'मासिक मुनाफ़े का ट्रेंड' : 'Monthly profit margin trend',
-      lang === 'hi'
-        ? 'इस महीने मुनाफ़ा प्रतिशत ' + month.profitMargin + '% है; पिछली समान अवधि से ' + Math.abs(difference) + ' अंक ' + (difference >= 5 ? 'बढ़ा' : difference <= -5 ? 'घटा' : 'का बदलाव है') + '। बिक्री और खर्च की एंट्री देखकर कारण समझें।'
-        : 'This month’s recorded profit margin is ' + month.profitMargin + '%, ' + Math.abs(difference) + ' percentage points ' + (difference >= 5 ? 'higher' : difference <= -5 ? 'lower' : 'different') + ' than the comparable period. Review the sales and expense entries to understand why.');
-  };
-
-  // Exactly three data-backed cards per period. Missing item entries are not
-  // treated as unsold or out-of-stock products.
-  return [
-    bestProductInsight(today),
-    expenseInsight(today),
-    outstandingAmount > 1000 ? udhaarInsight() : salesTrendInsight(today),
-    bestProductInsight(week),
-    slowProductInsight(week),
-    expenseInsight(week),
-    productTrendInsight(month),
-    expenseInsight(month),
-    monthlyMarginInsight(),
-  ];
 }
 
 
@@ -758,17 +501,21 @@ function PeriodSummary({ metrics, lang }: { metrics: PeriodMetrics; lang: Langua
 export function InsightsScreen() {
   const { state } = useStore();
   const lang: Language = state.language === 'hi' ? 'hi' : 'en';
-  const dashboard = getInsightsDashboard(state.sales, state.expenses);
+  const now = new Date();
+  const dashboard = getInsightsDashboard(state.sales, state.expenses, now);
   const advice = getMyAdvice(dashboard.week, dashboard.month, state.sales, state.udhaar, lang, state.shopProfile.shopType);
-  const insights = getInsightCards(
-    dashboard.today,
-    dashboard.week,
-    dashboard.month,
-    lang,
-    state.sales,
-    state.expenses,
-    state.udhaar,
-  );
+  const insights = buildBusinessInsights({
+    today: dashboard.today,
+    week: dashboard.week,
+    month: dashboard.month,
+    sales: state.sales,
+    expenses: state.expenses,
+    udhaar: state.udhaar,
+    shopType: state.shopProfile.shopType,
+    udhaarLevel: state.shopProfile.udhaarLevel,
+    language: lang,
+    now,
+  });
   const insightGroups: { period: InsightsPeriod; items: BusinessInsight[] }[] = [
     { period: 'day', items: insights.filter(item => item.period === 'day') },
     { period: 'week', items: insights.filter(item => item.period === 'week') },
@@ -782,7 +529,7 @@ export function InsightsScreen() {
       </div>
 
       <div className="flex-1 scroll-area px-5 pb-6">
-        {/* Nine data-backed signals, grouped into today, week and month. */}
+        {/* Twenty-one data-backed signals, with relevant alternatives for each shop. */}
         <section className="mb-5">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={18} className="text-primary" />
