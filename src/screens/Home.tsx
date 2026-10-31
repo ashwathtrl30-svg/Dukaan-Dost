@@ -1052,10 +1052,9 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
   const saleNameLabel = getSaleNameLabel(state.shopProfile.shopType, lang);
   const [itemName, setItemName] = useState(String(entry.itemName || ''));
   const [numberOfItemsText, setNumberOfItemsText] = useState(String(entry.numberOfItemsSold ?? entry.packageCount ?? entry.quantity ?? 1));
-  const [quantityText, setQuantityText] = useState(entry.quantity && entry.quantityUnit && isMeasuredSaleQuantity(parseSaleQuantityInput(`${entry.quantity} ${entry.quantityUnit}`)) ? `${entry.quantity} ${entry.quantityUnit}` : '');
+  const [quantityText, setQuantityText] = useState(formatSaleQuantityInput(entry));
   const parsedQuantity = parseSaleQuantityInput(quantityText);
-  const validMeasuredQuantity = isMeasuredSaleQuantity(parsedQuantity);
-  const usesMeasuredQuantity = shopUsesMeasuredQuantity(state.shopProfile.shopType);
+  const validQuantity = isValidSaleQuantity(parsedQuantity);
   const [amount, setAmount] = useState(String(entry.amount));
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
@@ -1065,12 +1064,13 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
   const handleSave = () => {
     const numAmount = parseInt(amount, 10) || 0;
     const parsedSaleQuantity = parseSaleQuantityInput(quantityText);
-    const saleQuantity = isMeasuredSaleQuantity(parsedSaleQuantity) ? parsedSaleQuantity : null;
-    const numberOfItemsSold = Number.parseInt(numberOfItemsText, 10);
+    const saleQuantity = isValidSaleQuantity(parsedSaleQuantity) ? parsedSaleQuantity : null;
+    const typedItemCount = Number.parseInt(numberOfItemsText, 10);
+    const numberOfItemsSold = getSaleItemCountFromQuantity(saleQuantity) ?? typedItemCount;
     if (numAmount <= 0 || (isSale && (
       !itemName.trim() ||
       !Number.isInteger(numberOfItemsSold) || numberOfItemsSold <= 0 ||
-      (usesMeasuredQuantity && quantityText.trim() && !saleQuantity)
+      (quantityText.trim() && !saleQuantity)
     ))) return;
     
     // Delete old entry
@@ -1085,8 +1085,8 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
         numberOfItemsSold,
         quantity: saleQuantity?.quantity,
         quantityUnit: saleQuantity?.quantityUnit,
-        packageCount: undefined,
-        packageUnit: undefined,
+        packageCount: saleQuantity?.packageCount,
+        packageUnit: saleQuantity?.packageUnit,
       } : {}),
       createdAt: Date.now(),
     };
@@ -1166,28 +1166,30 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
               />
             </div>
           )}
-          {isSale && usesMeasuredQuantity && (
+          {isSale && (
             <div className="mb-4">
               <label className="text-small font-medium text-text-secondary block mb-2">
-                {lang === 'hi' ? 'माप की मात्रा (वज़न / तरल)' : 'Measured quantity (weight / liquid)'}
+                {lang === 'hi' ? 'मात्रा / इकाई (वैकल्पिक)' : 'Quantity / unit (optional)'}
               </label>
               <input
                 type="text"
                 value={quantityText}
                 onChange={(e) => setQuantityText(e.target.value.slice(0, 60))}
-                placeholder={lang === 'hi' ? 'जैसे 500 ग्राम, 2 किलो, 750 मिली, 1 लीटर' : 'e.g. 500g, 2kg, 750ml, 1 litre'}
+                placeholder={lang === 'hi' ? 'जैसे 500g, 2kg, 1 pair, 3 packet, 2 घंटे' : 'e.g. 500g, 2kg, 1 pair, 3 packets, 2 hours, 128 GB'}
                 className="input-field"
                 maxLength={60}
-                aria-label={lang === 'hi' ? 'माप की मात्रा' : 'Measured quantity'}
+                aria-label={lang === 'hi' ? 'मात्रा और इकाई' : 'Quantity and unit'}
               />
               <p className="text-small text-text-secondary mt-1">
                 {lang === 'hi'
-                  ? 'यह वज़न या तरल की मात्रा है। सामान की गिनती ऊपर अलग डालें।'
-                  : 'This is the weight or liquid amount. Enter the item count separately above.'}
+                  ? 'हर संख्या के बाद सही इकाई लिखें। वज़न, लंबाई, गिनती, पैक, सेवा और तकनीकी इकाई स्वीकार हैं।'
+                  : 'Write a supported unit after every number. Weight, size, counts, packs, services and technical units are accepted.'}
               </p>
-              {quantityText.trim() && !validMeasuredQuantity && (
+              {quantityText.trim() && !validQuantity && (
                 <p className="text-small text-problem mt-1" role="alert">
-                  {lang === 'hi' ? 'सिर्फ वज़न या तरल की सही मात्रा लिखें, जैसे 500 ग्राम, 2 किलो, 750 मिली या 1 लीटर।' : 'Enter a valid weight or liquid amount, e.g. 500g, 2kg, 750ml or 1 litre.'}
+                  {lang === 'hi'
+                    ? 'कृपया हर संख्या के बाद सही इकाई लिखें, जैसे 500g, 1kg, 750ml, 1 pair या 1 piece।'
+                    : 'Enter a valid weight or liquid amount, e.g. 500g, 1kg, 750ml, 1 pair, 1 piece or etc.'}
                 </p>
               )}
             </div>
@@ -1239,7 +1241,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
               !itemName.trim() ||
               !Number.isInteger(Number.parseInt(numberOfItemsText, 10)) ||
               Number.parseInt(numberOfItemsText, 10) <= 0 ||
-              (usesMeasuredQuantity && quantityText.trim() && !validMeasuredQuantity)
+              (quantityText.trim() && !validQuantity)
             ))}
             className="btn-primary text-body-lg"
           >
