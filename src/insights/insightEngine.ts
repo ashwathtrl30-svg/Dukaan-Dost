@@ -322,8 +322,11 @@ function buildWeeklyProductPerformance(
     (language === 'hi' ? ' आइटम/पैक' : ' items/packs') + ' (' + money(item.revenue) + ')'
   ).join('; ');
   const totalUnits = products.reduce((sum, item) => sum + item.unitsSold, 0);
+  const isServiceShop = SERVICE_SHOPS.has(shopType || 'other');
   return createInsight('week', 'positive',
-    language === 'hi' ? 'सबसे ज़्यादा बिके उत्पाद/सेवाएँ' : 'Best-selling products by units sold',
+    language === 'hi'
+      ? (isServiceShop ? 'सबसे ज़्यादा की गई सेवाएँ' : 'सबसे ज़्यादा बिके उत्पाद')
+      : (isServiceShop ? 'Most frequently completed services' : 'Best-selling products by units sold'),
     language === 'hi'
       ? 'सबसे ज़्यादा यूनिट से क्रम: ' + list + '। कुल ' + totalUnits.toLocaleString('hi-IN') + ' यूनिट दर्ज हुईं। रैंकिंग बिक्री की रकम से नहीं, संख्या से है।'
       : 'Ranked by units/packs sold: ' + list + '. Total recorded units: ' + totalUnits.toLocaleString('en-IN') + '. Ranking is based on quantity sold, never revenue.');
