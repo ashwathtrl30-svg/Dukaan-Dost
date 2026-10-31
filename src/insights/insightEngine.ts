@@ -1,6 +1,5 @@
 import type { PeriodMetrics, InsightsPeriod } from './analytics';
 import { aggregateProductSales, normalizeProductIdentity } from './productSales';
-import { t } from '../i18n';
 import type { ExpenseEntry, SaleEntry, ShopType, UdhaarEntry, UdhaarLevel } from '../types';
 
 export type InsightTone = 'warning' | 'positive' | 'info';
@@ -578,21 +577,21 @@ function buildInventoryMovementInsight(
   language: 'en' | 'hi',
 ): BusinessInsight {
   const items = itemSummaries(sales, metrics.range).filter(item => item.unitsSold > 0).sort((a, b) => a.unitsSold - b.unitsSold);
-  const type = itemType(shopType, language);
+  const serviceShop = SERVICE_SHOPS.has(shopType || 'other');
   if (items.length >= 2) {
     const slow = items[0];
     const fast = items[items.length - 1];
     return createInsight(metrics.period, 'info',
-      language === 'hi' ? 'माँग के आधार पर स्टॉक/काम की समीक्षा' : 'Demand-led stock and workload review',
+      language === 'hi' ? (serviceShop ? 'सेवा की माँग और काम की योजना' : 'माँग के आधार पर स्टॉक की समीक्षा') : (serviceShop ? 'Service demand and workload review' : 'Demand-led stock review'),
       language === 'hi'
-        ? fast.name + ' के ' + fast.unitsSold + ' और ' + slow.name + ' के ' + slow.unitsSold + ' आइटम/सेवाएँ दर्ज हुईं। वास्तविक बचा स्टॉक या लंबित काम देखकर खरीद/समय तय करें; बिक्री रिकॉर्ड में उपलब्ध स्टॉक की संख्या नहीं है।'
-        : fast.name + ' has ' + fast.unitsSold + ' recorded units/services, while ' + slow.name + ' has ' + slow.unitsSold + '. Check actual stock on hand or pending work before deciding what to reorder or schedule; sales entries do not contain remaining-stock counts.');
+        ? fast.name + ' के ' + fast.unitsSold + ' और ' + slow.name + ' के ' + slow.unitsSold + ' आइटम/सेवाएँ दर्ज हुईं। ' + (serviceShop ? 'लंबित काम और उपलब्ध समय देखकर शेड्यूल तय करें।' : 'वास्तविक बचा स्टॉक देखकर खरीद तय करें; बिक्री रिकॉर्ड में उपलब्ध स्टॉक की संख्या नहीं है।')
+        : fast.name + ' has ' + fast.unitsSold + ' recorded units/services, while ' + slow.name + ' has ' + slow.unitsSold + '. ' + (serviceShop ? 'Check pending work and available capacity before changing the schedule.' : 'Check actual stock on hand before reordering; sales entries do not contain remaining-stock counts.'));
   }
   return createInsight(metrics.period, 'info',
     language === 'hi' ? 'स्टॉक की सही दक्षता अभी नहीं मापी जा सकती' : 'On-hand inventory efficiency cannot be measured yet',
     language === 'hi'
-      ? 'बिक्री एंट्री माँग दिखाती हैं, बचा हुआ स्टॉक नहीं। कम से कम दो उत्पादों की संख्या लगातार दर्ज करें और खरीद से पहले वास्तविक स्टॉक गिनें।'
-      : 'Sales entries show recorded demand, not how many units remain on the shelf. Record item counts consistently and check physical stock before changing purchase quantities.');
+      ? (serviceShop ? 'दर्ज सेवाएँ काम की माँग दिखाती हैं, उपलब्ध समय या लंबित बुकिंग नहीं। सेवाओं की संख्या लगातार दर्ज करें और अगली योजना से पहले लंबित काम देखें.' : 'बिक्री एंट्री माँग दिखाती हैं, बचा हुआ स्टॉक नहीं। कम से कम दो उत्पादों की संख्या लगातार दर्ज करें और खरीद से पहले वास्तविक स्टॉक गिनें।')
+      : (serviceShop ? 'Recorded services show workload completed, not appointment capacity or pending bookings. Keep service counts consistent and review outstanding work before planning the next period.' : 'Sales entries show recorded demand, not how many units remain on the shelf. Record item counts consistently and check physical stock before changing purchase quantities.'));
 }
 
 function buildConcentrationInsight(
@@ -654,7 +653,7 @@ export function buildBusinessInsights(input: InsightEngineInput): BusinessInsigh
   const todayCards = [
     buildSalesPerformance(today, sales, language, now),
     buildTopPerformer(today, sales, shopType, language),
-    buildProductMovement(today, sales, language),
+    buildProductMovement(today, sales, language, now),
     buildExpenseInsight(today, expenses, language, now),
     buildUdhaarOrPaymentInsight(today, sales, udhaar, udhaarLevel, language, now),
     buildPeakTimeInsight('day', sales, today.range, shopType, language),
