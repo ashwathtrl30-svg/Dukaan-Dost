@@ -773,7 +773,7 @@ export function InsightsScreen() {
       </div>
 
       <div className="flex-1 scroll-area px-5 pb-6">
-        {/* Insights come first: seven compact, data-backed signals. */}
+        {/* Nine data-backed signals, grouped into today, week and month. */}
         <section className="mb-5">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={18} className="text-primary" />
