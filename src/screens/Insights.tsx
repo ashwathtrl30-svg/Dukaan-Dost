@@ -529,7 +529,7 @@ export function InsightsScreen() {
       </div>
 
       <div className="flex-1 scroll-area px-5 pb-6">
-        {/* Twenty-one data-backed signals, with relevant alternatives for each shop. */}
+        {/* Ten focused, data-backed insights across Today, This Week and This Month. */}
         <section className="mb-5">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles size={18} className="text-primary" />
