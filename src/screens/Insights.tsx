@@ -14,22 +14,24 @@ import {
 import { useStore, formatRupee, getToday } from '../store';
 import { t } from '../i18n';
 import { formatInsightsDateRange, getInsightsDashboard } from '../insights/analytics';
-import type { PeriodMetrics } from '../insights/analytics';
+import type { InsightsPeriod, PeriodMetrics } from '../insights/analytics';
 
 type Language = 'en' | 'hi';
 type InsightTone = 'warning' | 'positive' | 'info';
 
 interface BusinessInsight {
-  period: 'week' | 'month' | null;
+  period: InsightsPeriod;
   tone: InsightTone;
   title: string;
   description: string;
   priority: number;
 }
 
-function periodName(period: 'week' | 'month', lang: Language): string {
-  if (lang === 'hi') return period === 'week' ? 'इस हफ़्ते' : 'इस महीने';
-  return period === 'week' ? 'This week' : 'This month';
+function periodName(period: InsightsPeriod, lang: Language): string {
+  if (lang === 'hi') {
+    return period === 'day' ? 'आज' : period === 'week' ? 'इस हफ़्ते' : 'इस महीने';
+  }
+  return period === 'day' ? 'Today' : period === 'week' ? 'This week' : 'This month';
 }
 
 function changePhrase(change: number, lang: Language, subject: 'sales' | 'expenses'): string {
@@ -163,6 +165,7 @@ function getShopAction(shopType: string | null | undefined, scenario: ShopAction
 }
 
 function getInsightCards(
+  today: PeriodMetrics,
   week: PeriodMetrics,
   month: PeriodMetrics,
   lang: Language,
@@ -182,7 +185,7 @@ function getInsightCards(
     (month.salesChange === null || month.salesChange >= 0) &&
     (month.expensesChange === null || month.salesChange === null || month.expensesChange <= month.salesChange + 5);
   const make = (
-    period: 'week' | 'month',
+    period: InsightsPeriod,
     tone: InsightTone,
     title: string,
     description: string,
@@ -289,35 +292,6 @@ function getInsightCards(
     );
   };
 
-  const strongestDayInsight = (metrics: PeriodMetrics): BusinessInsight => {
-    const label = periodName(metrics.period, lang);
-    if (metrics.bestSalesDay && metrics.salesDaysCount >= 2) {
-      const dayDate = new Date(`${metrics.bestSalesDay.date}T12:00:00`);
-      const formattedDate = dayDate.toLocaleDateString(lang === 'hi' ? 'hi-IN' : 'en-IN', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-      });
-      return make(
-        metrics.period,
-        'positive',
-        lang === 'hi' ? 'सबसे ज़्यादा बिक्री वाला दिन' : `${label} strongest sales day`,
-        lang === 'hi'
-          ? `${formattedDate} को ${formatRupee(metrics.bestSalesDay.amount)} की सबसे अधिक बिक्री दर्ज हुई। इसे एक संकेत मानें; कई हफ़्तों का डेटा मिलने पर ही नियमित पैटर्न का भरोसा होगा।`
-          : `${formattedDate} had the highest recorded sales at ${formatRupee(metrics.bestSalesDay.amount)}. Treat this as a single-period signal; several weeks of data are needed to confirm a recurring pattern.`,
-      );
-    }
-
-    return make(
-      metrics.period,
-      'info',
-      lang === 'hi' ? 'दैनिक बिक्री का पैटर्न बन रहा है' : `${label} daily sales pattern`,
-      lang === 'hi'
-        ? 'अलग-अलग दिनों की बिक्री दर्ज करते रहें। कई दिनों का रिकॉर्ड होने पर ही सबसे अच्छा दिन पहचानना उपयोगी होगा।'
-        : 'Record sales across more days. A comparison across multiple dates is needed before identifying a meaningful strongest day.',
-    );
-  };
-
   const monthlyExpenseTrend = (): BusinessInsight => {
     if (month.expensesChange === null) {
       return make(
@@ -400,14 +374,15 @@ function getInsightCards(
     );
   };
 
-  // Seven compact cards: four weekly signals and three monthly signals.
-  // Even when a comparison is unavailable, its card explains the data limitation
-  // instead of inventing a percentage or hiding the business question.
+  // Nine cards in three fixed groups: today, this week and this month.
+  // Missing baselines are explained rather than replaced with invented trends.
   return [
+    performanceSummary(today),
+    salesTrendInsight(today),
+    expenseInsight(today),
     performanceSummary(week),
     salesTrendInsight(week),
     expenseInsight(week),
-    strongestDayInsight(week),
     salesTrendInsight(month),
     monthlyExpenseTrend(),
     monthlyMarginInsight(),
@@ -784,9 +759,12 @@ export function InsightsScreen() {
 
   const advice = getMyAdvice(dashboard.week, dashboard.month, state.sales, state.udhaar, lang, state.shopProfile.shopType);
   const hasBusinessRisk = advice.some(item => item.tone !== 'positive');
-  const insights = hasAnyEntries
-    ? getInsightCards(dashboard.week, dashboard.month, lang, hasAnyEntries, hasBusinessRisk, state.shopProfile.shopType)
-    : [];
+  const insights = getInsightCards(dashboard.today, dashboard.week, dashboard.month, lang, hasAnyEntries, hasBusinessRisk, state.shopProfile.shopType);
+  const insightGroups: { period: InsightsPeriod; items: BusinessInsight[] }[] = [
+    { period: 'day', items: insights.filter(item => item.period === 'day') },
+    { period: 'week', items: insights.filter(item => item.period === 'week') },
+    { period: 'month', items: insights.filter(item => item.period === 'month') },
+  ];
 
   return (
     <div className="h-full flex flex-col bg-bg">
@@ -804,49 +782,32 @@ export function InsightsScreen() {
             </h2>
           </div>
 
-          {!hasAnyEntries ? (
-            <div className="card p-4 flex items-start gap-3">
-              <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <Lightbulb size={19} className="text-primary" />
-              </div>
-              <div>
-                <p className="text-body font-semibold text-text">
-                  {lang === 'hi' ? 'अपनी पहली एंट्री डालें' : 'Start with your first entries'}
-                </p>
-                <p className="text-small text-text-secondary mt-1">
-                  {lang === 'hi'
-                    ? 'बिक्री और खर्च दर्ज करें। हम आपके रिकॉर्ड से ट्रेंड और काम की सलाह दिखाएँगे।'
-                    : 'Record sales and expenses to unlock useful trends and recommendations based on your own business data.'}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {insights.map((insight, index) => {
-                const Icon = insight.tone === 'warning' ? AlertTriangle : insight.tone === 'positive' ? TrendingUp : Lightbulb;
-                const iconTone = insight.tone === 'warning' ? 'text-problem bg-problem/10' : insight.tone === 'positive' ? 'text-positive bg-positive/10' : 'text-primary bg-primary/10';
-                return (
-                  <div key={`${insight.period ?? 'general'}-${index}`} className="card p-3.5 flex items-start gap-3">
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${iconTone}`}>
-                      <Icon size={18} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <p className="text-body font-semibold text-text leading-snug">{insight.title}</p>
-                        {insight.period && (
-                          <span className="text-[10px] text-text-secondary whitespace-nowrap shrink-0">
-                            {periodName(insight.period, lang)}
-                          </span>
-                        )}
+          <div className="space-y-4">
+            {insightGroups.map(group => (
+              <div key={group.period}>
+                <h3 className="text-small font-semibold text-text-secondary mb-2">
+                  {periodName(group.period, lang)}
+                </h3>
+                <div className="space-y-2">
+                  {group.items.map((insight, index) => {
+                    const Icon = insight.tone === 'warning' ? AlertTriangle : insight.tone === 'positive' ? TrendingUp : Lightbulb;
+                    const iconTone = insight.tone === 'warning' ? 'text-problem bg-problem/10' : insight.tone === 'positive' ? 'text-positive bg-positive/10' : 'text-primary bg-primary/10';
+                    return (
+                      <div key={`${group.period}-${index}`} className="card p-3.5 flex items-start gap-3">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${iconTone}`}>
+                          <Icon size={18} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-body font-semibold text-text leading-snug">{insight.title}</p>
+                          <p className="text-small text-text-secondary leading-relaxed mt-1">{insight.description}</p>
+                        </div>
                       </div>
-                      <p className="text-small text-text-secondary leading-relaxed">{insight.description}</p>
-                    </div>
-                  </div>
-                );
-              })}
-
-            </div>
-          )}
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
 
         <MyAdviceSection items={advice} lang={lang} />
