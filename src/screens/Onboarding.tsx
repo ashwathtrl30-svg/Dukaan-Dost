@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../store';
 import { t } from '../i18n';
 import { ShopType, Duration, Ownership, MonthlySales, UdhaarLevel, AccountingMethod, Worry } from '../types';
-import { ArrowLeft, Check, MapPin, SkipForward } from 'lucide-react';
+import { ArrowLeft, SkipForward } from 'lucide-react';
 
 // Shop type emojis for visual cards
 const shopTypeEmojis: Record<ShopType, string> = {
@@ -331,61 +331,37 @@ function ShopNameQuestion() {
 function CityQuestion() {
   const { state, dispatch } = useStore();
   const lang = state.language!;
-  const [city, setCity] = useState(state.shopProfile.city);
-  const [showSuggestion, setShowSuggestion] = useState(true);
-  
+  const [city, setCity] = useState(state.shopProfile.city || '');
+  const cityValue = city.trim();
+
+  const saveCity = () => {
+    if (!cityValue) return;
+    dispatch({ type: 'UPDATE_SHOP_PROFILE', payload: { city: cityValue } });
+    dispatch({ type: 'SET_ONBOARDING_STEP', payload: state.onboardingStep + 1 });
+  };
+
   return (
     <div className="animate-fade-in">
       <h2 className="text-section-title text-text mb-4">{t('q_city', lang)}</h2>
-      
-      {showSuggestion && (
-        <div className="card mb-4 bg-green-50 border-green-200">
-          <div className="flex items-center gap-3 mb-3">
-            <MapPin size={24} className="text-primary flex-shrink-0" />
-            <div>
-              <p className="text-secondary text-text-secondary">{t('q_citySuggest', lang)}</p>
-              <p className="text-body font-bold">Delhi</p>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              dispatch({ type: 'UPDATE_SHOP_PROFILE', payload: { city: 'Delhi' } });
-              dispatch({ type: 'SET_ONBOARDING_STEP', payload: state.onboardingStep + 1 });
-            }}
-            className="btn-primary text-body"
-          >
-            <Check size={18} /> {t('q_cityConfirm', lang)}
-          </button>
-          <button
-            onClick={() => setShowSuggestion(false)}
-            className="btn-text w-full mt-2"
-          >
-            {t('q_cityChange', lang)}
-          </button>
-        </div>
-      )}
-      
-      {!showSuggestion && (
-        <>
-          <input
-            type="text"
-            value={city}
-            onChange={(e) => setCity(e.target.value)}
-            placeholder={lang === 'hi' ? 'शहर का नाम' : 'City name'}
-            className="input-field text-body mb-4"
-            autoFocus
-          />
-          <button
-            onClick={() => {
-              dispatch({ type: 'UPDATE_SHOP_PROFILE', payload: { city } });
-              dispatch({ type: 'SET_ONBOARDING_STEP', payload: state.onboardingStep + 1 });
-            }}
-            className="btn-primary"
-          >
-            {t('next', lang)} →
-          </button>
-        </>
-      )}
+      <input
+        type="text"
+        value={city}
+        onChange={(e) => setCity(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && cityValue) saveCity();
+        }}
+        placeholder={lang === 'hi' ? 'शहर या कस्बे का नाम लिखें' : 'Enter your city or town'}
+        className="input-field text-body mb-4"
+        autoFocus
+        autoComplete="address-level2"
+      />
+      <button
+        onClick={saveCity}
+        disabled={!cityValue}
+        className="btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+      >
+        {t('next', lang)} →
+      </button>
     </div>
   );
 }
