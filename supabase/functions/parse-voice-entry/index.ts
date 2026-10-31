@@ -62,12 +62,29 @@ const RESPONSE_SCHEMA = {
           quantity: { type: "NUMBER" },
           quantityUnit: {
             type: "STRING",
-            enum: ["unspecified", "kg", "g", "mg", "ml", "litre", "quintal", "tonne", "metre", "cm", "mm", "pav"],
+            enum: [
+              "unspecified",
+              "mg", "g", "kg", "quintal", "tonne",
+              "µL", "ml", "litre", "kL",
+              "mm", "cm", "metre", "km", "inch", "ft", "yard",
+              "m²", "sq ft", "acre", "hectare", "m³", "CFT",
+              "piece", "unit", "pair", "set", "dozen", "bunch",
+              "packet", "box", "carton", "case", "bag", "sack", "tray", "bottle", "roll",
+              "job", "session", "appointment", "visit", "booking", "hour", "day",
+              "V", "A", "W", "kWh", "GB", "TB", "PSI", "CC", "GSM",
+              "pav", "item", "pouch", "bundle", "strip", "jar", "can", "plate", "cup", "glass", "service"
+            ],
           },
           packageCount: { type: "NUMBER" },
           packageUnit: {
             type: "STRING",
-            enum: ["unspecified", "packet", "piece", "unit", "item", "bottle", "box", "dozen", "bag", "sack", "pouch", "bundle", "strip", "jar", "can", "pair", "tray", "roll", "set", "plate", "cup", "glass", "service", "dress", "serving", "portion"],
+            enum: [
+              "unspecified", "piece", "unit", "pair", "set", "dozen", "bunch",
+              "packet", "box", "carton", "case", "bag", "sack", "tray", "bottle", "roll",
+              "job", "session", "appointment", "visit", "booking",
+              "item", "pouch", "bundle", "strip", "jar", "can", "plate", "cup", "glass", "service",
+              "dress", "serving", "portion"
+            ],
           },
           customerName: { type: "STRING" },
           expenseCategory: {
@@ -145,18 +162,57 @@ function fail(error: string, selectedTranscript = "", clarification = "") {
   };
 }
 
-function normalizeMeasureUnit(value: string): string {
-  const unit = value.trim().toLowerCase();
-  const aliases: Record<string, string> = {
-    kilo: "kg", kilos: "kg", kilogram: "kg", kilograms: "kg", "किलोग्राम": "kg", "किलो": "kg",
-    gram: "g", grams: "g", gm: "g", "ग्राम": "g",
-    millilitre: "ml", milliliter: "ml", "मिली": "ml", "मिलीलीटर": "ml", "एमएल": "ml",
-    liter: "litre", liters: "litre", litre: "litre", litres: "litre", "लीटर": "litre", "लिटर": "litre",
-    "क्विंटल": "quintal", quintals: "quintal", tonnes: "tonne", tons: "tonne",
-    meters: "metre", metres: "metre",
-  };
-  return unit === "unspecified" ? "" : (aliases[unit] || unit);
+function normalizeUnitKey(value: string): string {
+  return value.normalize("NFKC").trim().toLowerCase()
+    .replace(/[µμ]/gu, "u")
+    .replace(/\./gu, "")
+    .replace(/\s+/gu, " ");
 }
+
+function normalizeMeasureUnit(value: string): string {
+  const unit = normalizeUnitKey(value);
+  if (!unit || unit === "unspecified") return "";
+  const aliases: Record<string, string> = {
+    milligram: "mg", milligrams: "mg",
+    gram: "g", grams: "g", gm: "g", gms: "g",
+    kilo: "kg", kilos: "kg", kilogram: "kg", kilograms: "kg", kgs: "kg", "किलोग्राम": "kg", "किलो": "kg",
+    quintals: "quintal", qtl: "quintal", qtls: "quintal", "क्विंटल": "quintal",
+    tons: "tonne", tonnes: "tonne", ton: "tonne",
+    ul: "µL", microlitre: "µL", microlitres: "µL", microliter: "µL", microliters: "µL",
+    millilitre: "ml", millilitres: "ml", milliliter: "ml", milliliters: "ml", "मिली": "ml", "मिलीलीटर": "ml", "एमएल": "ml",
+    l: "litre", lt: "litre", ltr: "litre", liter: "litre", liters: "litre", litre: "litre", litres: "litre", "लीटर": "litre", "लिटर": "litre",
+    kl: "kL", kilolitre: "kL", kilolitres: "kL", kiloliter: "kL", kiloliters: "kL",
+    millimetre: "mm", millimetres: "mm", millimeter: "mm", millimeters: "mm",
+    centimetre: "cm", centimetres: "cm", centimeter: "cm", centimeters: "cm",
+    m: "metre", meter: "metre", meters: "metre", metre: "metre", metres: "metre",
+    kilometre: "km", kilometres: "km", kilometer: "km", kilometers: "km",
+    in: "inch", inches: "inch", inch: "inch",
+    foot: "ft", feet: "ft", ft: "ft",
+    yards: "yard", yd: "yard", yds: "yard",
+    m2: "m²", "sq m": "m²", sqm: "m²", "square metre": "m²", "square metres": "m²", "square meter": "m²", "square meters": "m²",
+    "sq ft": "sq ft", sqft: "sq ft", "square foot": "sq ft", "square feet": "sq ft",
+    acres: "acre", hectare: "hectare", hectares: "hectare", ha: "hectare",
+    m3: "m³", "cu m": "m³", "cubic metre": "m³", "cubic metres": "m³", "cubic meter": "m³", "cubic meters": "m³",
+    cft: "CFT", "cu ft": "CFT", "cubic foot": "CFT", "cubic feet": "CFT",
+    pieces: "piece", pc: "piece", pcs: "piece", no: "piece", nos: "piece", "पीस": "piece", "नग": "piece",
+    units: "unit", pairs: "pair", sets: "set", dozens: "dozen", dz: "dozen", "दर्जन": "dozen", bunches: "bunch",
+    packets: "packet", pack: "packet", packs: "packet", pkt: "packet", pkts: "packet", "पैकेट": "packet",
+    boxes: "box", "डिब्बा": "box", "डिब्बे": "box",
+    cartons: "carton", ctn: "carton", cases: "case", bags: "bag", sacks: "sack", trays: "tray", bottles: "bottle", rolls: "roll",
+    jobs: "job", sessions: "session", appointments: "appointment", appt: "appointment", appts: "appointment",
+    visits: "visit", bookings: "booking", hours: "hour", hr: "hour", hrs: "hour", days: "day",
+    v: "V", volt: "V", volts: "V", a: "A", amp: "A", amps: "A", ampere: "A", amperes: "A",
+    w: "W", watt: "W", watts: "W", kwh: "kWh", "kilowatt hour": "kWh", "kilowatt hours": "kWh", "kilowatt-hour": "kWh", "kilowatt-hours": "kWh",
+    gb: "GB", gigabyte: "GB", gigabytes: "GB", tb: "TB", terabyte: "TB", terabytes: "TB",
+    psi: "PSI", "pounds per square inch": "PSI", cc: "CC",
+    "cubic centimetre": "CC", "cubic centimetres": "CC", "cubic centimeter": "CC", "cubic centimeters": "CC",
+    gsm: "GSM", "grams per square metre": "GSM", "grams per square meter": "GSM",
+    pav: "pav", items: "item", pouches: "pouch", bundles: "bundle", strips: "strip", jars: "jar", cans: "can",
+    plates: "plate", cups: "cup", glasses: "glass", services: "service",
+  };
+  return aliases[unit] || value.trim();
+}
+
 
 function validateAIResult(raw: any, inputTranscript: string) {
   const selectedTranscript = typeof raw?.selectedTranscript === "string" && raw.selectedTranscript.trim()
@@ -197,20 +253,32 @@ function validateAIResult(raw: any, inputTranscript: string) {
       const packageCount = Number(item.packageCount) || 0;
       const packageUnit = typeof item.packageUnit === "string" && item.packageUnit.trim().toLowerCase() !== "unspecified" ? item.packageUnit.trim().toLowerCase() : "";
 
-      const measureUnits = new Set(["kg", "g", "mg", "ml", "litre", "quintal", "tonne", "metre", "cm", "mm", "pav"]);
+      const quantityUnits = new Set([
+        "kg", "g", "mg", "ml", "litre", "quintal", "tonne", "metre", "cm", "mm", "km",
+        "µL", "kL", "inch", "ft", "yard", "m²", "sq ft", "acre", "hectare", "m³", "CFT",
+        "piece", "unit", "pair", "set", "dozen", "bunch",
+        "packet", "box", "carton", "case", "bag", "sack", "tray", "bottle", "roll",
+        "job", "session", "appointment", "visit", "booking", "hour", "day",
+        "V", "A", "W", "kWh", "GB", "TB", "PSI", "CC", "GSM",
+        "pav", "item", "pouch", "bundle", "strip", "jar", "can", "plate", "cup", "glass", "service",
+      ]);
       const packageUnits = new Set([
-        "packet", "piece", "unit", "item", "bottle", "box", "dozen", "bag", "sack",
-        "pouch", "bundle", "strip", "jar", "can", "pair", "tray", "roll", "set",
-        "plate", "cup", "glass", "service", "dress", "serving", "portion",
+        "piece", "unit", "pair", "set", "dozen", "bunch",
+        "packet", "box", "carton", "case", "bag", "sack", "tray", "bottle", "roll",
+        "job", "session", "appointment", "visit", "booking",
+        "item", "pouch", "bundle", "strip", "jar", "can", "plate", "cup", "glass", "service",
+        "dress", "serving", "portion",
       ]);
 
       if (quantity < 0 || !Number.isFinite(quantity)) return fail("missing_quantity", selectedTranscript);
-      if (quantity > 0 && !measureUnits.has(quantityUnit)) return fail("missing_quantity", selectedTranscript);
+      if (quantity > 0 && !quantityUnits.has(quantityUnit)) return fail("missing_quantity", selectedTranscript);
       if (packageCount > 0 && !packageUnits.has(packageUnit)) return fail("missing_quantity", selectedTranscript);
       if (packageCount > 0 && !packageUnit) return fail("missing_quantity", selectedTranscript);
 
       if (!numberOfItemsSold && packageCount > 0) numberOfItemsSold = packageCount;
-      if (!numberOfItemsSold && quantity > 0) numberOfItemsSold = quantity;
+      if (!numberOfItemsSold && quantity > 0) {
+        numberOfItemsSold = packageUnits.has(quantityUnit) ? quantity : quantityUnits.has(quantityUnit) ? quantity : 1;
+      }
       if (!numberOfItemsSold || numberOfItemsSold <= 0 || !Number.isFinite(numberOfItemsSold)) {
         return fail("missing_quantity", selectedTranscript);
       }
