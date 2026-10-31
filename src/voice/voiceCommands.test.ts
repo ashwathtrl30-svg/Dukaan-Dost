@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseVoiceTransactions } from './voiceCommands.ts';
-import { parseSaleQuantityInput, formatSaleQuantityInput, getSaleCountCopy, getSaleNameLabel } from '../quantity';
+import { parseSaleQuantityInput, formatSaleQuantityInput, getSaleCountCopy, getSaleNameLabel, getSaleItemCountFromQuantity } from '../quantity';
 
 test('parses three named sales with unit quantities from natural Hinglish', () => {
   const parsed = parseVoiceTransactions(
@@ -348,6 +348,72 @@ test('manual sales quantity input accepts measured quantities and package counts
   assert.equal(parseSaleQuantityInput('2'), null);
   assert.equal(parseSaleQuantityInput('0 kg'), null);
   assert.equal(parseSaleQuantityInput('two kg'), null);
+});
+
+test('manual quantity input accepts all requested unit families and case variants', () => {
+  const samples: Array<[string, string]> = [
+    ['1 mg', 'mg'], ['1 g', 'g'], ['1 kg', 'kg'], ['1 quintal', 'quintal'], ['1 tonne', 'tonne'],
+    ['1 µL', 'µL'], ['1 μL', 'µL'], ['1 uL', 'µL'], ['1 ml', 'ml'], ['1 L', 'litre'], ['1 kL', 'kL'],
+    ['1 mm', 'mm'], ['1 cm', 'cm'], ['1 m', 'metre'], ['1 km', 'km'], ['1 inch', 'inch'], ['1 ft', 'ft'], ['1 yard', 'yard'],
+    ['1 m²', 'm²'], ['1 sq. ft.', 'sq ft'], ['1 acre', 'acre'], ['1 hectare', 'hectare'], ['1 m³', 'm³'], ['1 CFT', 'CFT'],
+    ['1 piece', 'piece'], ['1 unit', 'unit'], ['1 pair', 'pair'], ['1 set', 'set'], ['1 dozen', 'dozen'], ['1 bunch', 'bunch'],
+    ['1 packet', 'packet'], ['1 box', 'box'], ['1 carton', 'carton'], ['1 case', 'case'], ['1 bag', 'bag'], ['1 sack', 'sack'], ['1 tray', 'tray'], ['1 bottle', 'bottle'], ['1 roll', 'roll'],
+    ['1 job', 'job'], ['1 session', 'session'], ['1 appointment', 'appointment'], ['1 visit', 'visit'], ['1 booking', 'booking'], ['1 hour', 'hour'], ['1 day', 'day'],
+    ['1 V', 'V'], ['1 A', 'A'], ['1 W', 'W'], ['1 kWh', 'kWh'], ['1 GB', 'GB'], ['1 TB', 'TB'], ['1 PSI', 'PSI'], ['1 CC', 'CC'], ['1 GSM', 'GSM'],
+  ];
+
+  for (const [input, expectedUnit] of samples) {
+    assert.equal(parseSaleQuantityInput(input)?.quantityUnit, expectedUnit, input);
+  }
+
+  assert.equal(parseSaleQuantityInput('2 KG')?.quantityUnit, 'kg');
+  assert.equal(parseSaleQuantityInput('2 Kg')?.quantityUnit, 'kg');
+  assert.equal(parseSaleQuantityInput('2 kG')?.quantityUnit, 'kg');
+  assert.equal(parseSaleQuantityInput('3 sq ft')?.quantityUnit, 'sq ft');
+  assert.equal(parseSaleQuantityInput('3 Sq.Ft.')?.quantityUnit, 'sq ft');
+});
+
+test('quantity validation rejects any number that has no supported unit after it', () => {
+  assert.equal(parseSaleQuantityInput('2'), null);
+  assert.equal(parseSaleQuantityInput('500g, 2'), null);
+  assert.equal(parseSaleQuantityInput('3 unknownunit'), null);
+  assert.equal(parseSaleQuantityInput('0 piece'), null);
+});
+
+test('countable and package quantities drive the recorded item count', () => {
+  assert.equal(getSaleItemCountFromQuantity(parseSaleQuantityInput('8 pieces')), 8);
+  assert.equal(getSaleItemCountFromQuantity(parseSaleQuantityInput('3 cartons')), 3);
+  assert.equal(getSaleItemCountFromQuantity(parseSaleQuantityInput('2 sessions')), 2);
+  assert.equal(getSaleItemCountFromQuantity(parseSaleQuantityInput('500 g')), null);
+  assert.equal(getSaleItemCountFromQuantity(parseSaleQuantityInput('128 GB')), null);
+});
+
+test('manual quantity input retains both package count and measured amount with new units', () => {
+  assert.deepEqual(parseSaleQuantityInput('2 pieces, 500g'), {
+    quantity: 500, quantityUnit: 'g', packageCount: 2, packageUnit: 'piece',
+  });
+  assert.deepEqual(parseSaleQuantityInput('3 cartons, 2 L'), {
+    quantity: 2, quantityUnit: 'litre', packageCount: 3, packageUnit: 'carton',
+  });
+});
+
+test('voice sales recognise count, service and technical quantity units', () => {
+  const gum = parseVoiceTransactions('add 10 pieces chewing gum 50 rupees sale', 'kirana');
+  assert.equal(gum.error, undefined);
+  assert.deepEqual(gum.transactions.map(({ itemName, numberOfItemsSold, quantity, quantityUnit }) => ({
+    itemName, numberOfItemsSold, quantity, quantityUnit,
+  })), [{ itemName: 'chewing gum', numberOfItemsSold: 10, quantity: 10, quantityUnit: 'piece' }]);
+
+  const service = parseVoiceTransactions('add 2 sessions haircut 500 rupees sale', 'salon');
+  assert.equal(service.error, undefined);
+  assert.equal(service.transactions[0]?.quantityUnit, 'session');
+  assert.equal(service.transactions[0]?.numberOfItemsSold, 2);
+
+  const technical = parseVoiceTransactions('add 128 GB memory card 1000 rupees sale', 'mobile');
+  assert.equal(technical.error, undefined);
+  assert.equal(technical.transactions[0]?.quantity, 128);
+  assert.equal(technical.transactions[0]?.quantityUnit, 'GB');
+  assert.equal(technical.transactions[0]?.numberOfItemsSold, 1);
 });
 
 test('formats saved sale quantities for editing without losing package count', () => {
