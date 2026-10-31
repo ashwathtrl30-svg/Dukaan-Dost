@@ -15,6 +15,7 @@ import { t } from '../i18n';
 import { formatInsightsDateRange, getInsightsDashboard } from '../insights/analytics';
 import type { InsightsPeriod, PeriodMetrics } from '../insights/analytics';
 import type { ExpenseEntry, SaleEntry, UdhaarEntry } from '../types';
+import { aggregateProductSales } from '../insights/productSales';
 
 type Language = 'en' | 'hi';
 type InsightTone = 'warning' | 'positive' | 'info';
@@ -176,30 +177,22 @@ function getInsightCards(
   const make = (period: InsightsPeriod, tone: InsightTone, title: string, description: string): BusinessInsight =>
     ({ period, tone, title, description, priority: 0 });
 
-  interface ProductPerformance { name: string; unit: string; quantity: number; }
-
   const formatQuantity = (value: number) =>
     value.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 2 });
 
-  // Only explicit item quantities are compared. Missing item entries are never
-  // interpreted as zero sales or proof that a product was out of stock.
-  const productSales = (dateRange: PeriodMetrics['range']): ProductPerformance[] => {
-    const totals = new Map<string, ProductPerformance>();
-    sales.forEach(sale => {
-      if (!sale.itemName?.trim() || sale.date < dateRange.start || sale.date > dateRange.end) return;
-      const measured = Number(sale.quantity);
-      const itemCount = Number(sale.numberOfItemsSold);
-      const hasMeasured = Number.isFinite(measured) && measured > 0;
-      const quantity = hasMeasured ? measured : Number.isFinite(itemCount) && itemCount > 0 ? itemCount : 0;
-      if (quantity <= 0) return;
-      const name = sale.itemName.trim().replace(/\s+/g, ' ');
-      const unit = hasMeasured ? (String(sale.quantityUnit || 'units').trim() || 'units') : 'items';
-      const key = name.toLocaleLowerCase() + '|' + unit.toLocaleLowerCase();
-      const current = totals.get(key) || { name, unit, quantity: 0 };
-      current.quantity += quantity;
-      totals.set(key, current);
-    });
-    return [...totals.values()];
+  // Products are grouped by their entered identity only. Brand + product
+  // stays distinct from a generic product name; size is a breakdown, not a key.
+  const productSales = (dateRange: PeriodMetrics['range']) =>
+    aggregateProductSales(sales, dateRange);
+
+  const productSizeText = (item: ReturnType<typeof productSales>[number]): string => {
+    if (item.sizes.length === 0) return '';
+    const details = item.sizes
+      .slice()
+      .sort((a, b) => b.unitsSold - a.unitsSold)
+      .map(size => size.label + ' × ' + formatQuantity(size.unitsSold))
+      .join(', ');
+    return lang === 'hi' ? ' पैक आकार: ' + details + '।' : ' Recorded sizes: ' + details + '.';
   };
 
   const salesTrendInsight = (metrics: PeriodMetrics): BusinessInsight => {
@@ -220,71 +213,67 @@ function getInsightCards(
   };
 
   const bestProductInsight = (metrics: PeriodMetrics): BusinessInsight => {
-    const items = productSales(metrics.range).sort((a, b) => b.quantity - a.quantity);
+    const items = productSales(metrics.range).sort((a, b) => b.unitsSold - a.unitsSold);
     if (items.length === 0) return salesTrendInsight(metrics);
     const best = items[0];
     return make(metrics.period, 'positive',
-      lang === 'hi' ? periodName(metrics.period, lang) + ' सबसे ज़्यादा बिका' : periodName(metrics.period, lang) + ' best-selling recorded item',
+      lang === 'hi' ? periodName(metrics.period, lang) + ' सबसे ज़्यादा बिका' : periodName(metrics.period, lang) + ' best-selling recorded product',
       lang === 'hi'
-        ? best.name + ' की ' + formatQuantity(best.quantity) + ' ' + best.unit + ' बिक्री दर्ज हुई। यह इस अवधि की दर्ज मात्रा में सबसे आगे है।'
-        : best.name + ' leads itemised sales with ' + formatQuantity(best.quantity) + ' ' + best.unit + ' recorded. This is based on quantities entered for this period.');
+        ? best.name + ' के ' + formatQuantity(best.unitsSold) + ' आइटम/पैक बिके।' + productSizeText(best) + ' अलग-अलग पैक आकारों को एक ही उत्पाद में गिना गया है; ग्राम और किलो को जोड़कर रैंक नहीं किया गया।'
+        : best.name + ' leads with ' + formatQuantity(best.unitsSold) + ' items/packs sold.' + productSizeText(best) + ' Different pack sizes are counted under this one product; grams and kilograms are not added together.');
   };
 
   const slowProductInsight = (metrics: PeriodMetrics): BusinessInsight => {
-    const items = productSales(metrics.range).sort((a, b) => a.quantity - b.quantity);
+    const items = productSales(metrics.range).sort((a, b) => a.unitsSold - b.unitsSold);
     if (items.length < 2) {
       const trend = productTrendInsight(metrics);
       return items.length === 1 ? trend : make(metrics.period, 'info',
         lang === 'hi' ? 'धीमी बिक्री का संकेत अभी उपलब्ध नहीं' : 'Not enough item data to identify a slow seller',
         lang === 'hi'
-          ? 'कम से कम दो अलग-अलग चीज़ों की मात्रा दर्ज होने पर ही उनकी बिक्री की तुलना की जा सकती है।'
-          : 'Record quantities for at least two different items in this period before comparing their recorded sales. An item not entered is not assumed to be unsold.');
+          ? 'कम से कम दो अलग-अलग उत्पादों की बिक्री संख्या दर्ज होने पर ही तुलना की जा सकती है।'
+          : 'Record sold-item counts for at least two distinct products before comparing their recorded sales. Different pack sizes of the same product are grouped together.');
     }
     const slow = items[0];
     const best = items[items.length - 1];
     const previous = productSales(metrics.previousRange);
-    const previousByKey = new Map<string, ProductPerformance>(previous.map(item => [
-      item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase(), item,
-    ] as [string, ProductPerformance]));
+    const previousByKey = new Map(previous.map(item => [item.key, item] as const));
     const movement = items.map(item => {
-      const prior = previousByKey.get(item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase());
-      if (!prior || prior.quantity <= 0) return null;
-      return { item, prior, change: Math.round(((item.quantity - prior.quantity) / prior.quantity) * 100) };
-    }).filter((value): value is { item: ProductPerformance; prior: ProductPerformance; change: number } =>
-      value !== null && Math.abs(value.change) >= 20 && Math.abs(value.item.quantity - value.prior.quantity) >= 1,
+      const prior = previousByKey.get(item.key);
+      if (!prior || prior.unitsSold <= 0) return null;
+      return { item, prior, change: Math.round(((item.unitsSold - prior.unitsSold) / prior.unitsSold) * 100) };
+    }).filter((value): value is { item: typeof items[number]; prior: typeof items[number]; change: number } =>
+      value !== null && Math.abs(value.change) >= 20 && Math.abs(value.item.unitsSold - value.prior.unitsSold) >= 1,
     ).sort((a, b) =>
-      Math.abs(b.item.quantity - b.prior.quantity) - Math.abs(a.item.quantity - a.prior.quantity),
+      Math.abs(b.item.unitsSold - b.prior.unitsSold) - Math.abs(a.item.unitsSold - a.prior.unitsSold),
     )[0];
     const movementText = movement
       ? (lang === 'hi'
-          ? ' साथ ही, ' + movement.item.name + ' की दर्ज बिक्री पिछली समान अवधि से ' + Math.abs(movement.change) + '% ' + (movement.change > 0 ? 'बढ़ी' : 'घटी') + ' है।'
-          : ' Also, recorded sales of ' + movement.item.name + ' are ' + Math.abs(movement.change) + '% ' + (movement.change > 0 ? 'higher' : 'lower') + ' than the previous comparable period.')
+          ? ' साथ ही, ' + movement.item.name + ' की बिकने वाली संख्या पिछली समान अवधि से ' + Math.abs(movement.change) + '% ' + (movement.change > 0 ? 'बढ़ी' : 'घटी') + ' है।'
+          : ' Also, recorded units sold for ' + movement.item.name + ' are ' + Math.abs(movement.change) + '% ' + (movement.change > 0 ? 'higher' : 'lower') + ' than the previous comparable period.')
       : '';
     return make(metrics.period, 'warning',
-      lang === 'hi' ? 'कम बिकने वाली चीज़ और उत्पाद ट्रेंड' : 'Slowest recorded seller and product movement',
+      lang === 'hi' ? 'कम बिकने वाला उत्पाद और ट्रेंड' : 'Slowest recorded product and product movement',
       lang === 'hi'
-        ? slow.name + ' की ' + formatQuantity(slow.quantity) + ' ' + slow.unit + ' बिक्री दर्ज हुई, जबकि ' + best.name + ' की ' + formatQuantity(best.quantity) + ' ' + best.unit + ' दर्ज हुई। यह केवल दर्ज मात्रा की तुलना है; उपलब्ध स्टॉक की जानकारी नहीं।' + movementText
-        : slow.name + ' has the lowest recorded quantity at ' + formatQuantity(slow.quantity) + ' ' + slow.unit + ', compared with ' + best.name + ' at ' + formatQuantity(best.quantity) + ' ' + best.unit + '.' + movementText + ' This compares recorded sales only; it does not confirm whether stock was available.');
+        ? slow.name + ' के ' + formatQuantity(slow.unitsSold) + ' आइटम/पैक बिके, जबकि ' + best.name + ' के ' + formatQuantity(best.unitsSold) + ' बिके।' + productSizeText(slow) + ' अलग-अलग नाम वाले उत्पाद अलग रखे गए हैं।' + movementText
+        : slow.name + ' has the lowest recorded count at ' + formatQuantity(slow.unitsSold) + ' items/packs, compared with ' + best.name + ' at ' + formatQuantity(best.unitsSold) + '.' + productSizeText(slow) + ' Separately named products remain separate.' + movementText);
   };
 
   const productTrendInsight = (metrics: PeriodMetrics): BusinessInsight => {
     const current = productSales(metrics.range);
     const previous = productSales(metrics.previousRange);
-    const previousByKey = new Map<string, ProductPerformance>(previous.map(item => [
-      item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase(), item,
-    ] as [string, ProductPerformance]));
+    const previousByKey = new Map(previous.map(item => [item.key, item] as const));
     const changes = current.map(item => {
-      const prior = previousByKey.get(item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase());
-      if (!prior || prior.quantity <= 0) return null;
+      const prior = previousByKey.get(item.key);
+      if (!prior || prior.unitsSold <= 0) return null;
       return {
         item,
         prior,
-        change: Math.round(((item.quantity - prior.quantity) / prior.quantity) * 100),
+        change: Math.round(((item.unitsSold - prior.unitsSold) / prior.unitsSold) * 100),
       };
-    }).filter((value): value is { item: ProductPerformance; prior: ProductPerformance; change: number } =>
-      value !== null && Math.abs(value.change) >= 20 && Math.abs(value.item.quantity - value.prior.quantity) >= 1,
+    }).filter((value): value is { item: typeof current[number]; prior: typeof previous[number]; change: number } =>
+      value !== null && Math.abs(value.change) >= 20 && Math.abs(value.item.unitsSold - value.prior.unitsSold) >= 1,
     ).sort((a, b) =>
-      Math.abs(b.item.quantity - b.prior.quantity) - Math.abs(a.item.quantity - a.prior.quantity),
+      Math.abs(b.item.unitsSold - b.prior.unitsSold) - Math.abs(a.item.unitsSold - a.prior.unitsSold),
     );
 
     if (changes.length > 0) {
@@ -293,21 +282,21 @@ function getInsightCards(
       return make(metrics.period, rising ? 'positive' : 'warning',
         lang === 'hi' ? 'उत्पाद की बिक्री में बदलाव' : 'A product sales trend is changing',
         lang === 'hi'
-          ? trend.item.name + ' की दर्ज बिक्री ' + formatQuantity(trend.prior.quantity) + ' से ' + formatQuantity(trend.item.quantity) + ' ' + trend.item.unit + ' हुई (' + (rising ? '+' : '') + trend.change + '%)। रुझान देखकर अगली खरीद या तैयारी की योजना बनाएँ।'
-          : trend.item.name + ' moved from ' + formatQuantity(trend.prior.quantity) + ' to ' + formatQuantity(trend.item.quantity) + ' ' + trend.item.unit + ' recorded (' + (rising ? '+' : '') + trend.change + '%). Use this trend when planning the next purchase or preparation.');
+          ? trend.item.name + ' के बिकने वाले आइटम/पैक ' + formatQuantity(trend.prior.unitsSold) + ' से ' + formatQuantity(trend.item.unitsSold) + ' हुए (' + (rising ? '+' : '') + trend.change + '%)।' + productSizeText(trend.item) + ' पैक आकार बदलने पर भी उत्पाद की पहचान एक ही रखी गई है।'
+          : trend.item.name + ' moved from ' + formatQuantity(trend.prior.unitsSold) + ' to ' + formatQuantity(trend.item.unitsSold) + ' items/packs sold (' + (rising ? '+' : '') + trend.change + '%).' + productSizeText(trend.item) + ' Pack-size changes do not create a new product identity.');
     }
     if (current.length > 0 && previous.length > 0) {
       return make(metrics.period, 'info',
         lang === 'hi' ? 'उत्पाद बिक्री लगभग स्थिर' : 'Recorded product sales are broadly steady',
         lang === 'hi'
-          ? 'पिछली समान अवधि से तुलना में किसी दर्ज उत्पाद की मात्रा में बड़ा बदलाव नहीं दिखा। एंट्री जारी रखें ताकि लंबी अवधि का रुझान साफ़ हो।'
-          : 'No large change stands out among products recorded in both comparable periods. Keep item quantities up to date to reveal longer-term patterns.');
+          ? 'पिछली समान अवधि से तुलना में किसी दर्ज उत्पाद की बिक्री संख्या में बड़ा बदलाव नहीं दिखा। ब्रांड सहित दर्ज उत्पाद नामों की अलग-अलग तुलना की गई है।'
+          : 'No large change stands out in the recorded units sold for products appearing in both comparable periods. Product names, including their brand wording, are compared separately.');
     }
     return make(metrics.period, 'info',
       lang === 'hi' ? 'उत्पाद ट्रेंड के लिए और रिकॉर्ड चाहिए' : 'More item history is needed for product trends',
       lang === 'hi'
-        ? 'उत्पादों की मात्रा पिछली समान अवधि में भी दर्ज होनी चाहिए। अभी उपलब्ध रिकॉर्ड से बढ़ती या घटती माँग का दावा करना सही नहीं होगा।'
-        : 'Product quantities need to be recorded in both comparable periods. The entries available are not enough to claim that demand is rising or falling.');
+        ? 'उत्पाद की बिक्री संख्या पिछली समान अवधि में भी दर्ज होनी चाहिए। ब्रांड वाला नाम और बिना ब्रांड वाला नाम अलग उत्पाद माने जाएँगे।'
+        : 'Product counts need to be recorded in both comparable periods. A branded name and an unbranded name are treated as separate products.');
   };
 
   const expenseInsight = (metrics: PeriodMetrics): BusinessInsight => {
