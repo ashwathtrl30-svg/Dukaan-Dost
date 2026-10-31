@@ -456,7 +456,7 @@ function buildMonthlyRisk(
       title: language === 'hi' ? 'दर्ज खर्च, बिक्री से ज़्यादा हैं' : 'Recorded expenses are higher than sales',
       description: language === 'hi'
         ? 'इस महीने बिक्री ' + money(metrics.sales) + ' और खर्च ' + money(metrics.expenses) + ' हैं। दर्ज रकम के हिसाब से ' + money(Math.abs(balance)) + ' की कमी है। छूटी हुई बिक्री या खर्च की एंट्री और बड़े बिल जाँचें।'
-        : 'This month has ' + money(metrics.sales) + ' in sales and ' + money(metrics.expenses) + ' in expenses, leaving a recorded shortfall of ' + money(Math.abs(balance)) + '. Check for missing sales entries and review major bills.');
+        : 'This month has ' + money(metrics.sales) + ' in sales and ' + money(metrics.expenses) + ' in expenses, leaving a recorded shortfall of ' + money(Math.abs(balance)) + '. Check for missing sales entries and review major bills.'
     });
   }
   if (metrics.sales > 0 && metrics.expenses > 0 && metrics.expenses / metrics.sales >= 0.9) {
@@ -465,7 +465,7 @@ function buildMonthlyRisk(
       title: language === 'hi' ? 'खर्च बिक्री के बहुत करीब पहुँच रहे हैं' : 'Expenses are close to recorded sales',
       description: language === 'hi'
         ? 'दर्ज खर्च, बिक्री का ' + Math.round((metrics.expenses / metrics.sales) * 100) + '% हैं। अगली खरीद या बड़े खर्च से पहले बिल, ज़रूरत और बिक्री की एंट्री जाँचें।'
-        : 'Recorded expenses are ' + Math.round((metrics.expenses / metrics.sales) * 100) + '% of recorded sales. Before the next large purchase, review bills, necessity and whether all sales have been entered.');
+        : 'Recorded expenses are ' + Math.round((metrics.expenses / metrics.sales) * 100) + '% of recorded sales. Before the next large purchase, review bills, necessity and whether all sales have been entered.'
     });
   }
   if (metrics.salesChange !== null && metrics.salesChange <= -20) {
@@ -474,7 +474,7 @@ function buildMonthlyRisk(
       title: language === 'hi' ? 'बिक्री में तेज़ गिरावट' : 'A sharp sales decline needs attention',
       description: language === 'hi'
         ? 'पिछली समान अवधि की तुलना में दर्ज बिक्री ' + Math.abs(metrics.salesChange) + '% घटी है। बिक्री के दिन, खुले रहने के समय और मुख्य उत्पादों की एंट्री जाँचें।'
-        : 'Recorded sales are down ' + Math.abs(metrics.salesChange) + '% versus the comparable period. Review trading days, opening hours and entries for your main products or services.');
+        : 'Recorded sales are down ' + Math.abs(metrics.salesChange) + '% versus the comparable period. Review trading days, opening hours and entries for your main products or services.'
     });
   }
   const expenseGrowthGap = metrics.salesChange !== null && metrics.expensesChange !== null
@@ -486,7 +486,7 @@ function buildMonthlyRisk(
       title: language === 'hi' ? 'खर्च बिक्री से तेज़ बढ़ रहे हैं' : 'Expenses are growing faster than sales',
       description: language === 'hi'
         ? 'खर्च ' + metrics.expensesChange + '% बढ़े, जबकि बिक्री ' + (metrics.salesChange as number) + '% बदली। अगली खरीद से पहले खर्च की बढ़ोतरी का कारण जाँचें।'
-        : 'Expenses rose ' + metrics.expensesChange + '% while sales changed by ' + metrics.salesChange + '%. Check what is driving the increase before committing to more spending.');
+        : 'Expenses rose ' + metrics.expensesChange + '% while sales changed by ' + metrics.salesChange + '%. Check what is driving the increase before committing to more spending.'
     });
   }
 
