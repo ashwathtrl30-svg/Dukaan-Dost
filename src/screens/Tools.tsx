@@ -645,64 +645,271 @@ function DigitalPayTool() {
 }
 
 // ============ LOAN CHECKER ============
+type LoanOffer = {
+  id: number;
+  rate: string;
+  termMonths: string;
+  fees: string;
+  rateType: 'fixed' | 'floating';
+};
+
 function LoanCheckTool() {
   const { state } = useStore();
   const lang = state.language!;
   const [amount, setAmount] = useState('');
-  const [rate1, setRate1] = useState('');
-  const [rate2, setRate2] = useState('');
-  
-  const amtNum = parseInt(amount) || 0;
-  const r1 = parseFloat(rate1) || 0;
-  const r2 = parseFloat(rate2) || 0;
-  const interest1 = Math.round(amtNum * r1 * 1 / 100);
-  const interest2 = Math.round(amtNum * r2 * 1 / 100);
-  
+  const [offers, setOffers] = useState<LoanOffer[]>([
+    { id: 1, rate: '', termMonths: '', fees: '', rateType: 'fixed' },
+    { id: 2, rate: '', termMonths: '', fees: '', rateType: 'fixed' },
+  ]);
+  const [nextOfferId, setNextOfferId] = useState(3);
+
+  const amountNum = Number(amount);
+  const validAmount = amount.trim() !== '' && Number.isFinite(amountNum) && amountNum > 0;
+
+  const updateOffer = (id: number, changes: Partial<LoanOffer>) => {
+    setOffers(current => current.map(offer =>
+      offer.id === id ? { ...offer, ...changes } : offer
+    ));
+  };
+
+  const calculations = offers.map((offer, index) => {
+    const rate = Number(offer.rate);
+    const months = Number(offer.termMonths);
+    const fees = Math.max(0, Number(offer.fees) || 0);
+    const valid = validAmount &&
+      offer.rate.trim() !== '' &&
+      Number.isFinite(rate) &&
+      rate >= 0 &&
+      rate <= 100 &&
+      offer.termMonths.trim() !== '' &&
+      Number.isInteger(months) &&
+      months > 0;
+    if (!valid) {
+      return {
+        id: offer.id,
+        offerNumber: index + 1,
+        valid: false,
+        rateType: offer.rateType,
+        emi: 0,
+        interest: 0,
+        fees,
+        totalCost: 0,
+        totalRepayment: 0,
+      };
+    }
+
+    const monthlyRate = rate / 1200;
+    const emi = monthlyRate === 0
+      ? amountNum / months
+      : amountNum * monthlyRate / (1 - Math.pow(1 + monthlyRate, -months));
+    const interest = Math.max(0, emi * months - amountNum);
+
+    return {
+      id: offer.id,
+      offerNumber: index + 1,
+      valid: true,
+      rateType: offer.rateType,
+      emi,
+      interest,
+      fees,
+      totalCost: interest + fees,
+      totalRepayment: amountNum + interest + fees,
+    };
+  });
+
+  const validComparisons = calculations.filter(offer => offer.valid);
+  const lowestCostOffer = validComparisons.length > 0
+    ? validComparisons.reduce((lowest, current) =>
+        current.totalCost < lowest.totalCost ? current : lowest
+      )
+    : null;
+  const sameLowestCost = lowestCostOffer
+    ? validComparisons.filter(offer => Math.abs(offer.totalCost - lowestCostOffer.totalCost) < 1).length > 1
+    : false;
+
   return (
-    <div className="animate-fade-in">
-      <p className="text-text-secondary mb-4 text-sm">
-        {lang === 'hi' ? 'दो लोन ऑफर की तुलना करें। कौन सस्ता है?' : 'Compare two loan offers. Which is cheaper?'}
+    <div className="animate-fade-in space-y-4">
+      <p className="text-base font-medium text-text leading-relaxed mb-5">
+        {lang === 'hi'
+          ? 'लोन तभी लें जब उससे आपकी कमाई या संपत्ति बढ़े और उसका फायदा लोन के खर्च से ज़्यादा हो। ज़्यादा फीस, बदलती ब्याज दरों और अपनी क्षमता से ज़्यादा उधार लेने से बचें।'
+          : 'Take a loan only when it helps you build wealth by earning more than the loan costs. Avoid high fees, changing interest rates, and borrowing more than you can comfortably repay.'}
       </p>
-      <div className="space-y-3 mb-6">
-        <div>
-          <label className="text-sm text-text-secondary">{lang === 'hi' ? 'लोन रकम' : 'Loan amount'}</label>
-          <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="input-field" placeholder="₹" />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-sm text-text-secondary">{lang === 'hi' ? 'ऑफर 1: ब्याज %' : 'Offer 1: Interest %'}</label>
-            <input type="number" value={rate1} onChange={e => setRate1(e.target.value)} className="input-field" placeholder="12" />
-          </div>
-          <div>
-            <label className="text-sm text-text-secondary">{lang === 'hi' ? 'ऑफर 2: ब्याज %' : 'Offer 2: Interest %'}</label>
-            <input type="number" value={rate2} onChange={e => setRate2(e.target.value)} className="input-field" placeholder="15" />
-          </div>
-        </div>
+
+      <div>
+        <label className="text-sm font-medium text-text-secondary block mb-1">
+          {lang === 'hi' ? 'कितनी रकम का लोन चाहिए?' : 'Loan amount'}
+        </label>
+        <input
+          type="number"
+          min="1"
+          step="0.01"
+          value={amount}
+          onChange={e => setAmount(e.target.value)}
+          className="input-field"
+          placeholder="₹"
+        />
       </div>
-      
-      {amtNum > 0 && (r1 > 0 || r2 > 0) && (
-        <div className="card bg-green-50 border-green-200 animate-fade-in">
-          {r1 > 0 && (
-            <div className="flex justify-between mb-2">
-              <span className="text-text-secondary">{lang === 'hi' ? 'ऑफर 1: सालाना ब्याज' : 'Offer 1: Yearly interest'}</span>
-              <span className="font-bold">{formatRupee(interest1)}</span>
+
+      <div className="space-y-3">
+        {offers.map((offer, index) => {
+          const result = calculations[index];
+          return (
+            <div key={offer.id} className="card space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-semibold text-text">
+                  {lang === 'hi' ? 'ऑफर ' : 'Offer '}{index + 1}
+                </h3>
+                {offers.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => setOffers(current => current.filter(item => item.id !== offer.id))}
+                    className="text-sm font-medium text-problem px-2 py-1"
+                  >
+                    {lang === 'hi' ? 'हटाएँ' : 'Remove'}
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">
+                  {lang === 'hi' ? 'सालाना ब्याज दर (%)' : 'Interest rate (% per year)'}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={offer.rate}
+                  onChange={e => updateOffer(offer.id, { rate: e.target.value })}
+                  className="input-field"
+                  placeholder="12"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-text-secondary block mb-1">
+                    {lang === 'hi' ? 'अवधि (महीने)' : 'Loan period (months)'}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={offer.termMonths}
+                    onChange={e => updateOffer(offer.id, { termMonths: e.target.value })}
+                    className="input-field"
+                    placeholder="24"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-text-secondary block mb-1">
+                    {lang === 'hi' ? 'फीस और अन्य शुल्क (₹)' : 'Fees and other charges (₹)'}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={offer.fees}
+                    onChange={e => updateOffer(offer.id, { fees: e.target.value })}
+                    className="input-field"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-text-secondary block mb-1">
+                  {lang === 'hi' ? 'ब्याज दर का प्रकार' : 'Interest rate type'}
+                </label>
+                <select
+                  value={offer.rateType}
+                  onChange={e => updateOffer(offer.id, { rateType: e.target.value as LoanOffer['rateType'] })}
+                  className="input-field"
+                >
+                  <option value="fixed">{lang === 'hi' ? 'फिक्स्ड (तय)' : 'Fixed'}</option>
+                  <option value="floating">{lang === 'hi' ? 'फ्लोटिंग (बदल सकती है)' : 'Floating (can change)'}</option>
+                </select>
+              </div>
+
+              {result.valid && (
+                <div className="border-t border-border pt-3 space-y-2">
+                  <div className="flex justify-between gap-3 text-sm">
+                    <span className="text-text-secondary">{lang === 'hi' ? 'महीने की EMI' : 'Monthly EMI'}</span>
+                    <span className="font-semibold text-text">{formatRupee(Math.round(result.emi))}</span>
+                  </div>
+                  <div className="flex justify-between gap-3 text-sm">
+                    <span className="text-text-secondary">{lang === 'hi' ? 'कुल ब्याज' : 'Total interest'}</span>
+                    <span className="font-medium text-text">{formatRupee(Math.round(result.interest))}</span>
+                  </div>
+                  <div className="flex justify-between gap-3 text-sm">
+                    <span className="text-text-secondary">{lang === 'hi' ? 'फीस और शुल्क' : 'Fees and charges'}</span>
+                    <span className="font-medium text-text">{formatRupee(Math.round(result.fees))}</span>
+                  </div>
+                  <div className="flex justify-between gap-3 text-sm border-t border-border pt-2">
+                    <span className="font-semibold text-text">{lang === 'hi' ? 'लोन का कुल खर्च' : 'Total loan cost'}</span>
+                    <span className="font-bold text-primary">{formatRupee(Math.round(result.totalCost))}</span>
+                  </div>
+                  <div className="flex justify-between gap-3 text-sm">
+                    <span className="text-text-secondary">{lang === 'hi' ? 'कुल चुकाई जाने वाली रकम' : 'Total amount to repay'}</span>
+                    <span className="font-semibold text-text">{formatRupee(Math.round(result.totalRepayment))}</span>
+                  </div>
+                  {offer.rateType === 'floating' && (
+                    <p className="text-xs text-warning leading-relaxed">
+                      {lang === 'hi'
+                        ? 'यह हिसाब आज की ब्याज दर पर है। दर बढ़ने पर EMI या कुल खर्च बढ़ सकता है।'
+                        : "This estimate uses today's rate. Your EMI or total cost may rise if the rate increases."}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
-          )}
-          {r2 > 0 && (
-            <div className="flex justify-between mb-2">
-              <span className="text-text-secondary">{lang === 'hi' ? 'ऑफर 2: सालाना ब्याज' : 'Offer 2: Yearly interest'}</span>
-              <span className="font-bold">{formatRupee(interest2)}</span>
-            </div>
-          )}
-          {r1 > 0 && r2 > 0 && (
-            <p className="text-sm text-primary mt-2 font-medium">
-              {interest1 < interest2
-                ? (lang === 'hi' ? `ऑफर 1 सस्ता है — ${formatRupee(interest2 - interest1)} बचाएँगे` : `Offer 1 is cheaper — save ${formatRupee(interest2 - interest1)}`)
-                : (lang === 'hi' ? `ऑफर 2 सस्ता है — ${formatRupee(interest1 - interest2)} बचाएँगे` : `Offer 2 is cheaper — save ${formatRupee(interest1 - interest2)}`)}
-            </p>
-          )}
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setOffers(current => [...current, { id: nextOfferId, rate: '', termMonths: '', fees: '', rateType: 'fixed' }]);
+          setNextOfferId(current => current + 1);
+        }}
+        className="w-full rounded-xl border border-primary/40 text-primary font-medium py-3 px-4"
+      >
+        + {lang === 'hi' ? 'एक और ऑफर जोड़ें' : 'Add another offer'}
+      </button>
+
+      {validComparisons.length >= 2 && lowestCostOffer && (
+        <div className="card bg-primary/5 border border-primary/15">
+          <p className="font-semibold text-text">
+            {sameLowestCost
+              ? (lang === 'hi' ? 'इन ऑफ़र का कुल अनुमानित खर्च लगभग बराबर है।' : 'These offers have nearly the same estimated total cost.')
+              : (lang === 'hi'
+                ? 'ऑफर ' + lowestCostOffer.offerNumber + ' का कुल अनुमानित खर्च सबसे कम है।'
+                : 'Offer ' + lowestCostOffer.offerNumber + ' has the lowest estimated total cost.')}
+          </p>
+          <p className="text-sm text-text-secondary mt-1">
+            {lang === 'hi'
+              ? 'EMI और बाकी शर्तें भी देखें; सिर्फ़ ब्याज दर के आधार पर फैसला न करें।'
+              : 'Check the EMI and all terms too. Do not decide by the interest rate alone.'}
+          </p>
         </div>
       )}
+
+      <div className="card space-y-2">
+        <p className="font-semibold text-text">
+          {lang === 'hi' ? 'सलाह' : 'Important advice'}
+        </p>
+        <p className="text-sm text-text leading-relaxed">
+          {lang === 'hi'
+            ? 'कम ब्याज दर का मतलब हमेशा बेहतर लोन नहीं होता। कुल ब्याज और फीस, EMI, चुकाने की अवधि, फिक्स्ड या फ्लोटिंग दर, और देर से या समय से पहले भुगतान करने के शुल्क देखें। वही लोन चुनें जिसकी EMI आप आराम से चुका सकें।'
+            : 'A lower interest rate does not always mean a better loan. Compare total interest and fees, the EMI, repayment period, fixed or floating rates, and charges for late or early repayment. Choose a loan with an EMI you can comfortably afford.'}
+        </p>
+        <p className="text-xs text-text-secondary leading-relaxed">
+          {lang === 'hi'
+            ? 'यह अनुमान हर महीने भुगतान और घटते बकाया पर ब्याज की गणना मानकर बनाया गया है। बैंक या लोन देने वाली संस्था के असली शुल्क और नियम अलग हो सकते हैं।'
+            : 'This estimate assumes monthly payments and interest on the remaining balance. The lender’s actual fees and terms may differ.'}
+        </p>
+      </div>
     </div>
   );
 }
