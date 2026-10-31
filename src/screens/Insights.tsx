@@ -251,9 +251,9 @@ function getInsightCards(
   const productTrendInsight = (metrics: PeriodMetrics): BusinessInsight => {
     const current = productSales(metrics.range);
     const previous = productSales(metrics.previousRange);
-    const previousByKey = new Map(previous.map(item => [
+    const previousByKey = new Map<string, ProductPerformance>(previous.map(item => [
       item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase(), item,
-    ]));
+    ] as [string, ProductPerformance]));
     const changes = current.map(item => {
       const prior = previousByKey.get(item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase());
       if (!prior || prior.quantity <= 0) return null;
