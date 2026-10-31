@@ -137,8 +137,10 @@ const SYSTEM_PROMPT = [
   "- '2 kilo sugar so rupaye sales add karo' means 2 kg sugar sold for ₹100.",
   "- '₹50 ashwat ke naam per udhari add karo' means ₹50 credit for customer Ashwat. Also understand 'Ashwat ke naam par ₹50 udhaar', 'Ashwat ko 50 rupaye udhar likho', and similar word orders.",
   "- Use the actual total transaction amount. If the speaker explicitly gives a per-unit rate (per kg, each, per piece), multiply by spoken count/quantity only when no total is also given. If a total amount is stated, use that total.",
-  "- For kirana, vegetable, bakery, sweet and other shops, weight/liquid measures such as kg, g, ml, litre can be saved as quantity + quantityUnit. For other businesses, interpret explicit work counts as numberOfItemsSold: services completed, dresses altered, servings sold, cups/glasses sold, pieces/items sold. Use shop type to choose sensible count meaning, never invent quantity.",
-  "- If an explicit measured quantity is spoken, set quantity and quantityUnit. If a count is spoken, set numberOfItemsSold. If both package count and total measured weight are spoken, use packageCount/packageUnit alongside quantity/quantityUnit.",
+  "- Every shop type may use every quantity family: weight (mg, g, kg, quintal, tonne), volume (µL, ml, L, kL), length (mm, cm, m, km, inch, ft, yard), area/volume (m², sq ft, acre, hectare, m³, CFT), counting (piece, unit, pair, set, dozen, bunch), packaging (packet, box, carton, case, bag, sack, tray, bottle, roll), services (job, session, appointment, visit, booking, hour, day), and technical specifications (V, A, W, kWh, GB, TB, PSI, CC, GSM).",
+  "- Unit recognition is case-insensitive: KG, kg, Kg and kG mean the same unit. Understand everyday short forms, full names, plurals, common spellings and Hindi/Hinglish descriptions; return the canonical unit from the response schema.",
+  "- When a number is followed by one of these units, set quantity and quantityUnit even for piece-based goods, packaging, services and technical specifications. If a separate pack/count and a measured quantity are both spoken, use packageCount/packageUnit alongside quantity/quantityUnit.",
+  "- A technical specification such as 128 GB describes the product, not 128 products sold. Never use technical values as numberOfItemsSold.",
   "- A clear singular item (one haircut, a bulb was sold) can have count 1. Do not invent a count when the transcript gives no reliable count or quantity.",
   "- Udhaar requires a customer name. Never use a product name, number, or command word as the customer.",
   "- Expenses should have a short note and the closest category: rent, electricity, salary, transport, packaging, maintenance, stock, or other.",
@@ -251,8 +253,11 @@ function validateAIResult(raw: any, inputTranscript: string) {
       const quantityUnit = normalizeMeasureUnit(typeof item.quantityUnit === "string" ? item.quantityUnit : "");
       let numberOfItemsSold = Number(item.numberOfItemsSold) || 0;
       const packageCount = Number(item.packageCount) || 0;
-      const packageUnit = typeof item.packageUnit === "string" && item.packageUnit.trim().toLowerCase() !== "unspecified" ? item.packageUnit.trim().toLowerCase() : "";
+      const packageUnit = typeof item.packageUnit === "string" && item.packageUnit.trim().toLowerCase() !== "unspecified"
+        ? normalizeMeasureUnit(item.packageUnit).toLowerCase()
+        : "";
 
+      const technicalUnits = new Set(["V", "A", "W", "kWh", "GB", "TB", "PSI", "CC", "GSM"]);
       const quantityUnits = new Set([
         "kg", "g", "mg", "ml", "litre", "quintal", "tonne", "metre", "cm", "mm", "km",
         "µL", "kL", "inch", "ft", "yard", "m²", "sq ft", "acre", "hectare", "m³", "CFT",
@@ -277,7 +282,7 @@ function validateAIResult(raw: any, inputTranscript: string) {
 
       if (!numberOfItemsSold && packageCount > 0) numberOfItemsSold = packageCount;
       if (!numberOfItemsSold && quantity > 0) {
-        numberOfItemsSold = packageUnits.has(quantityUnit) ? quantity : quantityUnits.has(quantityUnit) ? quantity : 1;
+        numberOfItemsSold = technicalUnits.has(quantityUnit) ? 1 : quantity;
       }
       if (!numberOfItemsSold || numberOfItemsSold <= 0 || !Number.isFinite(numberOfItemsSold)) {
         return fail("missing_quantity", selectedTranscript);
