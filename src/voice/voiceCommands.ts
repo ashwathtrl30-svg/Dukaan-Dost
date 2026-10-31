@@ -1,5 +1,5 @@
 import type { ShopType } from '../types';
-import { shopUsesMeasuredQuantity } from '../quantity';
+import { findSaleQuantityUnitPrefix, getSaleQuantityUnitKind, shopUsesMeasuredQuantity } from '../quantity';
 
 export type VoiceTransactionType = 'sale' | 'expense' | 'udhaar';
 
@@ -407,48 +407,14 @@ const MAX_VOICE_BATCH = 5;
 const MAX_VOICE_AMOUNT = 10_000_000;
 
 function matchQuantityUnit(after: string): { unit: string; length: number } | undefined {
-  const match = /^\s*(millilit(?:er|re)s?|ml|milligrams?|mg|kilograms?|kilos?|kgs?|kg|grams?|gms?|gm|g|litres?|liters?|ltr|lt|l|quintals?|tonnes?|tons?|meters?|metres?|m|cm|mm|packets?|packs?|pkts?|pieces?|pcs?|pc|units?|items?|bottles?|boxes?|dozen|dz|bags?|sacks?|pouches?|bundles?|strips?|jars?|cans?|pairs?|trays?|rolls?|sets?|plates?|cups?|glasses?|services?|किलोग्राम|किलो|ग्राम|मिलीलीटर|मिली|एमएल|एम[ ]*एल|लीटर|लिटर|पैकेट|पीस|नग|बोतल|डिब्बा|डिब्बे|दर्जन|पाव|क्विंटल)(?=\s|$|[,;])/iu.exec(after);
-  if (!match) return undefined;
-  const word = match[1].toLowerCase();
-  let unit = word;
-  if (/^(?:kilo|kilogram|kg)/iu.test(word) || word === 'किलो' || word === 'किलोग्राम') unit = 'kg';
-  else if (/^(?:gram|gm|gms|g)$/iu.test(word) || word === 'ग्राम') unit = 'g';
-  else if (/^(?:milliliter|millilitre|ml|मिलीलीटर|मिली|एमएल|एम एल)$/iu.test(word)) unit = 'ml';
-  else if (/^(?:liter|litre|ltr|lt|l)$/iu.test(word) || word === 'लीटर' || word === 'लिटर') unit = 'litre';
-  else if (/^(?:milligram|mg)$/iu.test(word)) unit = 'mg';
-  else if (/^quintal/iu.test(word) || word === 'क्विंटल') unit = 'quintal';
-  else if (/^(?:ton|tonne)/iu.test(word)) unit = 'tonne';
-  else if (/^(?:meter|metre|m)$/iu.test(word)) unit = 'metre';
-  else if (/^cm$/iu.test(word)) unit = 'cm';
-  else if (/^mm$/iu.test(word)) unit = 'mm';
-  else if (/^(?:packet|pack|pkt)/iu.test(word) || word === 'पैकेट') unit = 'packet';
-  else if (/^(?:piece|pc)/iu.test(word) || word === 'पीस' || word === 'नग') unit = 'piece';
-  else if (/^unit/iu.test(word)) unit = 'unit';
-  else if (/^item/iu.test(word)) unit = 'item';
-  else if (/^bottle/iu.test(word) || word === 'बोतल') unit = 'bottle';
-  else if (/^box/iu.test(word) || word === 'डिब्बा' || word === 'डिब्बे') unit = 'box';
-  else if (/^(?:dozen|dz)/iu.test(word) || word === 'दर्जन') unit = 'dozen';
-  else if (/^bag/iu.test(word)) unit = 'bag';
-  else if (/^sack/iu.test(word)) unit = 'sack';
-  else if (/^pouch/iu.test(word)) unit = 'pouch';
-  else if (/^bundle/iu.test(word)) unit = 'bundle';
-  else if (/^strip/iu.test(word)) unit = 'strip';
-  else if (/^jar/iu.test(word)) unit = 'jar';
-  else if (/^can/iu.test(word)) unit = 'can';
-  else if (/^pair/iu.test(word)) unit = 'pair';
-  else if (/^tray/iu.test(word)) unit = 'tray';
-  else if (/^roll/iu.test(word)) unit = 'roll';
-  else if (/^set/iu.test(word)) unit = 'set';
-  else if (/^plate/iu.test(word)) unit = 'plate';
-  else if (/^cup/iu.test(word)) unit = 'cup';
-  else if (/^glass/iu.test(word)) unit = 'glass';
-  else if (/^service/iu.test(word)) unit = 'service';
-  else if (word === 'पाव') unit = 'pav';
-  return { unit, length: match[0].length };
+  const match = findSaleQuantityUnitPrefix(after);
+  return match ? { unit: match.unit, length: match.length } : undefined;
 }
 
 function isMeasureQuantityUnit(unit: string | undefined): boolean {
-  return Boolean(unit && ['kg', 'g', 'mg', 'ml', 'litre', 'quintal', 'tonne', 'metre', 'cm', 'mm', 'pav'].includes(unit));
+  if (!unit) return false;
+  const kind = getSaleQuantityUnitKind(unit);
+  return kind === 'measure' || kind === 'technical';
 }
 
 function isQuantitySpan(span: AmountSpan, text: string): boolean {
@@ -621,7 +587,7 @@ function cleanSaleItemName(segment: string): {
 
   if (quantity !== undefined && quantityUnit) {
     if (isMeasureQuantityUnit(quantityUnit)) {
-      numberOfItemsSold ??= quantity;
+      numberOfItemsSold ??= getSaleQuantityUnitKind(quantityUnit) === 'technical' ? 1 : quantity;
       if (extraPackage) {
         packageCount = extraPackage.amount;
         packageUnit = extraPackage.unit;
@@ -837,10 +803,7 @@ export function parseVoiceTransactions(input: string, shopType?: ShopType | null
       if (shopType !== undefined && tracksMeasuredQuantity && !parsedItem.quantity && !parsedItem.numberOfItemsSold) {
         return { transactions: [], error: 'missing_quantity' };
       }
-      const shouldSaveMeasuredQuantity = Boolean(
-        parsedItem.quantity && parsedItem.quantityUnit &&
-        (isMeasureQuantityUnit(parsedItem.quantityUnit) || shopType === undefined),
-      );
+      const shouldSaveQuantity = Boolean(parsedItem.quantity && parsedItem.quantityUnit);
       const totalAmount = isPerUnitPriceSpan(span, text)
         ? span.amount * numberOfItemsSold
         : span.amount;
@@ -849,7 +812,7 @@ export function parseVoiceTransactions(input: string, shopType?: ShopType | null
         amount: Math.round(totalAmount),
         itemName: parsedItem.itemName,
         ...(shopType !== undefined ? { numberOfItemsSold } : {}),
-        ...(shouldSaveMeasuredQuantity
+        ...(shouldSaveQuantity
           ? { quantity: parsedItem.quantity, quantityUnit: parsedItem.quantityUnit }
           : {}),
         ...(parsedItem.packageCount && parsedItem.packageUnit
