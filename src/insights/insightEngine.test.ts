@@ -14,24 +14,25 @@ function sale(
   itemName: string,
   paymentType: SaleEntry['paymentType'] = 'cash',
   hour = 10,
+  units = 1,
 ): SaleEntry {
   return {
     id,
     date,
     amount,
     itemName,
-    numberOfItemsSold: 1,
+    numberOfItemsSold: units,
     paymentType,
     createdAt: new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)), hour).getTime(),
   };
 }
 
-function expense(id: string, date: string, amount: number): ExpenseEntry {
+function expense(id: string, date: string, amount: number, category = 'stock'): ExpenseEntry {
   return {
     id,
     date,
     amount,
-    category: 'stock',
+    category,
     createdAt: new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8, 10)), 11).getTime(),
   };
 }
@@ -78,28 +79,21 @@ const sampleSales = [
   sale('s11', '2026-09-30', 90, 'Fortune Soya', 'cash', 10),
 ];
 
-test('always renders 6 Today, 7 This Week and 8 This Month insights', () => {
+test('renders exactly 2 Today, 3 This Week and 5 This Month insights', () => {
   const cards = build(sampleSales, [expense('e1', today, 50)]);
-  assert.deepEqual(countsByPeriod(cards), INSIGHT_TARGET_COUNTS);
-  assert.equal(cards.length, 21);
+  assert.deepEqual(INSIGHT_TARGET_COUNTS, { day: 2, week: 3, month: 5 });
+  assert.deepEqual(countsByPeriod(cards), { day: 2, week: 3, month: 5 });
+  assert.equal(cards.length, 10);
+  assert.equal(cards.some(card => /data is still building/i.test(card.title)), false);
 });
 
-test('a shop that never gives udhaar gets useful payment insights instead of udhaar cards', () => {
+test('a shop that never gives udhaar does not receive credit-risk advice in Insights', () => {
   const cards = build(sampleSales, [expense('e1', today, 50)], [], 'never');
-  const todayCards = cards.filter(card => card.period === 'day');
-  const weekCards = cards.filter(card => card.period === 'week');
-  const monthCards = cards.filter(card => card.period === 'month');
-
-  assert.equal(todayCards.length, 6);
-  assert.equal(weekCards.length, 7);
-  assert.equal(monthCards.length, 8);
-  assert.ok(todayCards.some(card => card.title === 'Cash and UPI payment mix'));
-  assert.ok(monthCards.some(card => card.title === 'Cash and UPI payment mix'));
-  assert.ok(weekCards.some(card => card.title === 'Sales vary across recorded days' || card.title === 'More recorded days are needed for a weekly operating pattern'));
+  assert.equal(cards.length, 10);
   assert.equal(cards.some(card => /udhaar|credit balance/i.test(card.title)), false);
 });
 
-test('a shop that uses udhaar gets a credit insight while retaining all insight slots', () => {
+test('a shop that uses udhaar sees an overdue-credit risk when a due date has passed', () => {
   const credit: UdhaarEntry = {
     id: 'u1',
     customerName: 'Customer',
@@ -111,30 +105,77 @@ test('a shop that uses udhaar gets a credit insight while retaining all insight 
   };
   const sales = [...sampleSales, sale('s12', today, 250, 'Rice', 'udhaar', 16)];
   const cards = build(sales, [expense('e1', today, 50)], [credit], 'sometimes');
-
-  assert.deepEqual(countsByPeriod(cards), INSIGHT_TARGET_COUNTS);
-  assert.ok(cards.some(card => card.title === 'Udhaar and outstanding balance'));
+  const risk = cards.find(card => card.period === 'month' && card.title === 'Some recorded udhaar is overdue');
+  assert.ok(risk);
 });
 
-test('Today comparisons use yesterday sales only up to the current local time', () => {
+test('Today comparisons use yesterday sales and expenses only up to the current local time', () => {
   const sales = [
     sale('today', today, 150, 'Rice', 'cash', 10),
     sale('yesterday-morning', '2026-10-30', 100, 'Rice', 'cash', 9),
     sale('yesterday-evening', '2026-10-30', 900, 'Rice', 'cash', 20),
   ];
-  const cards = build(sales);
-  const salesCard = cards.find(card => card.period === 'day' && card.title === 'Today sales and average recorded sale');
-  assert.ok(salesCard);
-  assert.match(salesCard.description, /50% higher/);
+  const expenses = [
+    expense('today-cost', today, 40),
+    { ...expense('yesterday-morning-cost', '2026-10-30', 20), createdAt: new Date(2026, 9, 30, 9).getTime() },
+    { ...expense('yesterday-evening-cost', '2026-10-30', 500), createdAt: new Date(2026, 9, 30, 20).getTime() },
+  ];
+  const cards = build(sales, expenses);
+  const performance = cards.find(card => card.period === 'day' && card.title === "Today's sales and expense performance");
+  assert.ok(performance);
+  assert.match(performance.description, /50% higher/);
+  assert.doesNotMatch(performance.description, /500/);
 });
 
-test('service businesses receive service-specific insight wording', () => {
+test('bestseller ranking is based on units sold, not revenue', () => {
   const sales = [
-    sale('a', today, 300, 'Haircut', 'cash', 9),
-    sale('b', today, 500, 'Hair colour', 'upi', 18),
-    sale('c', today, 300, 'Haircut', 'cash', 19),
+    sale('premium', today, 10000, 'Premium Item', 'cash', 10, 1),
+    sale('value-1', today, 100, 'Value Item', 'cash', 11, 3),
+    sale('value-2', '2026-10-30', 100, 'Value Item', 'cash', 12, 2),
+    sale('premium-2', '2026-10-29', 10000, 'Premium Item', 'cash', 13, 1),
+  ];
+  const cards = build(sales);
+  const productInsight = cards.find(card => card.period === 'week' && card.title === 'Best-selling products by units sold');
+  assert.ok(productInsight);
+  assert.ok(productInsight.description.indexOf('Value Item') < productInsight.description.indexOf('Premium Item'));
+  assert.match(productInsight.description, /Value Item — 5 items\/packs/);
+  assert.match(productInsight.description, /Ranking is based on quantity sold, never revenue/);
+});
+
+test('products without recorded quantities are not falsely ranked by revenue', () => {
+  const sales = [
+    { ...sale('premium', today, 10000, 'Premium Item'), numberOfItemsSold: undefined },
+    { ...sale('cheap', today, 100, 'Cheap Item'), numberOfItemsSold: undefined },
+  ];
+  const cards = build(sales);
+  const productInsight = cards.find(card => card.period === 'week' && card.title === 'Best-selling products cannot be identified yet');
+  assert.equal(productInsight, undefined);
+  const weekInsight = cards.find(card => card.period === 'week' && /cannot be identified yet/.test(card.title));
+  assert.ok(weekInsight);
+  assert.match(weekInsight.description, /revenue alone does not determine a bestseller/i);
+});
+
+test('service businesses receive service-specific peak-hour and weekly performance wording', () => {
+  const sales = [
+    sale('a', today, 300, 'Haircut', 'cash', 9, 2),
+    sale('b', today, 500, 'Hair colour', 'upi', 18, 1),
+    sale('c', today, 300, 'Haircut', 'cash', 19, 3),
   ];
   const cards = build(sales, [], [], 'never', 'salon');
-  assert.ok(cards.some(card => card.title === 'Top-performing service'));
-  assert.ok(cards.some(card => card.title === 'Your busiest recorded time'));
+  assert.ok(cards.some(card => card.title === 'Your peak customer hours'));
+  assert.ok(cards.some(card => card.title === 'Most frequently completed services'));
+});
+
+test('monthly product mix reports category revenue and unit-based product leaders', () => {
+  const sales = [
+    { ...sale('a', today, 500, 'Soap', 'cash', 9, 10), category: 'Personal Care' },
+    { ...sale('b', today, 1000, 'Shampoo', 'upi', 10, 2), category: 'Personal Care' },
+    { ...sale('c', today, 200, 'Rice', 'cash', 11, 5), category: 'Grocery' },
+  ];
+  const cards = build(sales);
+  const mix = cards.find(card => card.period === 'month' && card.title === 'Product and category sales mix');
+  assert.ok(mix);
+  assert.match(mix.description, /Soap \(10 items\/packs\)/);
+  assert.match(mix.description, /largest recorded category is Personal Care/);
+  assert.match(mix.description, /highest number of units sold, not the highest revenue/);
 });
