@@ -149,9 +149,7 @@ export function isCountableSaleQuantityUnit(value: string): boolean {
 /** Find a recognised unit at the start of a voice-parser suffix, case-insensitively. */
 export function findSaleQuantityUnitPrefix(value: string): { unit: string; kind: SaleQuantityUnitKind; length: number } | null {
   for (const candidate of PREFIX_ALIASES) {
-    const escaped = candidate.alias
-      .replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')
-      .replace(/\\ /gu, '\\s+');
+    const escaped = escapeRegExp(candidate.alias);
     const match = new RegExp('^\\s*(' + escaped + ')(?=\\s|$|[,;])', 'iu').exec(value);
     if (match) {
       return {
