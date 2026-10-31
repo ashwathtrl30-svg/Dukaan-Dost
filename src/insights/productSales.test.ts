@@ -82,3 +82,34 @@ test('recognises legacy pack-size units such as 500 g packet', () => {
   assert.equal(result[0].unitsSold, 2);
   assert.deepEqual(result[0].sizes, [{ label: '500 g', unitsSold: 2 }]);
 });
+
+
+test('counts discrete piece, packaging and service quantities for bestsellers', () => {
+  const result = aggregateProductSales([
+    sale({ itemName: 'Chewing Gum', numberOfItemsSold: undefined, quantity: 8, quantityUnit: 'piece' }),
+    sale({ itemName: 'Chewing Gum', numberOfItemsSold: undefined, quantity: 5, quantityUnit: 'PCS' }),
+    sale({ itemName: 'Water Bottle', numberOfItemsSold: undefined, quantity: 3, quantityUnit: 'bottle' }),
+    sale({ itemName: 'Haircut', numberOfItemsSold: undefined, quantity: 2, quantityUnit: 'session' }),
+  ]);
+
+  assert.equal(result.find(item => item.name === 'Chewing Gum')?.unitsSold, 13);
+  assert.equal(result.find(item => item.name === 'Water Bottle')?.unitsSold, 3);
+  assert.equal(result.find(item => item.name === 'Haircut')?.unitsSold, 2);
+});
+
+test('does not mistake technical specifications for product counts', () => {
+  const result = aggregateProductSales([
+    sale({ itemName: 'Memory Card', numberOfItemsSold: undefined, quantity: 128, quantityUnit: 'GB' }),
+    sale({ itemName: 'Copper Wire', numberOfItemsSold: undefined, quantity: 10, quantityUnit: 'metre' }),
+  ]);
+  assert.equal(result.length, 0);
+});
+
+test('normalises case variations in package and count units', () => {
+  const result = aggregateProductSales([
+    sale({ itemName: 'Cable Tie', numberOfItemsSold: undefined, quantity: 4, quantityUnit: 'PaIr' }),
+    sale({ itemName: 'Cable Tie', numberOfItemsSold: undefined, quantity: 3, quantityUnit: 'SET' }),
+  ]);
+  assert.equal(result[0]?.unitsSold, 7);
+  assert.deepEqual(result[0]?.sizes.map(size => size.label).sort(), ['pair', 'set']);
+});
