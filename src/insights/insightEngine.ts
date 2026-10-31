@@ -1,5 +1,6 @@
 import type { PeriodMetrics, InsightsPeriod } from './analytics';
 import { aggregateProductSales, normalizeProductIdentity } from './productSales';
+import { t } from '../i18n';
 import type { ExpenseEntry, SaleEntry, ShopType, UdhaarEntry, UdhaarLevel } from '../types';
 
 export type InsightTone = 'warning' | 'positive' | 'info';
@@ -93,9 +94,9 @@ function createInsight(
   return { period, tone, title, description, priority: 0 };
 }
 
-function itemSummaries(sales: SaleEntry[], range: PeriodMetrics['range']): ItemSummary[] {
+function itemSummariesFromEntries(entries: SaleEntry[]): ItemSummary[] {
   const rows = new Map<string, ItemSummary>();
-  saleEntriesInRange(sales, range).forEach(entry => {
+  entries.forEach(entry => {
     if (typeof entry.itemName !== 'string' || !entry.itemName.trim()) return;
     const key = normalizeProductIdentity(entry.itemName);
     if (!key) return;
@@ -111,12 +112,16 @@ function itemSummaries(sales: SaleEntry[], range: PeriodMetrics['range']): ItemS
     rows.set(key, row);
   });
 
-  aggregateProductSales(sales, range).forEach(product => {
+  aggregateProductSales(entries).forEach(product => {
     const row = rows.get(product.key);
     if (row) row.unitsSold = product.unitsSold;
   });
 
   return [...rows.values()];
+}
+
+function itemSummaries(sales: SaleEntry[], range: PeriodMetrics['range']): ItemSummary[] {
+  return itemSummariesFromEntries(saleEntriesInRange(sales, range));
 }
 
 function itemType(shopType: ShopType | null, language: 'en' | 'hi'): string {
@@ -142,10 +147,12 @@ function buildSalesPerformance(
 
   const average = totalAmount(entries) / entries.length;
   let comparison = '';
+  let comparisonChange: number | null = metrics.period === 'day' ? null : metrics.salesChange;
   if (metrics.period === 'day') {
     const previous = comparisonSales(metrics, sales, now);
     const previousTotal = totalAmount(previous);
     const change = percentChange(metrics.sales, previousTotal);
+    comparisonChange = change;
     comparison = change === null
       ? (language === 'hi'
           ? ' अभी कल के इसी समय तक का पर्याप्त आधार नहीं है।'
@@ -163,7 +170,7 @@ function buildSalesPerformance(
       : ' There is not enough previous-period data for a reliable comparison yet.';
   }
 
-  return createInsight(metrics.period, metrics.salesChange !== null && metrics.salesChange < -10 ? 'warning' : 'positive',
+  return createInsight(metrics.period, comparisonChange !== null && comparisonChange < -10 ? 'warning' : 'positive',
     language === 'hi' ? label + ' की बिक्री और औसत बिल' : label + ' sales and average recorded sale',
     language === 'hi'
       ? 'कुल बिक्री ' + money(metrics.sales) + ' है। ' + entries.length + ' बिक्री एंट्री का औसत ' + money(average) + ' है।' + comparison
@@ -203,9 +210,13 @@ function buildProductMovement(
   metrics: PeriodMetrics,
   sales: SaleEntry[],
   language: 'en' | 'hi',
+  now: Date,
 ): BusinessInsight {
   const current = itemSummaries(sales, metrics.range);
-  const previous = itemSummaries(sales, metrics.previousRange);
+  const previousEntries = comparisonSales(metrics, sales, now);
+  const previous = metrics.period === 'day'
+    ? itemSummariesFromEntries(previousEntries)
+    : itemSummaries(sales, metrics.previousRange);
   const previousByKey = new Map(previous.map(item => [item.key, item]));
   const movements = current.map(item => {
     const prior = previousByKey.get(item.key);
@@ -363,10 +374,11 @@ function buildUdhaarInsight(
   sales: SaleEntry[],
   udhaar: UdhaarEntry[],
   language: 'en' | 'hi',
+  now: Date,
 ): BusinessInsight {
   const outstanding = udhaar.filter(entry => !entry.paid && Number(entry.amount) > 0);
   const outstandingTotal = totalAmount(outstanding);
-  const todayKey = new Date().getFullYear() + '-' + String(new Date().getMonth() + 1).padStart(2, '0') + '-' + String(new Date().getDate()).padStart(2, '0');
+  const todayKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
   const overdue = outstanding.filter(entry => Boolean(entry.dueDate && entry.dueDate < todayKey));
   const newCreditEntries = saleEntriesInRange(sales, metrics.range).filter(entry => entry.paymentType === 'udhaar');
   const separateCreditEntries = udhaar.filter(entry => entry.date >= metrics.range.start && entry.date <= metrics.range.end);
@@ -415,7 +427,7 @@ function buildPeakTimeInsight(
     groups.set(window.label, current);
   });
 
-  if (entries.length >= minRecords && groups.size >= 2) {
+  if (entries.length >= minRecords && groups.size >= 1) {
     const best = [...groups.entries()].sort((a, b) => b[1].amount - a[1].amount)[0];
     const name = language === 'hi' ? windows.find(item => item.label === best[0])?.hi || best[0] : best[0];
     const subject = SERVICE_SHOPS.has(shopType || 'other')
@@ -617,7 +629,7 @@ function buildUdhaarOrPaymentInsight(
     level === 'often'
   );
   return exists
-    ? buildUdhaarInsight(metrics, sales, udhaar, language)
+    ? buildUdhaarInsight(metrics, sales, udhaar, language, now)
     : buildPaymentMix(metrics, sales, language, now);
 }
 
@@ -627,13 +639,10 @@ function fillPeriod(
 ): BusinessInsight[] {
   const target = TARGET_COUNTS[period];
   const result = cards.slice(0, target);
-  const fallbackTitles = new Set(result.map(item => item.title));
-  let suffix = 1;
   while (result.length < target) {
     result.push(createInsight(period, 'info',
-      'Keep recording business activity',
-      'More consistent sales and expense records will unlock additional business comparisons (' + suffix + ').'));
-    suffix += 1;
+      periodLabel(period, 'en') + ' data is still building',
+      'Keep recording sales and expenses to unlock another reliable business signal.'));
   }
   return result.map(item => ({ ...item, period }));
 }
@@ -659,7 +668,7 @@ export function buildBusinessInsights(input: InsightEngineInput): BusinessInsigh
     buildProfitabilityInsight(week, language),
     buildExpenseInsight(week, expenses, language, now),
     shouldShowUdhaar(udhaarLevel, sales, udhaar)
-      ? buildUdhaarInsight(week, sales, udhaar, language)
+      ? buildUdhaarInsight(week, sales, udhaar, language, now)
       : buildDayPatternInsight(week, sales, language),
   ];
 
@@ -671,7 +680,7 @@ export function buildBusinessInsights(input: InsightEngineInput): BusinessInsigh
     buildInventoryMovementInsight(month, sales, shopType, language),
     buildExpenseInsight(month, expenses, language, now),
     shouldShowUdhaar(udhaarLevel, sales, udhaar)
-      ? buildUdhaarInsight(month, sales, udhaar, language)
+      ? buildUdhaarInsight(month, sales, udhaar, language, now)
       : buildPaymentMix(month, sales, language, now),
     buildConcentrationInsight(month, sales, language),
   ];
