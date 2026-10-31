@@ -362,7 +362,7 @@ function getInsightCards(
     return make('day', 'warning',
       lang === 'hi' ? 'दुकान का बकाया उधार ₹1,000 से ज़्यादा है' : 'Outstanding shop udhaar is above ₹1,000',
       lang === 'hi'
-        ? 'कुल ' + formatRupee(outstandingAmount) + ' का उधार ' + outstandingUdhaar.length + ' ग्राहकों से बाकी है' + (overdue.length > 0 ?। इनमें ' + overdue.length + ' ग्राहकों की तय तारीख़ निकल चुकी है' : '') + '। बड़े बकाये पर समय रहते विनम्रता से फ़ॉलो-अप करें।'
+        ? 'कुल ' + formatRupee(outstandingAmount) + ' का उधार ' + outstandingUdhaar.length + ' ग्राहकों से बाकी है' + (overdue.length > 0 ? '। इनमें ' + overdue.length + ' ग्राहकों की तय तारीख़ निकल चुकी है' : '') + '। बड़े बकाये पर समय रहते विनम्रता से फ़ॉलो-अप करें।'
         : formatRupee(outstandingAmount) + ' remains unpaid across ' + outstandingUdhaar.length + ' customer balance(s)' + (overdue.length > 0 ? ', including ' + overdue.length + ' that are past their due date' : '') + '. Follow up politely before the balance grows further.');
   };
 
