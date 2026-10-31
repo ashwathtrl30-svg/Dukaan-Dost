@@ -1,30 +1,194 @@
 import type { ShopType } from './types';
 
 export interface ParsedSaleQuantity {
-  /** Main measured or counted quantity, e.g. 500 ml, 2 kg or 3 packets. */
+  /** Main measured or counted quantity, e.g. 500 ml, 2 kg, 3 packets or 1 pair. */
   quantity: number;
   quantityUnit: string;
-  /** Optional package count when both a pack count and a total measure are supplied. */
+  /** Optional pack/count when a package count and a separate measure are supplied. */
   packageCount?: number;
   packageUnit?: string;
 }
 
-type QuantityUnitKind = 'measure' | 'package';
-type NormalizedUnit = { unit: string; kind: QuantityUnitKind };
+export type SaleQuantityUnitKind = 'measure' | 'count' | 'package' | 'service' | 'technical';
+type NormalizedUnit = { unit: string; kind: SaleQuantityUnitKind };
 
-const MEASUREMENT_UNITS = new Set([
-  'kg', 'g', 'mg', 'ml', 'litre', 'quintal', 'tonne', 'metre', 'cm', 'mm',
-]);
-
-/** Weight/volume is useful for grocery and produce-style shops, not most service or piece-based shops. */
-export function shopUsesMeasuredQuantity(shopType: ShopType | null | undefined): boolean {
-  if (!shopType) return true;
-  return ['kirana', 'vegetable', 'bakery', 'sweet', 'other'].includes(shopType);
+interface UnitDefinition {
+  unit: string;
+  kind: SaleQuantityUnitKind;
+  aliases: string[];
 }
 
-/** The measured-quantity input accepts weight/volume/length units only. */
-export function isMeasuredSaleQuantity(value: ParsedSaleQuantity | null): value is ParsedSaleQuantity {
-  return Boolean(value && MEASUREMENT_UNITS.has(value.quantityUnit) && !value.packageCount);
+/**
+ * Unit vocabulary for Indian local businesses. Matching is case-insensitive:
+ * KG, kg, Kg and kG all resolve to the same canonical unit.
+ */
+const UNIT_DEFINITIONS: UnitDefinition[] = [
+  { unit: 'mg', kind: 'measure', aliases: ['mg', 'milligram', 'milligrams'] },
+  { unit: 'g', kind: 'measure', aliases: ['g', 'gm', 'gms', 'gram', 'grams'] },
+  { unit: 'kg', kind: 'measure', aliases: ['kg', 'kgs', 'kilo', 'kilos', 'kilogram', 'kilograms', 'किलो', 'किलोग्राम'] },
+  { unit: 'quintal', kind: 'measure', aliases: ['quintal', 'quintals', 'qtl', 'qtls', 'क्विंटल'] },
+  { unit: 'tonne', kind: 'measure', aliases: ['tonne', 'tonnes', 'ton', 'tons', 'metric ton', 'metric tons'] },
+
+  { unit: 'µL', kind: 'measure', aliases: ['µL', 'μL', 'uL', 'ul', 'microlitre', 'microlitres', 'microliter', 'microliters'] },
+  { unit: 'ml', kind: 'measure', aliases: ['ml', 'millilitre', 'millilitres', 'milliliter', 'milliliters', 'मिली', 'मिलीलीटर', 'एमएल', 'एम एल'] },
+  { unit: 'litre', kind: 'measure', aliases: ['l', 'lt', 'ltr', 'litre', 'litres', 'liter', 'liters', 'लीटर', 'लिटर'] },
+  { unit: 'kL', kind: 'measure', aliases: ['kl', 'kilolitre', 'kilolitres', 'kiloliter', 'kiloliters'] },
+
+  { unit: 'mm', kind: 'measure', aliases: ['mm', 'millimetre', 'millimetres', 'millimeter', 'millimeters'] },
+  { unit: 'cm', kind: 'measure', aliases: ['cm', 'centimetre', 'centimetres', 'centimeter', 'centimeters'] },
+  { unit: 'metre', kind: 'measure', aliases: ['m', 'meter', 'meters', 'metre', 'metres'] },
+  { unit: 'km', kind: 'measure', aliases: ['km', 'kilometre', 'kilometres', 'kilometer', 'kilometers'] },
+  { unit: 'inch', kind: 'measure', aliases: ['inch', 'inches', 'in'] },
+  { unit: 'ft', kind: 'measure', aliases: ['ft', 'foot', 'feet'] },
+  { unit: 'yard', kind: 'measure', aliases: ['yard', 'yards', 'yd', 'yds'] },
+
+  { unit: 'm²', kind: 'measure', aliases: ['m²', 'm2', 'sq m', 'sqm', 'square metre', 'square metres', 'square meter', 'square meters'] },
+  { unit: 'sq ft', kind: 'measure', aliases: ['sq ft', 'sq. ft.', 'sq.ft.', 'sqft', 'square foot', 'square feet'] },
+  { unit: 'acre', kind: 'measure', aliases: ['acre', 'acres'] },
+  { unit: 'hectare', kind: 'measure', aliases: ['hectare', 'hectares', 'ha'] },
+  { unit: 'm³', kind: 'measure', aliases: ['m³', 'm3', 'cu m', 'cubic metre', 'cubic metres', 'cubic meter', 'cubic meters'] },
+  { unit: 'CFT', kind: 'measure', aliases: ['cft', 'cu ft', 'cubic foot', 'cubic feet', 'cubic ft'] },
+
+  { unit: 'piece', kind: 'count', aliases: ['piece', 'pieces', 'pc', 'pcs', 'no', 'nos', 'नग', 'पीस'] },
+  { unit: 'unit', kind: 'count', aliases: ['unit', 'units'] },
+  { unit: 'pair', kind: 'count', aliases: ['pair', 'pairs'] },
+  { unit: 'set', kind: 'count', aliases: ['set', 'sets'] },
+  { unit: 'dozen', kind: 'count', aliases: ['dozen', 'dozens', 'dz', 'दर्जन'] },
+  { unit: 'bunch', kind: 'count', aliases: ['bunch', 'bunches'] },
+
+  { unit: 'packet', kind: 'package', aliases: ['packet', 'packets', 'pack', 'packs', 'pkt', 'pkts', 'पैकेट'] },
+  { unit: 'box', kind: 'package', aliases: ['box', 'boxes', 'डिब्बा', 'डिब्बे'] },
+  { unit: 'carton', kind: 'package', aliases: ['carton', 'cartons', 'ctn'] },
+  { unit: 'case', kind: 'package', aliases: ['case', 'cases'] },
+  { unit: 'bag', kind: 'package', aliases: ['bag', 'bags'] },
+  { unit: 'sack', kind: 'package', aliases: ['sack', 'sacks'] },
+  { unit: 'tray', kind: 'package', aliases: ['tray', 'trays'] },
+  { unit: 'bottle', kind: 'package', aliases: ['bottle', 'bottles', 'बोतल'] },
+  { unit: 'roll', kind: 'package', aliases: ['roll', 'rolls'] },
+
+  { unit: 'job', kind: 'service', aliases: ['job', 'jobs'] },
+  { unit: 'session', kind: 'service', aliases: ['session', 'sessions'] },
+  { unit: 'appointment', kind: 'service', aliases: ['appointment', 'appointments', 'appt', 'appts'] },
+  { unit: 'visit', kind: 'service', aliases: ['visit', 'visits'] },
+  { unit: 'booking', kind: 'service', aliases: ['booking', 'bookings'] },
+  { unit: 'hour', kind: 'measure', aliases: ['hour', 'hours', 'hr', 'hrs'] },
+  { unit: 'day', kind: 'measure', aliases: ['day', 'days'] },
+
+  { unit: 'V', kind: 'technical', aliases: ['v', 'volt', 'volts'] },
+  { unit: 'A', kind: 'technical', aliases: ['a', 'amp', 'amps', 'ampere', 'amperes'] },
+  { unit: 'W', kind: 'technical', aliases: ['w', 'watt', 'watts'] },
+  { unit: 'kWh', kind: 'technical', aliases: ['kwh', 'kilowatt hour', 'kilowatt hours', 'kilowatt-hour', 'kilowatt-hours'] },
+  { unit: 'GB', kind: 'technical', aliases: ['gb', 'gigabyte', 'gigabytes'] },
+  { unit: 'TB', kind: 'technical', aliases: ['tb', 'terabyte', 'terabytes'] },
+  { unit: 'PSI', kind: 'technical', aliases: ['psi', 'pounds per square inch'] },
+  { unit: 'CC', kind: 'technical', aliases: ['cc', 'cubic centimetre', 'cubic centimetres', 'cubic centimeter', 'cubic centimeters'] },
+  { unit: 'GSM', kind: 'technical', aliases: ['gsm', 'grams per square metre', 'grams per square meter'] },
+
+  // Retain previously supported units so older products and voice phrases keep working.
+  { unit: 'pav', kind: 'measure', aliases: ['pav', 'पाव'] },
+  { unit: 'item', kind: 'count', aliases: ['item', 'items'] },
+  { unit: 'pouch', kind: 'package', aliases: ['pouch', 'pouches'] },
+  { unit: 'bundle', kind: 'package', aliases: ['bundle', 'bundles'] },
+  { unit: 'strip', kind: 'package', aliases: ['strip', 'strips'] },
+  { unit: 'jar', kind: 'package', aliases: ['jar', 'jars'] },
+  { unit: 'can', kind: 'package', aliases: ['can', 'cans'] },
+  { unit: 'plate', kind: 'count', aliases: ['plate', 'plates'] },
+  { unit: 'cup', kind: 'count', aliases: ['cup', 'cups'] },
+  { unit: 'glass', kind: 'count', aliases: ['glass', 'glasses'] },
+  { unit: 'service', kind: 'service', aliases: ['service', 'services'] },
+];
+
+function normalizeUnitKey(value: string): string {
+  return value
+    .normalize('NFKC')
+    .toLocaleLowerCase()
+    .replace(/[µμ]/gu, 'u')
+    .replace(/\./gu, '')
+    .replace(/\s+/gu, ' ')
+    .trim();
+}
+
+const UNIT_ALIASES: Record<string, NormalizedUnit> = {};
+const PREFIX_ALIASES: Array<{ alias: string; normalized: NormalizedUnit }> = [];
+UNIT_DEFINITIONS.forEach(definition => {
+  definition.aliases.forEach(alias => {
+    UNIT_ALIASES[normalizeUnitKey(alias)] = { unit: definition.unit, kind: definition.kind };
+    PREFIX_ALIASES.push({ alias, normalized: { unit: definition.unit, kind: definition.kind } });
+  });
+});
+PREFIX_ALIASES.sort((a, b) => b.alias.length - a.alias.length);
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&').replace(/\\ /gu, '\\s+');
+}
+
+function getLegacyPackSizeUnit(value: string): string | null {
+  const match = /^(\d+(?:\.\d+)?)\s*(g|gm|gms|gram|grams|kg|kgs|kilo|kilos|ml|l|litre|litres|liter|liters)\s*(?:packet|pack|pkt)$/iu.exec(value.trim());
+  if (!match) return null;
+  const measure = UNIT_ALIASES[normalizeUnitKey(match[2])];
+  return measure ? match[1] + ' ' + measure.unit + ' packet' : null;
+}
+
+/** Normalise a supported unit or common short form to the app's stored unit. */
+export function normalizeSaleQuantityUnit(value: string): string | null {
+  const legacyPackSize = getLegacyPackSizeUnit(value);
+  if (legacyPackSize) return legacyPackSize;
+  return UNIT_ALIASES[normalizeUnitKey(value)]?.unit || null;
+}
+
+export function getSaleQuantityUnitKind(value: string): SaleQuantityUnitKind | null {
+  if (/^\d+(?:\.\d+)?\s+.+\s+packet$/iu.test(value.trim())) return 'package';
+  return UNIT_ALIASES[normalizeUnitKey(value)]?.kind || null;
+}
+
+export function isCountableSaleQuantityUnit(value: string): boolean {
+  const kind = getSaleQuantityUnitKind(value);
+  return kind === 'count' || kind === 'package' || kind === 'service';
+}
+
+/** Find a recognised unit at the start of a voice-parser suffix, case-insensitively. */
+export function findSaleQuantityUnitPrefix(value: string): { unit: string; kind: SaleQuantityUnitKind; length: number } | null {
+  for (const candidate of PREFIX_ALIASES) {
+    const escaped = candidate.alias
+      .replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')
+      .replace(/\\ /gu, '\\s+');
+    const match = new RegExp('^\\s*(' + escaped + ')(?=\\s|$|[,;])', 'iu').exec(value);
+    if (match) {
+      return {
+        unit: candidate.normalized.unit,
+        kind: candidate.normalized.kind,
+        length: match[0].length,
+      };
+    }
+  }
+  return null;
+}
+
+/** Backward-compatible helper; the current quantity field supports every unit family. */
+export function shopUsesMeasuredQuantity(shopType: ShopType | null | undefined): boolean {
+  return Boolean(shopType || !shopType);
+}
+
+/** Validate any supported weight, size, count, package, service or technical quantity. */
+export function isValidSaleQuantity(value: ParsedSaleQuantity | null): value is ParsedSaleQuantity {
+  if (!value || !Number.isFinite(value.quantity) || value.quantity <= 0) return false;
+  if (!getSaleQuantityUnitKind(value.quantityUnit)) return false;
+  if (value.packageCount !== undefined) {
+    if (!Number.isFinite(value.packageCount) || value.packageCount <= 0 || !value.packageUnit) return false;
+    const packageKind = getSaleQuantityUnitKind(value.packageUnit);
+    if (!packageKind || !(packageKind === 'count' || packageKind === 'package' || packageKind === 'service')) return false;
+  }
+  return true;
+}
+
+/** Legacy name retained for existing imports; it now validates all supported units. */
+export const isMeasuredSaleQuantity = isValidSaleQuantity;
+
+/** For discrete sale units, quantity is also the number of products/packs/services sold. */
+export function getSaleItemCountFromQuantity(value: ParsedSaleQuantity | null): number | null {
+  if (!isValidSaleQuantity(value)) return null;
+  if (Number.isFinite(value.packageCount) && Number(value.packageCount) > 0) return Number(value.packageCount);
+  return isCountableSaleQuantityUnit(value.quantityUnit) ? value.quantity : null;
 }
 
 export function getSaleNameLabel(shopType: ShopType | null | undefined, language: 'en' | 'hi'): string {
@@ -76,85 +240,25 @@ export function getSaleCountCopy(shopType: ShopType | null | undefined, language
     : { inputLabel: 'Number of items sold *', summaryLabel: 'items sold', displayLabel: 'Items sold' };
 }
 
-const UNIT_ALIASES: Record<string, NormalizedUnit> = {
-  kg: { unit: 'kg', kind: 'measure' }, kgs: { unit: 'kg', kind: 'measure' },
-  kilo: { unit: 'kg', kind: 'measure' }, kilos: { unit: 'kg', kind: 'measure' },
-  kilogram: { unit: 'kg', kind: 'measure' }, kilograms: { unit: 'kg', kind: 'measure' },
-  g: { unit: 'g', kind: 'measure' }, gm: { unit: 'g', kind: 'measure' },
-  gms: { unit: 'g', kind: 'measure' }, gram: { unit: 'g', kind: 'measure' },
-  grams: { unit: 'g', kind: 'measure' },
-  mg: { unit: 'mg', kind: 'measure' }, milligram: { unit: 'mg', kind: 'measure' },
-  milligrams: { unit: 'mg', kind: 'measure' },
-  ml: { unit: 'ml', kind: 'measure' }, milliliter: { unit: 'ml', kind: 'measure' },
-  milliliters: { unit: 'ml', kind: 'measure' }, millilitre: { unit: 'ml', kind: 'measure' },
-  millilitres: { unit: 'ml', kind: 'measure' },
-  l: { unit: 'litre', kind: 'measure' }, lt: { unit: 'litre', kind: 'measure' },
-  ltr: { unit: 'litre', kind: 'measure' }, litre: { unit: 'litre', kind: 'measure' },
-  litres: { unit: 'litre', kind: 'measure' }, liter: { unit: 'litre', kind: 'measure' },
-  liters: { unit: 'litre', kind: 'measure' },
-  quintal: { unit: 'quintal', kind: 'measure' }, quintals: { unit: 'quintal', kind: 'measure' },
-  ton: { unit: 'tonne', kind: 'measure' }, tons: { unit: 'tonne', kind: 'measure' },
-  tonne: { unit: 'tonne', kind: 'measure' }, tonnes: { unit: 'tonne', kind: 'measure' },
-  m: { unit: 'metre', kind: 'measure' }, meter: { unit: 'metre', kind: 'measure' },
-  meters: { unit: 'metre', kind: 'measure' }, metre: { unit: 'metre', kind: 'measure' },
-  metres: { unit: 'metre', kind: 'measure' }, cm: { unit: 'cm', kind: 'measure' },
-  mm: { unit: 'mm', kind: 'measure' },
-  packet: { unit: 'packet', kind: 'package' }, packets: { unit: 'packet', kind: 'package' },
-  pack: { unit: 'packet', kind: 'package' }, packs: { unit: 'packet', kind: 'package' },
-  pkt: { unit: 'packet', kind: 'package' }, pkts: { unit: 'packet', kind: 'package' },
-  piece: { unit: 'piece', kind: 'package' }, pieces: { unit: 'piece', kind: 'package' },
-  pc: { unit: 'piece', kind: 'package' }, pcs: { unit: 'piece', kind: 'package' },
-  unit: { unit: 'unit', kind: 'package' }, units: { unit: 'unit', kind: 'package' },
-  item: { unit: 'item', kind: 'package' }, items: { unit: 'item', kind: 'package' },
-  bottle: { unit: 'bottle', kind: 'package' }, bottles: { unit: 'bottle', kind: 'package' },
-  box: { unit: 'box', kind: 'package' }, boxes: { unit: 'box', kind: 'package' },
-  dozen: { unit: 'dozen', kind: 'package' }, dz: { unit: 'dozen', kind: 'package' },
-  bag: { unit: 'bag', kind: 'package' }, bags: { unit: 'bag', kind: 'package' },
-  sack: { unit: 'sack', kind: 'package' }, sacks: { unit: 'sack', kind: 'package' },
-  pouch: { unit: 'pouch', kind: 'package' }, pouches: { unit: 'pouch', kind: 'package' },
-  bundle: { unit: 'bundle', kind: 'package' }, bundles: { unit: 'bundle', kind: 'package' },
-  strip: { unit: 'strip', kind: 'package' }, strips: { unit: 'strip', kind: 'package' },
-  jar: { unit: 'jar', kind: 'package' }, jars: { unit: 'jar', kind: 'package' },
-  can: { unit: 'can', kind: 'package' }, cans: { unit: 'can', kind: 'package' },
-  pair: { unit: 'pair', kind: 'package' }, pairs: { unit: 'pair', kind: 'package' },
-  tray: { unit: 'tray', kind: 'package' }, trays: { unit: 'tray', kind: 'package' },
-  roll: { unit: 'roll', kind: 'package' }, rolls: { unit: 'roll', kind: 'package' },
-  set: { unit: 'set', kind: 'package' }, sets: { unit: 'set', kind: 'package' },
-  plate: { unit: 'plate', kind: 'package' }, plates: { unit: 'plate', kind: 'package' },
-  cup: { unit: 'cup', kind: 'package' }, cups: { unit: 'cup', kind: 'package' },
-  glass: { unit: 'glass', kind: 'package' }, glasses: { unit: 'glass', kind: 'package' },
-  service: { unit: 'service', kind: 'package' }, services: { unit: 'service', kind: 'package' },
-  किलो: { unit: 'kg', kind: 'measure' }, किलोग्राम: { unit: 'kg', kind: 'measure' },
-  ग्राम: { unit: 'g', kind: 'measure' }, मिली: { unit: 'ml', kind: 'measure' },
-  मिलीलीटर: { unit: 'ml', kind: 'measure' }, एमएल: { unit: 'ml', kind: 'measure' }, 'एम एल': { unit: 'ml', kind: 'measure' },
-  लीटर: { unit: 'litre', kind: 'measure' }, लिटर: { unit: 'litre', kind: 'measure' },
-  पैकेट: { unit: 'packet', kind: 'package' }, पीस: { unit: 'piece', kind: 'package' },
-  नग: { unit: 'piece', kind: 'package' }, बोतल: { unit: 'bottle', kind: 'package' },
-  डिब्बा: { unit: 'box', kind: 'package' }, डिब्बे: { unit: 'box', kind: 'package' },
-  दर्जन: { unit: 'dozen', kind: 'package' },
-};
-
-function parseOneQuantity(value: string): (ParsedSaleQuantity & { kind: QuantityUnitKind }) | null {
+function parseOneQuantity(value: string): (ParsedSaleQuantity & { kind: SaleQuantityUnitKind }) | null {
   const match = /^\s*(\d+(?:\.\d+)?)\s*(.+?)\s*$/u.exec(value);
   if (!match) return null;
 
   const quantity = Number(match[1]);
-  const rawUnit = match[2].toLowerCase().replace(/\s+/g, ' ').trim();
+  const rawUnit = match[2].toLocaleLowerCase().replace(/\s+/gu, ' ').trim();
   if (!Number.isFinite(quantity) || quantity <= 0) return null;
 
-  if (/^500\s*g\s*packet$/iu.test(rawUnit)) {
-    return { quantity, quantityUnit: '500 g packet', kind: 'package' };
-  }
-  const normalized = UNIT_ALIASES[rawUnit];
+  const legacyPackSize = getLegacyPackSizeUnit(rawUnit);
+  if (legacyPackSize) return { quantity, quantityUnit: legacyPackSize, kind: 'package' };
+
+  const normalized = UNIT_ALIASES[normalizeUnitKey(rawUnit)];
   if (!normalized) return null;
   return { quantity, quantityUnit: normalized.unit, kind: normalized.kind };
 }
 
 /**
- * Accepts a quantity such as "500 ml", "2 kg", "3 packets", or
- * "2 packets, 2 kg". When both a package count and a measured total are
- * supplied, the measured total is the main quantity and the package count
- * is retained separately.
+ * Accepts a quantity such as "500 ml", "2 kg", "3 packets", "1 pair",
+ * "128 GB", or "2 packets, 2 kg". A combined package + measure keeps both.
  */
 export function parseSaleQuantityInput(value: string): ParsedSaleQuantity | null {
   const parts = value
@@ -167,15 +271,15 @@ export function parseSaleQuantityInput(value: string): ParsedSaleQuantity | null
   if (parts.length < 1 || parts.length > 2) return null;
   const parsed = parts.map(parseOneQuantity);
   if (parsed.some(part => !part)) return null;
-  const quantities = parsed as Array<ParsedSaleQuantity & { kind: QuantityUnitKind }>;
+  const quantities = parsed as Array<ParsedSaleQuantity & { kind: SaleQuantityUnitKind }>;
 
   if (quantities.length === 1) {
     const { quantity, quantityUnit } = quantities[0];
     return { quantity, quantityUnit };
   }
 
-  const measured = quantities.find(part => part.kind === 'measure');
-  const packaged = quantities.find(part => part.kind === 'package');
+  const measured = quantities.find(part => part.kind === 'measure' || part.kind === 'technical');
+  const packaged = quantities.find(part => part.kind === 'count' || part.kind === 'package' || part.kind === 'service');
   if (!measured || !packaged) return null;
   return {
     quantity: measured.quantity,
