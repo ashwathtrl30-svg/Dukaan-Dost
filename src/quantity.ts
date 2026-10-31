@@ -1,5 +1,7 @@
 import type { ShopType } from './types';
 
+export const INVALID_SALE_QUANTITY_MESSAGE = 'Enter a valid weight or liquid amount, e.g. 500g, 1kg, 750ml, 1 pair, 1 piece or etc.';
+
 export interface ParsedSaleQuantity {
   /** Main measured or counted quantity, e.g. 500 ml, 2 kg, 3 packets or 1 pair. */
   quantity: number;
