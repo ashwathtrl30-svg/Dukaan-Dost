@@ -1,6 +1,6 @@
 import type { ExpenseEntry, SaleEntry } from '../types';
 
-export type InsightsPeriod = 'week' | 'month';
+export type InsightsPeriod = 'day' | 'week' | 'month';
 
 export interface DateRange {
   start: string;
@@ -36,6 +36,7 @@ export interface PeriodMetrics {
 }
 
 export interface InsightsDashboard {
+  today: PeriodMetrics;
   week: PeriodMetrics;
   month: PeriodMetrics;
 }
@@ -108,6 +109,13 @@ function daysInMonth(year: number, monthIndex: number): number {
 
 function getRanges(now: Date, period: InsightsPeriod): { current: DateRange; previous: DateRange } {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  if (period === 'day') {
+    return {
+      current: range(today, today),
+      previous: range(addDays(today, -1), addDays(today, -1)),
+    };
+  }
 
   if (period === 'week') {
     // Monday through today, compared with the same weekdays in the prior week.
@@ -200,10 +208,12 @@ export function getInsightsDashboard(
   expenses: ExpenseEntry[],
   now: Date = new Date(),
 ): InsightsDashboard {
+  const dayRanges = getRanges(now, 'day');
   const weekRanges = getRanges(now, 'week');
   const monthRanges = getRanges(now, 'month');
 
   return {
+    today: calculatePeriod('day', sales, expenses, dayRanges.current, dayRanges.previous),
     week: calculatePeriod('week', sales, expenses, weekRanges.current, weekRanges.previous),
     month: calculatePeriod('month', sales, expenses, monthRanges.current, monthRanges.previous),
   };
