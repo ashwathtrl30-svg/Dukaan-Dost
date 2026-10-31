@@ -112,10 +112,10 @@ function buildPeakTimeInsight(
   const entries = saleEntriesInRange(sales, range)
     .filter(entry => Number.isFinite(entry.createdAt) && entry.createdAt > 0);
   const windows = [
-    { label: 'Morning', hi: 'सुबह', from: 6, to: 12 },
-    { label: 'Afternoon', hi: 'दोपहर', from: 12, to: 17 },
-    { label: 'Evening', hi: 'शाम', from: 17, to: 22 },
-    { label: 'Late night / early morning', hi: 'रात / सुबह जल्दी', from: 22, to: 30 },
+    { label: 'Morning', hi: 'सुबह', time: '6 AM–12 PM', hiTime: 'सुबह 6–12 बजे', from: 6, to: 12 },
+    { label: 'Afternoon', hi: 'दोपहर', time: '12–5 PM', hiTime: 'दोपहर 12–5 बजे', from: 12, to: 17 },
+    { label: 'Evening', hi: 'शाम', time: '5–10 PM', hiTime: 'शाम 5–10 बजे', from: 17, to: 22 },
+    { label: 'Late night / early morning', hi: 'रात / सुबह जल्दी', time: '10 PM–6 AM', hiTime: 'रात 10–सुबह 6 बजे', from: 22, to: 30 },
   ];
   const groups = new Map<string, { amount: number; count: number }>();
 
@@ -133,16 +133,16 @@ function buildPeakTimeInsight(
   const isServiceShop = SERVICE_SHOPS.has(shopType || 'other');
   if (entries.length >= 3 && groups.size > 0) {
     const best = [...groups.entries()].sort((a, b) => b[1].amount - a[1].amount || b[1].count - a[1].count)[0];
-    const windowName = language === 'hi'
-      ? windows.find(item => item.label === best[0])?.hi || best[0]
-      : best[0];
+    const bestWindow = windows.find(item => item.label === best[0]);
+    const windowName = language === 'hi' ? bestWindow?.hi || best[0] : best[0];
+    const timeRange = language === 'hi' ? bestWindow?.hiTime || '' : bestWindow?.time || '';
     return createInsight('day', 'positive',
       language === 'hi'
         ? (isServiceShop ? 'ग्राहकों का सबसे व्यस्त समय' : 'बिक्री का सबसे व्यस्त समय')
         : (isServiceShop ? 'Your peak customer hours' : 'Your peak sales hours'),
       language === 'hi'
-        ? windowName + ' के दौरान ' + best[1].count + ' बिक्री एंट्री और ' + money(best[1].amount) + ' दर्ज हुए। इस समय ज़रूरी सामान, तैयारी या स्टाफ़ की उपलब्धता पर ध्यान दें।'
-        : windowName + ' is the strongest recorded window, with ' + best[1].count + ' sale entries worth ' + money(best[1].amount) + '. Plan availability, preparation or staffing around this time.');
+        ? windowName + ' (' + timeRange + ') के दौरान ' + best[1].count + ' बिक्री एंट्री और ' + money(best[1].amount) + ' दर्ज हुए। इस समय ज़रूरी सामान, तैयारी या स्टाफ़ की उपलब्धता पर ध्यान दें।'
+        : windowName + ' (' + timeRange + ') is the strongest recorded window, with ' + best[1].count + ' sale entries worth ' + money(best[1].amount) + '. Plan availability, preparation or staffing around this time.');
   }
 
   return createInsight('day', 'info',
