@@ -1,4 +1,5 @@
 import type { SaleEntry } from '../types';
+import { getSaleQuantityUnitKind, isCountableSaleQuantityUnit, normalizeSaleQuantityUnit } from '../quantity';
 
 export interface ProductSizeBreakdown {
   label: string;
@@ -10,9 +11,9 @@ export interface ProductSalesSummary {
   key: string;
   /** Original display name from the first matching sale entry. */
   name: string;
-  /** Count of sold items/packs, never the sum of grams, kilograms or litres. */
+  /** Count of separate items, packs or discrete services; never the sum of measured quantities. */
   unitsSold: number;
-  /** Different recorded sizes remain visible under the same product. */
+  /** Different recorded sizes and sale units remain visible under the same product. */
   sizes: ProductSizeBreakdown[];
   revenue: number;
 }
@@ -32,24 +33,7 @@ function positiveNumber(value: unknown): number | null {
   return Number.isFinite(number) && number > 0 ? number : null;
 }
 
-function normaliseMeasurementUnit(unit: string): string {
-  const value = unit.trim().toLocaleLowerCase();
-  const aliases: Record<string, string> = {
-    gram: 'g', grams: 'g', gm: 'g', gms: 'g',
-    kilogram: 'kg', kilograms: 'kg', kilo: 'kg', kilos: 'kg', kgs: 'kg',
-    millilitre: 'ml', millilitres: 'ml', milliliter: 'ml', milliliters: 'ml',
-    litre: 'l', litres: 'l', liter: 'l', liters: 'l', ltr: 'l',
-  };
-  return aliases[value] || value;
-}
-
-const PACKAGE_UNITS = new Set([
-  'packet', 'pack', 'pkt', 'piece', 'pc', 'unit', 'item', 'bottle', 'box',
-  'dozen', 'bag', 'sack', 'pouch', 'bundle', 'strip', 'jar', 'can', 'pair',
-  'tray', 'roll', 'set', 'plate', 'cup', 'glass', 'service',
-]);
-
-/** Returns the count of sold items/packs without ever adding measured weights. */
+/** Returns the count of sold items/packs without ever adding grams, litres, metres or specifications. */
 function getSoldUnitCount(sale: SaleEntry): number {
   const itemCount = positiveNumber(sale.numberOfItemsSold);
   if (itemCount !== null) return itemCount;
@@ -57,16 +41,13 @@ function getSoldUnitCount(sale: SaleEntry): number {
   const packageCount = positiveNumber(sale.packageCount);
   if (packageCount !== null) return packageCount;
 
-  // Older voice entries can store a pack size in the unit itself, e.g.
-  // quantity=2, quantityUnit="500 g packet". In that format quantity is packs.
-  const rawUnit = String(sale.quantityUnit || '').trim().toLocaleLowerCase();
-  const isPackSizeUnit = /^\d+(?:\.\d+)?\s*(?:g|gm|gms|gram|grams|kg|kgs|kilo|kilos|ml|l|litre|litres|liter|liters)\s*(?:packet|pack|pkt)$/u.test(rawUnit);
-  if (isPackSizeUnit || PACKAGE_UNITS.has(rawUnit)) {
+  const rawUnit = String(sale.quantityUnit || '').trim();
+  const normalizedUnit = normalizeSaleQuantityUnit(rawUnit) || rawUnit.toLocaleLowerCase();
+  if (isCountableSaleQuantityUnit(normalizedUnit)) {
     return positiveNumber(sale.quantity) || 0;
   }
 
-  // A measured amount alone (e.g. 500 g) is not enough to infer how many
-  // packets/items were sold. Do not rank grams as item counts.
+  // A measured amount or technical specification alone is not an item count.
   return 0;
 }
 
@@ -74,25 +55,28 @@ function getRecordedSizeLabel(sale: SaleEntry): string | null {
   const rawUnit = String(sale.quantityUnit || '').trim();
   if (!rawUnit) return null;
 
-  const packSizeMatch = /^(\d+(?:\.\d+)?)\s*(g|gm|gms|gram|grams|kg|kgs|kilo|kilos|ml|l|litre|litres|liter|liters)\s*(?:packet|pack|pkt)$/iu.exec(rawUnit);
-  if (packSizeMatch) {
-    const unit = normaliseMeasurementUnit(packSizeMatch[2]);
-    return packSizeMatch[1] + ' ' + unit;
+  // Legacy records may store the pack size inside quantityUnit, e.g. "500 g packet".
+  const legacyPackSize = /^(\d+(?:\.\d+)?)\s*(g|gm|gms|gram|grams|kg|kgs|kilo|kilos|ml|l|litre|litres|liter|liters)\s*(?:packet|pack|pkt)$/iu.exec(rawUnit);
+  if (legacyPackSize) {
+    const unit = normalizeSaleQuantityUnit(legacyPackSize[2]) || legacyPackSize[2].toLocaleLowerCase();
+    return legacyPackSize[1] + ' ' + unit;
   }
 
   const quantity = positiveNumber(sale.quantity);
-  const unit = normaliseMeasurementUnit(rawUnit);
-  if (quantity !== null && ['g', 'kg', 'mg', 'ml', 'l', 'quintal', 'tonne', 'metre', 'cm', 'mm'].includes(unit)) {
+  const unit = normalizeSaleQuantityUnit(rawUnit);
+  if (!unit || quantity === null) return null;
+
+  const kind = getSaleQuantityUnitKind(unit);
+  if (kind === 'measure' || kind === 'technical') {
     return quantity.toLocaleString('en-IN', { maximumFractionDigits: 3 }) + ' ' + unit;
   }
-
-  if (PACKAGE_UNITS.has(unit)) return unit;
+  if (isCountableSaleQuantityUnit(unit)) return unit;
   return null;
 }
 
 /**
- * Aggregate itemised sales by product name only. Pack sizes and measured units
- * are kept as a breakdown, while bestseller ranking uses item/pack counts.
+ * Aggregate itemised sales by product name only. Different measures and pack
+ * units stay in the size breakdown; bestseller ranking uses discrete counts.
  */
 export function aggregateProductSales(
   sales: SaleEntry[],
