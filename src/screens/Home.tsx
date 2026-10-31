@@ -3,7 +3,7 @@ import { useStore, formatRupee, getTodaySales, getTodayExpenses, getLast7DaysDat
 import { t } from '../i18n';
 import { NotebookScreen } from './NotebookScreen';
 import { SaleEntry, ExpenseEntry, UdhaarEntry, PaymentType } from '../types';
-import { parseSaleQuantityInput, isValidSaleQuantity, formatSaleQuantityInput, getSaleItemCountFromQuantity, getSaleCountCopy, getSaleNameLabel } from '../quantity';
+import { parseSaleQuantityInput, isValidSaleQuantity, formatSaleQuantityInput, getSaleItemCountFromQuantity, getSaleCountCopy, getSaleNameLabel, INVALID_SALE_QUANTITY_MESSAGE } from '../quantity';
 import { Plus, ArrowLeft, X, Check, TrendingUp, TrendingDown, Edit2, MoreVertical, ClipboardList, CalendarDays, Trash2 } from 'lucide-react';
 
 // ============ HOME SCREEN ============
@@ -936,7 +936,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
                 <p className="text-small text-problem mt-1" role="alert">
                   {lang === 'hi'
                     ? 'कृपया हर संख्या के बाद सही इकाई लिखें, जैसे 500g, 1kg, 750ml, 1 pair या 1 piece।'
-                    : 'Enter a valid weight or liquid amount, e.g. 500g, 1kg, 750ml, 1 pair, 1 piece or etc.'}
+                    : INVALID_SALE_QUANTITY_MESSAGE}
                 </p>
               )}
             </div>
@@ -1189,7 +1189,7 @@ function EditEntryModal({ entry, onClose }: { entry: any; onClose: () => void })
                 <p className="text-small text-problem mt-1" role="alert">
                   {lang === 'hi'
                     ? 'कृपया हर संख्या के बाद सही इकाई लिखें, जैसे 500g, 1kg, 750ml, 1 pair या 1 piece।'
-                    : 'Enter a valid weight or liquid amount, e.g. 500g, 1kg, 750ml, 1 pair, 1 piece or etc.'}
+                    : INVALID_SALE_QUANTITY_MESSAGE}
                 </p>
               )}
             </div>
