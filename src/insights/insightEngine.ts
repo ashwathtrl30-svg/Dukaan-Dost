@@ -177,12 +177,12 @@ function buildTodayPerformance(
   const salesComparison = salesChange === null
     ? (language === 'hi' ? 'कल इसी समय से बिक्री की तुलना के लिए पर्याप्त आधार नहीं है।' : 'There is not enough data to compare sales with yesterday at this time.')
     : (language === 'hi'
-        ? 'कल इसी समय से बिक्री ' + Math.abs(salesChange) + '% ' + (salesChange > 0 ? 'ज़्यादा' : salesChange < 0 ? 'कम' : 'बराबर') + है।'
+        ? 'कल इसी समय से बिक्री ' + Math.abs(salesChange) + '% ' + (salesChange > 0 ? 'ज़्यादा' : salesChange < 0 ? 'कम' : 'बराबर') + 'है।'
         : 'Sales are ' + Math.abs(salesChange) + '% ' + (salesChange > 0 ? 'higher' : salesChange < 0 ? 'lower' : 'unchanged') + ' than yesterday at this time.');
   const expenseComparison = expensesChange === null
     ? (language === 'hi' ? 'खर्च की पिछली समान समय वाली तुलना उपलब्ध नहीं है।' : 'There is not enough comparable expense history yet.')
     : (language === 'hi'
-        ? 'दर्ज खर्च ' + Math.abs(expensesChange) + '% ' + (expensesChange > 0 ? 'ज़्यादा' : expensesChange < 0 ? 'कम' : 'बराबर') + हैं।'
+        ? 'दर्ज खर्च ' + Math.abs(expensesChange) + '% ' + (expensesChange > 0 ? 'ज़्यादा' : expensesChange < 0 ? 'कम' : 'बराबर') + 'हैं।'
         : 'Recorded expenses are ' + Math.abs(expensesChange) + '% ' + (expensesChange > 0 ? 'higher' : expensesChange < 0 ? 'lower' : 'unchanged') + '.');
 
   return createInsight('day', tone,
@@ -344,7 +344,7 @@ function buildMonthlyOverallPerformance(
   const expenseChange = metrics.expensesChange === null
     ? (language === 'hi' ? ' खर्च की तुलना के लिए पर्याप्त पुराना रिकॉर्ड नहीं है।' : ' There is not enough previous expense history for comparison.')
     : (language === 'hi'
-        ? ' खर्च ' + Math.abs(metrics.expensesChange) + '% ' + (metrics.expensesChange > 0 ? 'बढ़े' : metrics.expensesChange < 0 ? 'घटे' : 'बदले नहीं') + हैं।'
+        ? ' खर्च ' + Math.abs(metrics.expensesChange) + '% ' + (metrics.expensesChange > 0 ? 'बढ़े' : metrics.expensesChange < 0 ? 'घटे' : 'बदले नहीं') + 'हैं।'
         : ' Expenses are ' + Math.abs(metrics.expensesChange) + '% ' + (metrics.expensesChange > 0 ? 'higher' : metrics.expensesChange < 0 ? 'lower' : 'unchanged') + '.');
   return createInsight('month', tone,
     language === 'hi' ? 'इस महीने दुकान का कुल प्रदर्शन' : 'Overall business performance this month',
@@ -385,7 +385,7 @@ function buildMonthlyBusinessTrend(
   return createInsight('month', ratio !== null && ratio >= 3 ? 'warning' : 'info',
     language === 'hi' ? 'महीने के दिनों में बिक्री का ट्रेंड' : 'Business trend across recorded days',
     language === 'hi'
-      ? 'सबसे ज़्यादा बिक्री ' + dateLabel(high[0]) + ' को ' + money(high[1]) + रही, जबकि सबसे कम ' + dateLabel(low[0]) + ' को ' + money(low[1]) + रही। ' + days.length + ' अलग दिनों का रिकॉर्ड है। बड़े अंतर वाले दिनों के कारण और एंट्री की पूरी जानकारी जाँचें।'
+      ? 'सबसे ज़्यादा बिक्री ' + dateLabel(high[0]) + ' को ' + money(high[1]) + 'रही, जबकि सबसे कम ' + dateLabel(low[0]) + ' को ' + money(low[1]) + 'रही। ' + days.length + ' अलग दिनों का रिकॉर्ड है। बड़े अंतर वाले दिनों के कारण और एंट्री की पूरी जानकारी जाँचें।'
       : 'The strongest recorded day was ' + dateLabel(high[0]) + ' at ' + money(high[1]) + ', while the quietest was ' + dateLabel(low[0]) + ' at ' + money(low[1]) + '. This covers ' + days.length + ' recorded trading days. Review what drove the difference and whether entries are complete.');
 }
 
@@ -422,7 +422,7 @@ function buildMonthlyExpenseHealth(
   const comparison = growthGap === null
     ? (language === 'hi' ? ' बिक्री और खर्च की रफ़्तार की तुलना के लिए पर्याप्त पुराना रिकॉर्ड नहीं है।' : ' There is not enough prior-period history to compare sales and expense growth.')
     : (language === 'hi'
-        ? ' खर्च की वृद्धि बिक्री की वृद्धि से ' + Math.abs(growthGap) + ' अंक ' + (growthGap > 0 ? 'तेज़' : growthGap < 0 ? 'धीमी' : 'बराबर') + है।'
+        ? ' खर्च की वृद्धि बिक्री की वृद्धि से ' + Math.abs(growthGap) + ' अंक ' + (growthGap > 0 ? 'तेज़' : growthGap < 0 ? 'धीमी' : 'बराबर') + 'है।'
         : ' Expense growth is ' + Math.abs(growthGap) + ' percentage points ' + (growthGap > 0 ? 'faster' : growthGap < 0 ? 'slower' : 'equal') + ' to sales growth.');
   return createInsight('month', tone,
     language === 'hi' ? 'इस महीने खर्च की सेहत' : 'Expense health this month',
@@ -452,7 +452,7 @@ function buildMonthlyRisk(
       severity: 100,
       title: language === 'hi' ? 'दर्ज खर्च, बिक्री से ज़्यादा हैं' : 'Recorded expenses are higher than sales',
       description: language === 'hi'
-        ? 'इस महीने बिक्री ' + money(metrics.sales) + और खर्च ' + money(metrics.expenses) + हैं। दर्ज रकम के हिसाब से ' + money(Math.abs(balance)) + की कमी है। छूटी हुई बिक्री या खर्च की एंट्री और बड़े बिल जाँचें।'
+        ? 'इस महीने बिक्री ' + money(metrics.sales) + ' और खर्च ' + money(metrics.expenses) + ' हैं। दर्ज रकम के हिसाब से ' + money(Math.abs(balance)) + ' की कमी है। छूटी हुई बिक्री या खर्च की एंट्री और बड़े बिल जाँचें।'
         : 'This month has ' + money(metrics.sales) + ' in sales and ' + money(metrics.expenses) + ' in expenses, leaving a recorded shortfall of ' + money(Math.abs(balance)) + '. Check for missing sales entries and review major bills.');
     });
   }
@@ -496,7 +496,7 @@ function buildMonthlyRisk(
         severity: 85,
         title: language === 'hi' ? 'कुछ उधार की तय तारीख़ निकल चुकी है' : 'Some recorded udhaar is overdue',
         description: language === 'hi'
-          ? overdue.length + ' बकाया एंट्री की तय तारीख़ निकल चुकी है; कुल ' + money(overdueTotal) + अभी बाकी है। रिकॉर्ड मिलाएँ और तय तारीख़ के अनुसार विनम्र फ़ॉलो-अप करें।'
+          ? overdue.length + ' बकाया एंट्री की तय तारीख़ निकल चुकी है; कुल ' + money(overdueTotal) + ' अभी बाकी है। रिकॉर्ड मिलाएँ और तय तारीख़ के अनुसार विनम्र फ़ॉलो-अप करें।'
           : overdue.length + ' unpaid balance(s) are past their recorded due dates, totalling ' + money(overdueTotal) + '. Reconcile the entries and follow up politely according to the agreed dates.');
       });
     }
