@@ -175,6 +175,18 @@ function normalizeMeasureUnit(value: string): string {
   const unit = normalizeUnitKey(value);
   if (!unit || unit === "unspecified") return "";
   const aliases: Record<string, string> = {
+    // Canonical short forms are included too, so uppercase/mixed-case AI output normalises safely.
+    mg: "mg", g: "g", gm: "g", gms: "g",
+    kg: "kg", kgs: "kg",
+    ml: "ml", l: "litre", kl: "kL",
+    mm: "mm", cm: "cm", km: "km",
+    inch: "inch", ft: "ft", yard: "yard",
+    m2: "m²", m3: "m³", "sq ft": "sq ft", sqm: "m²", cft: "CFT",
+    acre: "acre", hectare: "hectare",
+    piece: "piece", unit: "unit", pair: "pair", set: "set", dozen: "dozen", bunch: "bunch",
+    packet: "packet", box: "box", carton: "carton", case: "case", bag: "bag", sack: "sack", tray: "tray", bottle: "bottle", roll: "roll",
+    job: "job", session: "session", appointment: "appointment", visit: "visit", booking: "booking", hour: "hour", day: "day",
+    item: "item", pouch: "pouch", bundle: "bundle", strip: "strip", jar: "jar", can: "can", plate: "plate", cup: "cup", glass: "glass", service: "service",
     milligram: "mg", milligrams: "mg",
     gram: "g", grams: "g", gm: "g", gms: "g",
     kilo: "kg", kilos: "kg", kilogram: "kg", kilograms: "kg", kgs: "kg", "किलोग्राम": "kg", "किलो": "kg",
