@@ -119,7 +119,7 @@ UNIT_DEFINITIONS.forEach(definition => {
 PREFIX_ALIASES.sort((a, b) => b.alias.length - a.alias.length);
 
 function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&').replace(/\\ /gu, '\\s+');
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&').replace(/ /gu, '\\s+');
 }
 
 function getLegacyPackSizeUnit(value: string): string | null {
