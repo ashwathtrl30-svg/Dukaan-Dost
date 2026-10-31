@@ -166,7 +166,8 @@ export function findSaleQuantityUnitPrefix(value: string): { unit: string; kind:
 
 /** Backward-compatible helper; the current quantity field supports every unit family. */
 export function shopUsesMeasuredQuantity(shopType: ShopType | null | undefined): boolean {
-  return Boolean(shopType || !shopType);
+  if (!shopType) return true;
+  return ['kirana', 'vegetable', 'bakery', 'sweet', 'other'].includes(shopType);
 }
 
 /** Validate any supported weight, size, count, package, service or technical quantity. */
