@@ -500,7 +500,7 @@ function buildMonthlyRisk(
         title: language === 'hi' ? 'कुछ उधार की तय तारीख़ निकल चुकी है' : 'Some recorded udhaar is overdue',
         description: language === 'hi'
           ? overdue.length + ' बकाया एंट्री की तय तारीख़ निकल चुकी है; कुल ' + money(overdueTotal) + ' अभी बाकी है। रिकॉर्ड मिलाएँ और तय तारीख़ के अनुसार विनम्र फ़ॉलो-अप करें।'
-          : overdue.length + ' unpaid balance(s) are past their recorded due dates, totalling ' + money(overdueTotal) + '. Reconcile the entries and follow up politely according to the agreed dates.');
+          : overdue.length + ' unpaid balance(s) are past their recorded due dates, totalling ' + money(overdueTotal) + '. Reconcile the entries and follow up politely according to the agreed dates.'
       });
     }
   }
