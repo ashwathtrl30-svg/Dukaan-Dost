@@ -808,6 +808,7 @@ export function AskScreen() {
   const { state, dispatch } = useStore();
   const lang = state.language!;
   const [input, setInput] = useState('');
+  const [inputFromVoice, setInputFromVoice] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [voiceNotice, setVoiceNotice] = useState('');
   const [voiceListening, setVoiceListening] = useState(false);
@@ -836,7 +837,7 @@ export function AskScreen() {
     }
   }, [messages, isSending]);
   
-  const handleSend = async (text?: string) => {
+  const handleSend = async (text?: string, fromVoice = false) => {
     const message = (text || input.trim()).trim();
     if (!message || isSending || voiceListening) return;
 
@@ -850,6 +851,7 @@ export function AskScreen() {
     };
     dispatch({ type: 'ADD_CHAT_MESSAGE', payload: userMsg });
     setInput('');
+    setInputFromVoice(false);
     setIsSending(true);
 
     let response = '';
@@ -1179,8 +1181,11 @@ export function AskScreen() {
           <input
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            onChange={(e) => {
+              setInput(e.target.value);
+              setInputFromVoice(false);
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && handleSend(undefined, inputFromVoice)}
             placeholder={t('askPlaceholder', lang)}
             className="input-field flex-1 text-body"
           />
@@ -1191,12 +1196,15 @@ export function AskScreen() {
             label={voiceListening
               ? (lang === 'hi' ? 'रिकॉर्डिंग रोकें' : 'Stop recording')
               : (lang === 'hi' ? 'आवाज़ से सवाल पूछें' : 'Ask by voice')}
-            onTranscript={(transcript) => setInput(transcript)}
+            onTranscript={(transcript) => {
+              setInput(transcript);
+              setInputFromVoice(true);
+            }}
             onRecordingChange={setVoiceListening}
             onStatus={setVoiceNotice}
           />
           <button
-            onClick={() => handleSend()}
+            onClick={() => handleSend(undefined, inputFromVoice)}
             disabled={!input.trim() || isSending || voiceListening}
             aria-label={lang === 'hi' ? 'सवाल भेजें' : 'Send question'}
             title={lang === 'hi' ? 'सवाल भेजें' : 'Send question'}
