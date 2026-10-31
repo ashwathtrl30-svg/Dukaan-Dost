@@ -764,7 +764,7 @@ export function InsightsScreen() {
   const quantityWeekStartDate = new Date(quantityToday + 'T12:00:00');
   quantityWeekStartDate.setDate(quantityWeekStartDate.getDate() - 6);
   const quantityWeekStart = quantityWeekStartDate.getFullYear() + '-' + String(quantityWeekStartDate.getMonth() + 1).padStart(2, '0') + '-' + String(quantityWeekStartDate.getDate()).padStart(2, '0');
-  const quantitiesByItem = new Map<string, { name: string; unit: string; quantity: number; packageCount: number; packageUnit: string; revenue: number }>();
+  const quantitiesByItem = new Map<string, { name: string; unit: string; quantity: number; packageCount: number; packageUnit: string }>();
   state.sales.forEach((sale) => {
     if (!sale.itemName?.trim() || sale.date < quantityWeekStart || sale.date > quantityToday) return;
     const quantity = Number(sale.quantity);
@@ -775,10 +775,9 @@ export function InsightsScreen() {
     const packageUnit = String(sale.packageUnit || '').trim();
     const packageCount = Number(sale.packageCount);
     const key = name.toLocaleLowerCase() + '|' + unit.toLocaleLowerCase() + '|' + packageUnit.toLocaleLowerCase();
-    const current = quantitiesByItem.get(key) || { name, unit, quantity: 0, packageCount: 0, packageUnit, revenue: 0 };
+    const current = quantitiesByItem.get(key) || { name, unit, quantity: 0, packageCount: 0, packageUnit };
     current.quantity += quantity;
     if (Number.isFinite(packageCount) && packageCount > 0 && packageUnit) current.packageCount += packageCount;
-    current.revenue += Number(sale.amount) || 0;
     quantitiesByItem.set(key, current);
   });
   const topQuantityItems = [...quantitiesByItem.values()].sort((a, b) => b.quantity - a.quantity).slice(0, 3);
@@ -845,41 +844,37 @@ export function InsightsScreen() {
                   </div>
                 );
               })}
-              {topQuantityItems.length > 0 && (
-                <div className="card p-3.5">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Package size={17} className="text-primary" />
-                    <p className="text-body font-semibold text-text">
-                      {lang === 'hi' ? 'पिछले 7 दिनों में सबसे ज़्यादा दर्ज मात्रा' : 'Top recorded quantities · last 7 days'}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    {topQuantityItems.map((item) => (
-                      <div key={item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase() + '|' + item.packageUnit.toLocaleLowerCase()} className="flex items-start justify-between gap-3 text-small">
-                        <span className="text-text-secondary break-words">{item.name}</span>
-                        <span className="text-right shrink-0">
-                          <span className="font-semibold text-text block">
-                            {item.packageCount > 0 ? `${item.packageCount} ${item.packageUnit} · ` : ''}{Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} {item.unit}
-                          </span>
-                          <span className="text-[10px] text-text-secondary block">
-                            {lang === 'hi' ? 'औसत' : 'Avg'} {formatRupee(item.revenue / item.quantity)} / {item.unit}
-                          </span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-text-secondary mt-2 leading-relaxed">
-                    {lang === 'hi'
-                      ? 'यह केवल उन बिक्री को गिनता है जिनमें मात्रा दर्ज है। पुराने रिकॉर्ड की मात्रा उपलब्ध नहीं है।'
-                      : 'Only sales with a recorded quantity are counted. Older entries do not contain quantity data.'}
-                  </p>
-                </div>
-              )}
+
             </div>
           )}
         </section>
 
         <MyAdviceSection items={advice} lang={lang} />
+
+        {topQuantityItems.length > 0 && (
+          <section className="mb-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Package size={18} className="text-primary" />
+              <h2 className="text-body-lg font-semibold text-text">
+                {lang === 'hi' ? 'सबसे ज़्यादा बिकने वाले' : 'Bestsellers'}
+              </h2>
+            </div>
+            <div className="card p-3.5">
+              <div className="space-y-2">
+                {topQuantityItems.map((item) => (
+                  <div key={item.name.toLocaleLowerCase() + '|' + item.unit.toLocaleLowerCase() + '|' + item.packageUnit.toLocaleLowerCase()} className="flex items-start justify-between gap-3 text-small">
+                    <span className="text-text-secondary break-words">{item.name}</span>
+                    <span className="text-right shrink-0">
+                      <span className="font-semibold text-text block">
+                        {item.packageCount > 0 ? `${item.packageCount} ${item.packageUnit} · ` : ''}{Number.isInteger(item.quantity) ? item.quantity : item.quantity.toLocaleString(lang === 'hi' ? 'hi-IN' : 'en-IN', { maximumFractionDigits: 3 })} {item.unit}
+                      </span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Compact period summaries use the same date ranges as their insights. */}
         <section>
