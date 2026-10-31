@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseVoiceTransactions } from './voiceCommands.ts';
-import { parseSaleQuantityInput, formatSaleQuantityInput, getSaleCountCopy, getSaleNameLabel, getSaleItemCountFromQuantity } from '../quantity';
+import { parseSaleQuantityInput, formatSaleQuantityInput, getSaleCountCopy, getSaleNameLabel, getSaleItemCountFromQuantity, INVALID_SALE_QUANTITY_MESSAGE } from '../quantity';
 
 test('parses three named sales with unit quantities from natural Hinglish', () => {
   const parsed = parseVoiceTransactions(
@@ -348,6 +348,15 @@ test('manual sales quantity input accepts measured quantities and package counts
   assert.equal(parseSaleQuantityInput('2'), null);
   assert.equal(parseSaleQuantityInput('0 kg'), null);
   assert.equal(parseSaleQuantityInput('two kg'), null);
+});
+
+test('shows the requested guidance when a numeric quantity has no recognised unit', () => {
+  assert.equal(
+    INVALID_SALE_QUANTITY_MESSAGE,
+    'Enter a valid weight or liquid amount, e.g. 500g, 1kg, 750ml, 1 pair, 1 piece or etc.',
+  );
+  assert.equal(parseSaleQuantityInput('500'), null);
+  assert.equal(parseSaleQuantityInput('2 pieces, 500'), null);
 });
 
 test('manual quantity input accepts all requested unit families and case variants', () => {
