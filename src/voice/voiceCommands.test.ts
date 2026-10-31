@@ -495,3 +495,21 @@ test('parses udhaar customer names with ke naam per, pe, and name-first wording'
     );
   }
 });
+
+test('keeps branded and unbranded product identities while extracting different pack sizes', () => {
+  const parsed = parseVoiceTransactions(
+    '1 packet Fortune Soya 500 g 50 rupaye, 1 packet Fortune Soya 1 kg 90 rupaye, 1 packet Soya 500 g 45 rupaye sales mai add kardo',
+    'kirana',
+  );
+  assert.equal(parsed.error, undefined);
+  assert.deepEqual(
+    parsed.transactions.map(({ itemName, numberOfItemsSold, quantity, quantityUnit, packageCount, packageUnit }) => ({
+      itemName, numberOfItemsSold, quantity, quantityUnit, packageCount, packageUnit,
+    })),
+    [
+      { itemName: 'Fortune Soya', numberOfItemsSold: 1, quantity: 500, quantityUnit: 'g', packageCount: 1, packageUnit: 'packet' },
+      { itemName: 'Fortune Soya', numberOfItemsSold: 1, quantity: 1, quantityUnit: 'kg', packageCount: 1, packageUnit: 'packet' },
+      { itemName: 'Soya', numberOfItemsSold: 1, quantity: 500, quantityUnit: 'g', packageCount: 1, packageUnit: 'packet' },
+    ],
+  );
+});
