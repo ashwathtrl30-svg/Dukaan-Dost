@@ -25,6 +25,10 @@ jobs:
         run: npm ci
       - name: Build production bundle
         run: npm run build
+      - name: Validate protected availability endpoint
+        run: |
+          node --check api/supabase-keepalive.js
+          node --test api/supabase-keepalive.test.js
       - name: Test four-pillar My Advice recommendations
         run: npx --yes tsx --test src/insights/myAdvice.test.ts
       - name: Test product identity and pack-size aggregation

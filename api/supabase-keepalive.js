@@ -1,4 +1,4 @@
-export default async function handler(req: any, res: any) {
+export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
 
   if (req.method !== "GET") {
@@ -11,7 +11,8 @@ export default async function handler(req: any, res: any) {
     return res.status(401).json({ ok: false, error: "Unauthorized." });
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL?.replace(/\\/+$/, "");
+  let supabaseUrl = (process.env.SUPABASE_URL || "").trim();
+  while (supabaseUrl.endsWith("/")) supabaseUrl = supabaseUrl.slice(0, -1);
   const anonKey = process.env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !anonKey) {
