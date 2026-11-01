@@ -209,6 +209,14 @@ export function HomeScreen() {
                   <p className="text-small text-text-secondary">{t('totalOwed', lang)}</p>
                   <p className="number-medium text-warning">{formatRupee(totalUdhaar)}</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowUdhaarList(true)}
+                  className="flex-shrink-0 max-w-[112px] rounded-lg border border-primary/20 px-2.5 py-2 text-right text-xs font-semibold leading-snug text-primary transition-colors hover:bg-primary/5 active:scale-[0.98]"
+                  aria-label={lang === 'hi' ? 'उधार सूची देखें' : 'View Udhaar List'}
+                >
+                  {t('viewUdhaarList', lang)}
+                </button>
               </div>
             </div>
           </div>
