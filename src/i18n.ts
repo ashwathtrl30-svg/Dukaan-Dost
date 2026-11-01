@@ -171,6 +171,7 @@ const translations = {
     dueDate: 'When will they pay?',
     addUdhaar: 'Add Udhaar',
     totalOwed: 'Total Owed to You',
+    viewUdhaarList: 'View Udhaar List',
     whoOwesToday: 'Who to ask today',
     sendReminder: 'Send Reminder',
     
@@ -424,6 +425,7 @@ const translations = {
     dueDate: 'कब तक पैसे देंगे?',
     addUdhaar: 'उधार डालें',
     totalOwed: 'आपको कुल कितना मिलना है',
+    viewUdhaarList: 'उधार सूची देखें',
     whoOwesToday: 'आज किससे माँगें',
     sendReminder: 'याद दिलाएँ',
     
