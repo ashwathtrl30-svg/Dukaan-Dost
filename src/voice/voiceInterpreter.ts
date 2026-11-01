@@ -52,23 +52,26 @@ function parseTransaction(value: unknown): VoiceTransaction | null {
 
   if (type === 'sale') {
     const itemName = typeof item.itemName === 'string' ? item.itemName.trim().slice(0, 80) : '';
-    const numberOfItemsSold = Number(item.numberOfItemsSold);
+    const rawCount = item.numberOfItemsSold === undefined ? undefined : Number(item.numberOfItemsSold);
+    const numberOfItemsSold = rawCount !== undefined && Number.isFinite(rawCount) && rawCount > 0 ? rawCount : undefined;
     const quantity = item.quantity === undefined ? undefined : Number(item.quantity);
     const quantityUnit = typeof item.quantityUnit === 'string' ? item.quantityUnit.trim() : undefined;
     const packageCount = item.packageCount === undefined ? undefined : Number(item.packageCount);
     const packageUnit = typeof item.packageUnit === 'string' ? item.packageUnit.trim() : undefined;
+    const requiresQuantityConfirmation = item.requiresQuantityConfirmation === true;
 
-    if (!itemName || !Number.isFinite(numberOfItemsSold) || numberOfItemsSold <= 0) return null;
-    if (quantity !== undefined && (!Number.isFinite(quantity) || quantity <= 0 || !quantityUnit)) return null;
-    if (packageCount !== undefined && (!Number.isFinite(packageCount) || packageCount <= 0 || !packageUnit)) return null;
+    if (!itemName || (!numberOfItemsSold && !requiresQuantityConfirmation)) return null;
+    if (quantity !== undefined && (!Number.isFinite(quantity) || quantity <= 0 || !quantityUnit || quantityUnit.toLowerCase() === 'unspecified')) return null;
+    if (packageCount !== undefined && (!Number.isFinite(packageCount) || packageCount <= 0 || !packageUnit || packageUnit.toLowerCase() === 'unspecified')) return null;
 
     return {
       type: 'sale',
       amount,
       itemName,
-      numberOfItemsSold,
+      ...(numberOfItemsSold !== undefined ? { numberOfItemsSold } : {}),
       ...(quantity !== undefined && quantityUnit ? { quantity, quantityUnit } : {}),
       ...(packageCount !== undefined && packageUnit ? { packageCount, packageUnit } : {}),
+      ...(requiresQuantityConfirmation ? { requiresQuantityConfirmation: true } : {}),
     };
   }
 
@@ -166,8 +169,21 @@ export async function interpretVoiceTransactions(
     };
   }
 
+  const verifiedTransactions = transactions as VoiceTransaction[];
+  const hasIncompleteQuantity = verifiedTransactions.some(
+    transaction => transaction.type === 'sale' && transaction.requiresQuantityConfirmation === true,
+  );
+  if (hasIncompleteQuantity || rawError === 'missing_quantity') {
+    return {
+      transactions: verifiedTransactions,
+      error: 'missing_quantity',
+      selectedTranscript,
+      clarification: clarification || 'You forgot to mention a quantity. Please add the amount and unit before saving this sale.',
+    };
+  }
+
   return {
-    transactions: transactions as VoiceTransaction[],
+    transactions: verifiedTransactions,
     selectedTranscript,
     clarification: clarification || undefined,
   };
