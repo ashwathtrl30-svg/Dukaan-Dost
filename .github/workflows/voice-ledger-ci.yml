@@ -33,6 +33,8 @@ jobs:
         run: npx --yes tsx --test src/insights/insightEngine.test.ts
       - name: Test voice parser examples
         run: npx --yes tsx --test src/voice/voiceCommands.test.ts
+      - name: Test product-aware voice quantity separation
+        run: npx --yes tsx --test supabase/functions/parse-voice-entry/quantityRules.test.ts
       - name: Test AI interpreter and API proxy
         run: npx --yes tsx --test src/voice/voiceInterpreter.test.ts tests/api/parse-voice.test.ts
       - name: Report dependency audit findings
