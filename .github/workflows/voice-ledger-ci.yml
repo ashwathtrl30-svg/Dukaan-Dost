@@ -29,6 +29,8 @@ jobs:
         run: |
           node --check api/supabase-keepalive.js
           node --test api/supabase-keepalive.test.js
+      - name: Test cloud shop-data snapshot reconciliation
+        run: npx --yes tsx --test src/shopDataSnapshot.test.ts
       - name: Test four-pillar My Advice recommendations
         run: npx --yes tsx --test src/insights/myAdvice.test.ts
       - name: Test product identity and pack-size aggregation

@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { AppState, Language, Theme, ShopProfile, SaleEntry, ExpenseEntry, UdhaarEntry, NotebookNote, ChatMessage, ChatSession, Insight } from './types';
+import { createShopDataSnapshot, mergeShopDataSnapshots } from './shopDataSnapshot';
+import type { ShopDataSnapshot } from './shopDataSnapshot';
+import { loadOrCreateCloudSnapshot, persistShopDataSnapshot } from './cloudPersistence';
+import { supabase } from './supabaseClient';
 
 const initialState: AppState = {
   language: null,
@@ -72,7 +76,8 @@ type Action =
   | { type: 'TOGGLE_ALERT_TYPE'; payload: string }
   | { type: 'EXPORT_DATA' }
   | { type: 'DELETE_ALL_DATA' }
-  | { type: 'RESET_ONBOARDING' };
+  | { type: 'RESET_ONBOARDING' }
+  | { type: 'HYDRATE_SHOP_DATA'; payload: ShopDataSnapshot };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -192,6 +197,11 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         alertTypes: { ...state.alertTypes, [action.payload]: !state.alertTypes[action.payload] },
       };
+    case 'HYDRATE_SHOP_DATA': {
+      // Merge by stable entry ID so a user action made during initial cloud loading is never discarded.
+      const merged = mergeShopDataSnapshots(createShopDataSnapshot(state), action.payload);
+      return { ...state, ...merged };
+    }
     case 'DELETE_ALL_DATA':
       return { ...initialState, language: state.language, theme: state.theme };
     case 'RESET_ONBOARDING':
@@ -282,10 +292,108 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, null, loadState);
+  const [cloudReady, setCloudReady] = useState(false);
+  const currentSnapshotRef = useRef<ShopDataSnapshot>(createShopDataSnapshot(state));
+  const lastCloudSnapshotRef = useRef('');
+  const cloudSaveInFlightRef = useRef(false);
+  const cloudRetryAttemptRef = useRef(0);
+  const cloudRetryTimerRef = useRef<number | null>(null);
+  const cloudUserIdRef = useRef<string | null>(null);
 
+  currentSnapshotRef.current = createShopDataSnapshot(state);
+
+  // Keep the existing local cache for offline use and as a non-destructive migration source.
   useEffect(() => {
     saveState(state);
   }, [state]);
+
+  // Establish the authenticated owner and reconcile local data with that owner's cloud copy.
+  useEffect(() => {
+    let active = true;
+
+    const bootstrap = async () => {
+      if (!supabase) return;
+      try {
+        const localSnapshot = currentSnapshotRef.current;
+        const result = await loadOrCreateCloudSnapshot(localSnapshot);
+        if (!active) return;
+
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        cloudUserIdRef.current = sessionData.session?.user?.id ?? null;
+
+        lastCloudSnapshotRef.current = JSON.stringify(
+          result.remoteSnapshot ?? result.snapshot
+        );
+        dispatch({ type: 'HYDRATE_SHOP_DATA', payload: result.snapshot });
+        setCloudReady(true);
+      } catch (error) {
+        // Cloud failure must never block the existing local-only app from opening or recording entries.
+        console.error('Dukaan Dost cloud persistence could not initialize; local data remains available.', error);
+      }
+    };
+
+    void bootstrap();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Serialize cloud writes, skip unchanged state, and retry transient failures without changing the UI.
+  const pushCloudSnapshotRef = useRef<() => void>(() => undefined);
+  pushCloudSnapshotRef.current = () => {
+    if (!cloudReady || !cloudUserIdRef.current || cloudSaveInFlightRef.current) return;
+
+    const snapshot = currentSnapshotRef.current;
+    const serialized = JSON.stringify(snapshot);
+    if (serialized === lastCloudSnapshotRef.current) return;
+
+    cloudSaveInFlightRef.current = true;
+    void persistShopDataSnapshot(snapshot, cloudUserIdRef.current)
+      .then(() => {
+        lastCloudSnapshotRef.current = serialized;
+        cloudRetryAttemptRef.current = 0;
+      })
+      .catch((error) => {
+        console.error('Dukaan Dost cloud save failed; it will retry automatically.', error);
+        cloudRetryAttemptRef.current += 1;
+        if (cloudRetryTimerRef.current !== null) {
+          window.clearTimeout(cloudRetryTimerRef.current);
+        }
+        const delay = Math.min(60000, 2000 * (2 ** Math.min(cloudRetryAttemptRef.current - 1, 5)));
+        cloudRetryTimerRef.current = window.setTimeout(() => {
+          cloudRetryTimerRef.current = null;
+          pushCloudSnapshotRef.current();
+        }, delay);
+      })
+      .finally(() => {
+        cloudSaveInFlightRef.current = false;
+        // If data changed while a write was in flight, immediately enqueue the latest version.
+        if (JSON.stringify(currentSnapshotRef.current) !== lastCloudSnapshotRef.current) {
+          if (cloudRetryTimerRef.current === null) {
+            window.setTimeout(() => pushCloudSnapshotRef.current(), 0);
+          }
+        }
+      });
+  };
+
+  useEffect(() => {
+    if (!cloudReady) return;
+    const timer = window.setTimeout(() => pushCloudSnapshotRef.current(), 700);
+    return () => window.clearTimeout(timer);
+  }, [state, cloudReady]);
+
+  useEffect(() => {
+    const retryWhenOnline = () => pushCloudSnapshotRef.current();
+    window.addEventListener('online', retryWhenOnline);
+    return () => window.removeEventListener('online', retryWhenOnline);
+  }, []);
+
+  useEffect(() => () => {
+    if (cloudRetryTimerRef.current !== null) {
+      window.clearTimeout(cloudRetryTimerRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (state.theme === 'dark') {
