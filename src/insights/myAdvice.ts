@@ -249,7 +249,6 @@ function getBuyingAdvice(
   });
 
   if (reliableProducts.length > 0) {
-    const recordedDates = new Set(recentSales.map(entry => entry.date)).size;
     return {
       id: 'buying-repeat-sellers',
       category: 'Better buying',
