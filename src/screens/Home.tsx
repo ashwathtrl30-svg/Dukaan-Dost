@@ -212,7 +212,7 @@ export function HomeScreen() {
                 <button
                   type="button"
                   onClick={() => setShowUdhaarList(true)}
-                  className="flex-shrink-0 max-w-[112px] rounded-lg border border-primary/20 px-2.5 py-2 text-right text-xs font-semibold leading-snug text-primary transition-colors hover:bg-primary/5 active:scale-[0.98]"
+                  className="flex-shrink-0 min-w-[124px] whitespace-nowrap rounded-xl border border-primary/25 bg-primary/10 px-3 py-2.5 text-center text-[13px] font-medium leading-none text-primary shadow-sm transition-colors hover:bg-primary/15 active:scale-[0.98]"
                   aria-label={lang === 'hi' ? 'उधार सूची देखें' : 'View Udhaar List'}
                 >
                   {t('viewUdhaarList', lang)}
