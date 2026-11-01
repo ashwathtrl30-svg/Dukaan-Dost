@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef, useState, ReactNode } from 'react';
 import { AppState, Language, Theme, ShopProfile, SaleEntry, ExpenseEntry, UdhaarEntry, NotebookNote, ChatMessage, ChatSession, Insight } from './types';
 import { createShopDataSnapshot, mergeShopDataSnapshots } from './shopDataSnapshot';
 import type { ShopDataSnapshot } from './shopDataSnapshot';
