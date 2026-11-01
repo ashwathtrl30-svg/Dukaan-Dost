@@ -425,7 +425,7 @@ function AppContent() {
                 </button>
               </> 
             );
-          })()})}
+          })()}
         </div>
       )}
 
