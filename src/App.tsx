@@ -3,7 +3,7 @@ import { StoreProvider, useStore, generateId, getToday, formatRupee } from './st
 import { VoiceMicButton } from './components/VoiceMicButton';
 import { interpretVoiceTransactions } from './voice/voiceInterpreter';
 import type { VoiceInterpretation } from './voice/voiceInterpreter';
-import { getSaleCountCopy } from './quantity';
+import { getSaleCountCopy, getSaleItemCountFromQuantity, parseSaleQuantityInput } from './quantity';
 import { t } from './i18n';
 import { LanguageScreen, WelcomeScreen, PhoneScreen, InterviewScreen, ProfileSummaryScreen, TourScreen } from './screens/Onboarding';
 import { HomeScreen } from './screens/Home';
@@ -49,7 +49,7 @@ function AppContent() {
       if (error === 'too_many_entries') return 'एक बार में अधिकतम 5 एंट्री जोड़ सकता हूँ। कुछ भी नहीं जोड़ा गया। कृपया 5 या उससे कम एंट्री बोलें।';
       if (error === 'amount_out_of_range') return 'अधिकतम रकम ₹1 करोड़ तक हो सकती है। कुछ भी नहीं जोड़ा गया। रकम फिर से बोलें।';
       if (error === 'missing_item') return 'किस सामान या सेवा की बिक्री हुई, वह साफ़ नहीं समझ आया। कुछ भी नहीं जोड़ा गया। सामान का नाम साफ़ बोलें।';
-      if (error === 'missing_quantity') return 'बेची गई मात्रा और उसकी इकाई साफ़ नहीं मिली। कुछ भी नहीं जोड़ा गया। जैसे 2 किलो, 500 मिलीलीटर या 3 पैकेट बोलें।';
+      if (error === 'missing_quantity') return 'आप बेची गई मात्रा बताना भूल गए। कृपया वास्तविक मात्रा और इकाई बताएँ, जैसे 500 मिलीलीटर या 1 लीटर। अभी कुछ भी सेव नहीं हुआ।';
       if (error === 'missing_customer') return 'उधार के लिए ग्राहक का नाम साफ़ नहीं समझ आया। कुछ भी नहीं जोड़ा गया। ग्राहक का नाम और रकम फिर से बोलें।';
       if (error === 'missing_amount' || error === 'ambiguous_amount') return 'हम आपकी बात साफ़ नहीं समझ पाए। कुछ भी नहीं जोड़ा गया। हर सामान/खर्च/उधार का नाम और रकम साफ़-साफ़ बोलें।';
       if (error === 'no_type') return 'बताइए कि बिक्री, खर्च या उधार में क्या जोड़ना है। कुछ भी नहीं जोड़ा गया।';
@@ -58,7 +58,7 @@ function AppContent() {
     if (error === 'too_many_entries') return 'I can add a maximum of 5 entries at once. Nothing was added. Please split this into batches of 5 or fewer.';
     if (error === 'amount_out_of_range') return 'The maximum supported amount is ₹1 crore. Nothing was added; please say the amount again.';
     if (error === 'missing_item') return 'I could not clearly identify a product or service for every sale. Nothing was added; please say each item name clearly.';
-    if (error === 'missing_quantity') return 'The sale quantity or unit is missing. Nothing was added; say a clear quantity such as 2 kg, 500 ml, 1 litre or 3 packets.';
+    if (error === 'missing_quantity') return 'You forgot to mention a quantity. Please say the actual quantity and unit, such as 500 ml or 1 litre. Nothing has been saved yet.';
     if (error === 'missing_customer') return 'I could not clearly identify the customer for an udhaar entry. Nothing was added; say each customer name and amount clearly.';
     if (error === 'missing_amount' || error === 'ambiguous_amount') return 'We did not hear you clearly. Nothing was added. Please say each item/customer, amount, and transaction type clearly.';
     if (error === 'no_type') return 'Say whether these entries are sales, expenses, or udhaar. Nothing was added.';
@@ -115,6 +115,16 @@ function AppContent() {
       showTemporaryVoiceStatus(voiceErrorMessage(parsed.error));
       return;
     }
+    if (parsed.transactions.some(transaction =>
+      transaction.type === 'sale' && transaction.requiresQuantityConfirmation === true
+    )) {
+      showTemporaryVoiceStatus(
+        lang === 'hi'
+          ? 'कृपया मात्रा और उसकी इकाई बताएँ। अभी कुछ भी सेव नहीं हुआ।'
+          : 'Please provide the quantity and unit. Nothing has been saved yet.'
+      );
+      return;
+    }
     if (parsed.transactions.length > 5) {
       showTemporaryVoiceStatus(voiceErrorMessage('too_many_entries'));
       return;
@@ -128,6 +138,19 @@ function AppContent() {
       const id = generateId();
       if (transaction.type === 'sale') {
         const quantity = Number(transaction.quantity);
+        const quantityInput = transaction.quantity && transaction.quantityUnit
+          ? (transaction.packageCount && transaction.packageUnit
+            ? `${transaction.packageCount} ${transaction.packageUnit}, ${quantity} ${transaction.quantityUnit}`
+            : `${quantity} ${transaction.quantityUnit}`)
+          : '';
+        const discreteQuantityCount = quantityInput
+          ? getSaleItemCountFromQuantity(parseSaleQuantityInput(quantityInput))
+          : null;
+        // A measured amount (e.g. 500 ml) is not the number of items sold.
+        const numberOfItemsSold = transaction.numberOfItemsSold ||
+          transaction.packageCount ||
+          discreteQuantityCount ||
+          1;
         dispatch({
           type: 'ADD_SALE',
           payload: {
@@ -135,7 +158,7 @@ function AppContent() {
             date: today,
             amount: transaction.amount,
             itemName: transaction.itemName!.trim(),
-            numberOfItemsSold: transaction.numberOfItemsSold || quantity || 1,
+            numberOfItemsSold,
             ...(transaction.quantity && transaction.quantityUnit
               ? { quantity, quantityUnit: transaction.quantityUnit }
               : {}),
@@ -149,7 +172,7 @@ function AppContent() {
         const quantitySummary = transaction.quantity && transaction.quantityUnit
           ? quantity + ' ' + transaction.quantityUnit
           : '';
-        const countSummary = (transaction.numberOfItemsSold || quantity || 1) + ' ' + getSaleCountCopy(state.shopProfile.shopType, lang).summaryLabel;
+        const countSummary = numberOfItemsSold + ' ' + getSaleCountCopy(state.shopProfile.shopType, lang).summaryLabel;
         summaries.push(
           (transaction.itemName || 'Sale') + ' · ' + countSummary +
           (quantitySummary ? ' · ' + quantitySummary : '') + ' · ' + formatRupee(transaction.amount),
