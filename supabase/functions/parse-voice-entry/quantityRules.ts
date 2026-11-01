@@ -119,7 +119,7 @@ export function resolveVoiceSaleQuantity(input: VoiceSaleQuantityInput): VoiceSa
   const hasMeasuredValue = quantity !== undefined && !!quantityUnit && !isPackageUnit(quantityUnit);
   const hasExplicitDiscreteValue = quantity !== undefined && isDiscreteUnit(quantityUnit);
   const hasPackageValue = packageCount !== undefined && !!packageUnit;
-  const hasAnyQuantity = hasMeasuredValue || hasExplicitDiscreteValue || hasPackageValue;
+  const hasAnyQuantity = (quantity !== undefined && !!quantityUnit) || hasPackageValue;
 
   const requiresQuantityConfirmation =
     (expectedFamily !== undefined && !hasMeasuredValue && !hasExplicitDiscreteValue) ||
@@ -130,6 +130,8 @@ export function resolveVoiceSaleQuantity(input: VoiceSaleQuantityInput): VoiceSa
   if (packageCount !== undefined) {
     numberOfItemsSold = numberOfItemsSold ?? packageCount;
   } else if (quantity !== undefined && isDiscreteUnit(quantityUnit)) {
+    numberOfItemsSold = numberOfItemsSold ?? quantity;
+  } else if (quantity !== undefined && isPackageUnit(quantityUnit)) {
     numberOfItemsSold = numberOfItemsSold ?? quantity;
   } else if (quantity !== undefined && !isPackageUnit(quantityUnit)) {
     numberOfItemsSold = numberOfItemsSold && numberOfItemsSold !== quantity
