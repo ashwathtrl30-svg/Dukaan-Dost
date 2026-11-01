@@ -41,7 +41,5 @@ jobs:
         run: npx --yes tsx --test supabase/functions/parse-voice-entry/quantityRules.test.ts
       - name: Test AI interpreter and API proxy
         run: npx --yes tsx --test src/voice/voiceInterpreter.test.ts tests/api/parse-voice.test.ts
-      - name: Report dependency audit findings
-        run: |
-          npm audit --json > npm-audit.json || true
-          node -e "const a = require('./npm-audit.json'); for (const [name, v] of Object.entries(a.vulnerabilities || {})) console.log(JSON.stringify({package: name, severity: v.severity, direct: v.isDirect, range: v.range, fixAvailable: v.fixAvailable})); console.log('Totals:', JSON.stringify(a.metadata?.vulnerabilities || {}));"
+      - name: Audit dependencies (block high and critical vulnerabilities)
+        run: npm audit --audit-level=high
