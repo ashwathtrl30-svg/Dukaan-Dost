@@ -95,7 +95,7 @@ test('sales advice identifies a repeated time window only across multiple dates'
   const salesAdvice = advice(sales)[2];
   assert.equal(salesAdvice.id, 'sales-strongest-time');
   assert.match(salesAdvice.title, /5–10 pm/);
-  assert.match(salesAdvice.reason, /3 separate dates/);
+  assert.match(salesAdvice.reason, /4 separate dates/);
 });
 
 test('does not infer peak hours from too few distinct dates', () => {
