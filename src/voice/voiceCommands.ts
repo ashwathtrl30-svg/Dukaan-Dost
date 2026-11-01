@@ -18,6 +18,8 @@ export interface VoiceTransaction {
   /** Optional separate package count when both count and total measure are spoken. */
   packageCount?: number;
   packageUnit?: string;
+  /** Preview-only flag: the interpreted sale is incomplete and must not be saved yet. */
+  requiresQuantityConfirmation?: boolean;
   /** Customer name for udhaar, required for a multi-entry voice credit. */
   customerName?: string;
   expenseCategory?: string;
