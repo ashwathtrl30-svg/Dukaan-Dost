@@ -29,6 +29,13 @@ jobs:
         run: |
           node --check api/supabase-keepalive.js
           node --test api/supabase-keepalive.test.js
+      - name: Type-check cloud persistence integration
+        run: >-
+          npx tsc --noEmit --target ES2020 --module ESNext
+          --moduleResolution bundler --jsx react-jsx --skipLibCheck
+          --allowSyntheticDefaultImports --types vite/client
+          src/store.tsx src/cloudPersistence.ts src/shopDataSnapshot.ts
+          src/types.ts src/supabaseClient.ts
       - name: Test cloud shop-data snapshot reconciliation
         run: npx --yes tsx --test src/shopDataSnapshot.test.ts
       - name: Test four-pillar My Advice recommendations
