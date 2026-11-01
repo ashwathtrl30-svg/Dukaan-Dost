@@ -4,6 +4,14 @@
     {
       "path": "/api/supabase-keepalive",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/supabase-keepalive",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/supabase-keepalive",
+      "schedule": "0 22 * * *"
     }
   ]
 }
