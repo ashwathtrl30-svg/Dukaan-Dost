@@ -90,3 +90,69 @@ test('rejects a malformed AI transaction instead of returning it for saving', as
   assert.equal(result.transactions.length, 0);
   assert.equal(result.error, 'unclear');
 });
+
+
+test('returns an incomplete sale preview and quantity warning without making it saveable', async () => {
+  installResponse({
+    transactions: [{
+      type: 'sale',
+      amount: 100,
+      itemName: 'Fortune Oil',
+      numberOfItemsSold: 1,
+      packageCount: 1,
+      packageUnit: 'packet',
+      requiresQuantityConfirmation: true,
+    }],
+    error: 'missing_quantity',
+    selectedTranscript: 'fortune oil ek packet 100 rupaye',
+    clarification: 'You forgot to mention a quantity.',
+  });
+
+  const result = await interpretVoiceTransactions({
+    transcript: 'fortune oil ek packet 100 rupaye',
+    shopType: 'kirana',
+    language: 'en',
+  });
+
+  assert.equal(result.error, 'missing_quantity');
+  assert.equal(result.transactions.length, 1);
+  assert.equal(result.transactions[0].type, 'sale');
+  assert.equal(result.transactions[0].itemName, 'Fortune Oil');
+  assert.equal(result.transactions[0].amount, 100);
+  assert.equal(result.transactions[0].numberOfItemsSold, 1);
+  assert.equal(result.transactions[0].packageCount, 1);
+  assert.equal(result.transactions[0].packageUnit, 'packet');
+  assert.equal(result.transactions[0].quantity, undefined);
+  assert.equal(result.transactions[0].requiresQuantityConfirmation, true);
+});
+
+test('keeps packet count, measured amount and discrete item count in separate fields', async () => {
+  installResponse({
+    transactions: [{
+      type: 'sale',
+      amount: 100,
+      itemName: 'Fortune Oil',
+      numberOfItemsSold: 1,
+      quantity: 500,
+      quantityUnit: 'ml',
+      packageCount: 1,
+      packageUnit: 'packet',
+    }],
+    selectedTranscript: 'fortune oil ek packet 500 ml 100 rupaye',
+    clarification: '',
+  });
+
+  const result = await interpretVoiceTransactions({
+    transcript: 'fortune oil ek packet 500 ml 100 rupaye',
+    shopType: 'kirana',
+    language: 'hi',
+  });
+
+  assert.equal(result.error, undefined);
+  assert.equal(result.transactions.length, 1);
+  assert.equal(result.transactions[0].numberOfItemsSold, 1);
+  assert.equal(result.transactions[0].packageCount, 1);
+  assert.equal(result.transactions[0].packageUnit, 'packet');
+  assert.equal(result.transactions[0].quantity, 500);
+  assert.equal(result.transactions[0].quantityUnit, 'ml');
+});
