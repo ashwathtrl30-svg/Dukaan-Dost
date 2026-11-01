@@ -119,7 +119,10 @@ export function resolveVoiceSaleQuantity(input: VoiceSaleQuantityInput): VoiceSa
   const hasMeasuredValue = quantity !== undefined && !!quantityUnit && !isPackageUnit(quantityUnit);
   const hasExplicitDiscreteValue = quantity !== undefined && isDiscreteUnit(quantityUnit);
   const hasPackageValue = packageCount !== undefined && !!packageUnit;
-  const hasAnyQuantity = (quantity !== undefined && !!quantityUnit) || hasPackageValue;
+  const hasAnyQuantity =
+    (quantity !== undefined && !!quantityUnit) ||
+    hasPackageValue ||
+    numberOfItemsSold !== undefined;
 
   const requiresQuantityConfirmation =
     (expectedFamily !== undefined && !hasMeasuredValue && !hasExplicitDiscreteValue) ||
