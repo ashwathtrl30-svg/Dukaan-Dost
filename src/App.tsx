@@ -320,7 +320,18 @@ function AppContent() {
           />
           {(() => {
             const parsed = homeVoiceAIResult;
-            const canAdd = !!parsed && !parsed.error && parsed.transactions.length > 0 && parsed.transactions.length <= 5;
+            const canAdd = !!parsed &&
+              !parsed.error &&
+              parsed.transactions.length > 0 &&
+              parsed.transactions.length <= 5 &&
+              !parsed.transactions.some(transaction =>
+                transaction.type === 'sale' && transaction.requiresQuantityConfirmation === true
+              );
+            const hasPreview = !!parsed && parsed.transactions.length > 0 && parsed.transactions.length <= 5;
+            const hasMissingQuantity = parsed?.error === 'missing_quantity' ||
+              !!parsed?.transactions.some(transaction =>
+                transaction.type === 'sale' && transaction.requiresQuantityConfirmation === true
+              );
             return (
               <>
                 {homeVoiceParsing && (
@@ -333,12 +344,14 @@ function AppContent() {
                     {lang === 'hi' ? 'AI ने यह टेक्स्ट चुना:' : 'AI interpreted this transcript:'} {parsed.selectedTranscript}
                   </p>
                 )}
-                {canAdd ? (
+                {hasPreview ? (
                   <div className="rounded-xl bg-bg p-3 space-y-2">
                     <p className="text-sm font-semibold text-text">
-                      {lang === 'hi'
-                        ? parsed.transactions.length + ' एंट्री तैयार हैं'
-                        : parsed.transactions.length + (parsed.transactions.length === 1 ? ' entry ready' : ' entries ready')}
+                      {hasMissingQuantity
+                        ? (lang === 'hi' ? 'अधूरी एंट्री — मात्रा जोड़ें' : 'Incomplete interpretation — quantity needed')
+                        : (lang === 'hi'
+                          ? parsed.transactions.length + ' एंट्री तैयार हैं'
+                          : parsed.transactions.length + (parsed.transactions.length === 1 ? ' entry ready' : ' entries ready'))}
                     </p>
                     {parsed.transactions.map((transaction, index) => (
                       <div key={index} className="flex items-start justify-between gap-3 text-sm">
@@ -352,7 +365,12 @@ function AppContent() {
                           </p>
                           {transaction.type === 'sale' && (
                             <p className="text-xs text-text-secondary">
-                              {transaction.numberOfItemsSold || transaction.quantity || 1} {getSaleCountCopy(state.shopProfile.shopType, lang).summaryLabel}
+                              {transaction.numberOfItemsSold
+                                ? `${transaction.numberOfItemsSold} ${getSaleCountCopy(state.shopProfile.shopType, lang).summaryLabel}`
+                                : ''}
+                              {transaction.packageCount && transaction.packageUnit
+                                ? ` · ${transaction.packageCount} ${transaction.packageUnit}`
+                                : ''}
                               {transaction.quantity && transaction.quantityUnit
                                 ? ` · ${transaction.quantity} ${transaction.quantityUnit}`
                                 : ''}
@@ -379,6 +397,18 @@ function AppContent() {
                       : 'AI interprets Hindi, English and Hinglish. Nothing is saved until you review and confirm each entry.'}
                   </p>
                 )}
+                {hasMissingQuantity && (
+                  <div className="space-y-1" role="alert" aria-live="assertive">
+                    <p className="text-sm font-semibold text-problem">
+                      {lang === 'hi' ? 'आप बेची गई मात्रा बताना भूल गए।' : 'You forgot to mention a quantity.'}
+                    </p>
+                    <p className="text-xs leading-relaxed text-problem">
+                      {lang === 'hi'
+                        ? 'परेशानी के लिए माफ़ कीजिए। यह जानकारी देने से आपको बेहतर insights मिलेंगे।'
+                        : 'Sorry if this bothers you, by providing this info, you will get better insights.'}
+                    </p>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={handleHomeVoiceConfirm}
@@ -393,9 +423,9 @@ function AppContent() {
                         ? (lang === 'hi' ? 'फिर से समझें' : 'Retry interpretation')
                         : (lang === 'hi' ? 'AI से समझें' : 'Interpret with AI')}
                 </button>
-              </>
+              </> 
             );
-          })()}
+          })()})}
         </div>
       )}
 
