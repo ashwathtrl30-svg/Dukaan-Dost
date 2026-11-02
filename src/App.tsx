@@ -49,20 +49,21 @@ function AppContent() {
   useEffect(() => {
     if (!hasValidAppLock) return;
 
+    const lockApp = () => {
+      setIsAppUnlocked(false);
+      setUnlockPin('');
+      setUnlockError('');
+      setShowUnlockPin(true);
+    };
     const lockWhenHidden = () => {
-      if (document.visibilityState === 'hidden') {
-        setIsAppUnlocked(false);
-        setUnlockPin('');
-        setUnlockError('');
-        setShowUnlockPin(true);
-      }
+      if (document.visibilityState === 'hidden') lockApp();
     };
 
     document.addEventListener('visibilitychange', lockWhenHidden);
-    window.addEventListener('pagehide', lockWhenHidden);
+    window.addEventListener('pagehide', lockApp);
     return () => {
       document.removeEventListener('visibilitychange', lockWhenHidden);
-      window.removeEventListener('pagehide', lockWhenHidden);
+      window.removeEventListener('pagehide', lockApp);
     };
   }, [hasValidAppLock]);
 
