@@ -5,6 +5,7 @@ import {
   createEmptySnapshotTombstones,
   createShopDataSnapshot,
   mergeShopDataSnapshots,
+  normalizeShopDataSnapshot,
 } from './shopDataSnapshot';
 import type { ShopDataSnapshot } from './shopDataSnapshot';
 import { ensureShopVaultSession, readEncryptedShopVault, readLegacyShopSnapshot, writeEncryptedShopVault, deleteLegacyShopSnapshot, subscribeToEncryptedShopVault, type EncryptedShopVaultRow } from './cloudVault';
@@ -361,174 +362,291 @@ function saveState(state: AppState) {
   }
 }
 
+type VaultStatus = 'checking' | 'new' | 'locked' | 'unlocked' | 'error';
+
 interface StoreContextType {
   state: AppState;
   dispatch: React.Dispatch<Action>;
+  vaultStatus: VaultStatus;
+  vaultError: string;
+  unlockVault: (passphrase: string) => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
+const LOCAL_VAULT_CACHE_PREFIX = 'dukaandost_encrypted_state:';
+const LOCAL_VAULT_SALT_PREFIX = 'dukaandost_local_vault_salt:';
+
+function localVaultCacheKey(userId: string): string {
+  return LOCAL_VAULT_CACHE_PREFIX + userId;
+}
+
+function localVaultSaltKey(userId: string): string {
+  return LOCAL_VAULT_SALT_PREFIX + userId;
+}
+
+function readLocalEncryptedCache(userId: string): { envelope: EncryptedVaultEnvelope; salt: string } | null {
+  try {
+    const raw = localStorage.getItem(localVaultCacheKey(userId));
+    const salt = localStorage.getItem(localVaultSaltKey(userId));
+    if (!raw || !salt) return null;
+    const value: unknown = JSON.parse(raw);
+    if (!value || typeof value !== 'object') return null;
+    const envelope = value as EncryptedVaultEnvelope;
+    if (
+      typeof envelope.ciphertext !== 'string' ||
+      typeof envelope.iv !== 'string' ||
+      typeof envelope.kdf_salt !== 'string' ||
+      envelope.crypto_version !== 1
+    ) return null;
+    return { envelope, salt };
+  } catch {
+    return null;
+  }
+}
+
+function isAppState(value: unknown): value is AppState {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<AppState>;
+  return !!candidate.shopProfile &&
+    typeof candidate.shopProfile === 'object' &&
+    Array.isArray(candidate.sales) &&
+    Array.isArray(candidate.expenses) &&
+    Array.isArray(candidate.udhaar) &&
+    Array.isArray(candidate.notebookNotes);
+}
+
+function hasLocalProfileData(profile: ShopProfile): boolean {
+  return Boolean(
+    profile.shopType || profile.shopName?.trim() || profile.city?.trim() ||
+    profile.duration || profile.ownership || profile.monthlySales ||
+    profile.udhaarLevel || profile.accounting || profile.worries?.length
+  );
+}
+
+function applySnapshotToState(base: AppState, snapshot: ShopDataSnapshot): AppState {
+  return {
+    ...base,
+    shopProfile: snapshot.shopProfile,
+    sales: snapshot.sales,
+    expenses: snapshot.expenses,
+    udhaar: snapshot.udhaar,
+    notebookNotes: snapshot.notebookNotes,
+    chatSessions: snapshot.chatSessions,
+    insights: snapshot.insights,
+    language: snapshot.preferences.language,
+    theme: snapshot.preferences.theme,
+    onboardingComplete: snapshot.preferences.onboardingComplete,
+    userName: snapshot.preferences.userName,
+    reminderTime: snapshot.preferences.reminderTime,
+    streak: snapshot.preferences.streak,
+    lastEntryDate: snapshot.preferences.lastEntryDate,
+    textSize: snapshot.preferences.textSize,
+    notificationsEnabled: snapshot.preferences.notificationsEnabled,
+    alertTypes: snapshot.preferences.alertTypes,
+  };
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
+  // Plaintext local storage is read only as a one-time migration source.
+  // Once a vault is unlocked, the app writes only encrypted local state.
   const [state, dispatch] = useReducer(reducer, null, loadState);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
+  const [vaultStatus, setVaultStatus] = useState<VaultStatus>('checking');
+  const [vaultError, setVaultError] = useState('');
   const [cloudReady, setCloudReady] = useState(false);
+
+  const userIdRef = useRef<string | null>(null);
+  const passphraseRef = useRef<string | null>(null);
+  const remoteCipherRef = useRef<VaultCipher | null>(null);
+  const localCipherRef = useRef<VaultCipher | null>(null);
+  const remoteUpdatedAtRef = useRef(0);
+  const lastCloudSnapshotRef = useRef('');
+  const cloudSubscriptionCleanupRef = useRef<(() => void) | null>(null);
+  const cloudSaveInFlightRef = useRef(false);
+  const cloudRetryTimerRef = useRef<number | null>(null);
+  const cloudRetryAttemptRef = useRef(0);
+  const localSaveTimerRef = useRef<number | null>(null);
+  const localSaveSequenceRef = useRef(0);
+
   const tombstonesRef = useRef(createEmptySnapshotTombstones());
   const currentSnapshotRef = useRef<ShopDataSnapshot>(
-    createShopDataSnapshot(state, tombstonesRef.current)
+    createShopDataSnapshot(state, tombstonesRef.current),
   );
   const previousSnapshotRef = useRef<ShopDataSnapshot>(currentSnapshotRef.current);
-  const lastCloudSnapshotRef = useRef('');
-  const cloudSaveInFlightRef = useRef(false);
-  const cloudRetryAttemptRef = useRef(0);
-  const cloudRetryTimerRef = useRef<number | null>(null);
-  const cloudBootstrapRetryTimerRef = useRef<number | null>(null);
-  const cloudUserIdRef = useRef<string | null>(null);
-  const cloudSubscriptionCleanupRef = useRef<(() => void) | null>(null);
-  const lastRemoteUpdatedAtRef = useRef(0);
+  const pushCloudRef = useRef<() => void>(() => undefined);
+  const connectCloudRef = useRef<() => Promise<void>>(async () => undefined);
+  const subscribeRef = useRef<() => void>(() => undefined);
 
   currentSnapshotRef.current = createShopDataSnapshot(state, tombstonesRef.current);
 
-  // Persist deletions as tombstones. This prevents an older offline copy from
-  // re-introducing a sale, expense, udhaar, note, chat, or insight after sync.
-  useEffect(() => {
-    const latest = createShopDataSnapshot(state, tombstonesRef.current);
-    tombstonesRef.current = collectSnapshotTombstones(previousSnapshotRef.current, latest);
-    currentSnapshotRef.current = createShopDataSnapshot(state, tombstonesRef.current);
-    previousSnapshotRef.current = currentSnapshotRef.current;
-  }, [state]);
-
-  // Keep the existing local cache for offline use and as a non-destructive migration source.
-  useEffect(() => {
-    saveState(state);
-  }, [state]);
-
-  // Establish the authenticated owner and reconcile local data with that owner's cloud copy.
-  // Initialization is retried after transient network failures; local use remains available.
+  // Identify the current owner and check whether the encrypted vault exists.
   useEffect(() => {
     let active = true;
-    let attempts = 0;
-
     const bootstrap = async () => {
-      if (!supabase) return;
       try {
-        const localSnapshot = currentSnapshotRef.current;
-        const result = await loadOrCreateCloudSnapshot(localSnapshot);
+        const userId = await ensureShopVaultSession();
         if (!active) return;
+        userIdRef.current = userId;
+        localStorage.setItem('dukaandost_active_vault_user', userId);
 
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) throw sessionError;
-        const activeUserId = sessionData.session?.user?.id ?? null;
-        if (!activeUserId) throw new Error('There is no authenticated shop session.');
-        cloudUserIdRef.current = activeUserId;
-
-        tombstonesRef.current = result.snapshot.tombstones;
-        currentSnapshotRef.current = result.snapshot;
-        previousSnapshotRef.current = result.snapshot;
-        lastCloudSnapshotRef.current = result.schemaVersion >= 2
-          ? JSON.stringify(result.remoteSnapshot ?? result.snapshot)
-          : '';
-        lastRemoteUpdatedAtRef.current = result.updatedAt
-          ? Date.parse(result.updatedAt)
-          : 0;
-
-        dispatch({ type: 'HYDRATE_SHOP_DATA', payload: result.snapshot });
-
-        // Subscribe only to this owner's row. Reconnection performs a fresh cloud read,
-        // so changes made while this device was offline are recovered automatically.
-        cloudSubscriptionCleanupRef.current?.();
-        cloudSubscriptionCleanupRef.current = subscribeToShopDataSnapshot(
-          activeUserId,
-          (remoteSnapshot, updatedAt) => {
-            if (!active) return;
-
-            const remoteTime = Date.parse(updatedAt);
-            if (Number.isFinite(remoteTime) && remoteTime < lastRemoteUpdatedAtRef.current) {
-              return;
-            }
-            if (Number.isFinite(remoteTime)) {
-              lastRemoteUpdatedAtRef.current = remoteTime;
-            }
-
-            const remoteSerialized = JSON.stringify(remoteSnapshot);
-            if (remoteSerialized === lastCloudSnapshotRef.current) return;
-
-            const currentSnapshot = currentSnapshotRef.current;
-            let preferLocalProfile = true;
-            let preferLocalPreferences = true;
-
-            // Compare these fields independently. A pending sale must not prevent a
-            // remote shop-profile or preference edit from reaching this device.
-            if (lastCloudSnapshotRef.current) {
-              try {
-                const lastSynced = JSON.parse(lastCloudSnapshotRef.current) as ShopDataSnapshot;
-                preferLocalProfile =
-                  JSON.stringify(currentSnapshot.shopProfile) !== JSON.stringify(lastSynced.shopProfile);
-                preferLocalPreferences =
-                  JSON.stringify(currentSnapshot.preferences) !== JSON.stringify(lastSynced.preferences);
-              } catch {
-                // Until a valid cloud baseline exists, preserve local setup choices.
-              }
-            }
-
-            const reconciled = mergeShopDataSnapshots(
-              currentSnapshot,
-              remoteSnapshot,
-              { preferLocalProfile, preferLocalPreferences },
-            );
-
-            lastCloudSnapshotRef.current = remoteSerialized;
-            tombstonesRef.current = reconciled.tombstones;
-
-            // Dispatch even when the merged data matches local state: this schedules
-            // a cloud write if the local device had unsaved edits while the event arrived.
-
-            currentSnapshotRef.current = reconciled;
-            previousSnapshotRef.current = reconciled;
-            dispatch({ type: 'SYNC_SHOP_DATA', payload: reconciled });
-          },
-        );
-
-        setCloudReady(true);
-      } catch (error) {
-        console.error('Dukaan Dost cloud persistence could not initialize; local data remains available.', error);
-        if (active && attempts < 5) {
-          const delay = Math.min(30000, 2000 * (2 ** attempts));
-          attempts += 1;
-          cloudBootstrapRetryTimerRef.current = window.setTimeout(() => {
-            cloudBootstrapRetryTimerRef.current = null;
-            void bootstrap();
-          }, delay);
+        try {
+          const row = await readEncryptedShopVault(userId);
+          if (!active) return;
+          setVaultError('');
+          setVaultStatus(row ? 'locked' : 'new');
+        } catch (error) {
+          if (!active) return;
+          if (readLocalEncryptedCache(userId)) {
+            setVaultError('Cloud storage is temporarily unavailable. You can unlock the encrypted copy on this device; cloud sync will resume when the connection returns.');
+            setVaultStatus('locked');
+          } else {
+            setVaultError(error instanceof Error
+              ? error.message
+              : 'Could not connect to secure cloud storage. Check your internet connection and retry.');
+            setVaultStatus('error');
+          }
         }
+      } catch (error) {
+        if (!active) return;
+        setVaultError(error instanceof Error
+          ? error.message
+          : 'Could not establish a secure shop account. Please retry.');
+        setVaultStatus('error');
       }
     };
-
     void bootstrap();
+
     return () => {
       active = false;
       cloudSubscriptionCleanupRef.current?.();
       cloudSubscriptionCleanupRef.current = null;
-      if (cloudBootstrapRetryTimerRef.current !== null) {
-        window.clearTimeout(cloudBootstrapRetryTimerRef.current);
-      }
     };
   }, []);
 
-  // Serialize cloud writes, skip unchanged state, and retry transient failures without changing the UI.
-  const pushCloudSnapshotRef = useRef<() => void>(() => undefined);
-  pushCloudSnapshotRef.current = () => {
-    if (!cloudReady || !cloudUserIdRef.current || cloudSaveInFlightRef.current) return;
+  // Track deleted records only after the vault has been unlocked. This avoids treating
+  // the initial locked state as a real deletion of records from the encrypted vault.
+  useEffect(() => {
+    if (vaultStatus !== 'unlocked') return;
+    const latest = createShopDataSnapshot(state, tombstonesRef.current);
+    tombstonesRef.current = collectSnapshotTombstones(previousSnapshotRef.current, latest);
+    currentSnapshotRef.current = createShopDataSnapshot(state, tombstonesRef.current);
+    previousSnapshotRef.current = currentSnapshotRef.current;
+  }, [state, vaultStatus]);
+
+  // Persist all on-device app state as an encrypted envelope. The encryption key
+  // remains non-extractable and in memory; the passphrase is never stored.
+  useEffect(() => {
+    if (vaultStatus !== 'unlocked') return;
+    const userId = userIdRef.current;
+    const cipher = localCipherRef.current;
+    if (!userId || !cipher) return;
+
+    const sequence = ++localSaveSequenceRef.current;
+    if (localSaveTimerRef.current !== null) {
+      window.clearTimeout(localSaveTimerRef.current);
+    }
+    localSaveTimerRef.current = window.setTimeout(() => {
+      localSaveTimerRef.current = null;
+      void cipher.encrypt(state).then((envelope) => {
+        if (sequence !== localSaveSequenceRef.current) return;
+        localStorage.setItem(localVaultCacheKey(userId), JSON.stringify(envelope));
+        localStorage.setItem(localVaultSaltKey(userId), envelope.kdf_salt);
+        localStorage.removeItem('dukaandost_state');
+      }).catch((error) => {
+        console.error('Dukaan Dost could not update its encrypted local cache.', error);
+      });
+    }, 180);
+
+    return () => {
+      if (localSaveTimerRef.current !== null) {
+        window.clearTimeout(localSaveTimerRef.current);
+        localSaveTimerRef.current = null;
+      }
+    };
+  }, [state, vaultStatus]);
+
+  // Realtime delivers encrypted rows only. Decryption and reconciliation happen locally.
+  subscribeRef.current = () => {
+    const userId = userIdRef.current;
+    if (!userId || !remoteCipherRef.current) return;
+
+    cloudSubscriptionCleanupRef.current?.();
+    cloudSubscriptionCleanupRef.current = subscribeToEncryptedShopVault(userId, (row) => {
+      void (async () => {
+        const cipher = remoteCipherRef.current;
+        if (!cipher || row.user_id !== userId) return;
+
+        const remoteTime = Date.parse(row.updated_at);
+        if (Number.isFinite(remoteTime) && remoteTime < remoteUpdatedAtRef.current) return;
+
+        const decoded = await cipher.decrypt<unknown>(row);
+        const remoteSnapshot = normalizeShopDataSnapshot(decoded);
+        if (!remoteSnapshot) {
+          console.error('Dukaan Dost ignored an invalid encrypted vault update.');
+          return;
+        }
+
+        const remoteSerialized = JSON.stringify(remoteSnapshot);
+        if (remoteSerialized === lastCloudSnapshotRef.current) return;
+
+        const localSnapshot = currentSnapshotRef.current;
+        let preferLocalProfile = true;
+        let preferLocalPreferences = true;
+        if (lastCloudSnapshotRef.current) {
+          try {
+            const lastSynced = JSON.parse(lastCloudSnapshotRef.current) as ShopDataSnapshot;
+            preferLocalProfile = JSON.stringify(localSnapshot.shopProfile) !== JSON.stringify(lastSynced.shopProfile);
+            preferLocalPreferences = JSON.stringify(localSnapshot.preferences) !== JSON.stringify(lastSynced.preferences);
+          } catch {
+            // Preserve local pending edits if a prior sync baseline cannot be parsed.
+          }
+        }
+
+        const reconciled = mergeShopDataSnapshots(
+          localSnapshot,
+          remoteSnapshot,
+          { preferLocalProfile, preferLocalPreferences },
+        );
+        lastCloudSnapshotRef.current = remoteSerialized;
+        if (Number.isFinite(remoteTime)) remoteUpdatedAtRef.current = remoteTime;
+        tombstonesRef.current = reconciled.tombstones;
+        currentSnapshotRef.current = reconciled;
+        previousSnapshotRef.current = reconciled;
+        dispatch({
+          type: 'RESTORE_LOCAL_STATE',
+          payload: applySnapshotToState(stateRef.current, reconciled),
+        });
+      })().catch((error) => {
+        console.error('Dukaan Dost could not decrypt a vault update. Local data remains unchanged.', error);
+      });
+    });
+  };
+
+  // Persist the latest cloud-safe snapshot as ciphertext, with a single-write queue.
+  pushCloudRef.current = () => {
+    const userId = userIdRef.current;
+    const cipher = remoteCipherRef.current;
+    if (vaultStatus !== 'unlocked' || !cloudReady || !userId || !cipher || cloudSaveInFlightRef.current) {
+      return;
+    }
 
     const snapshot = currentSnapshotRef.current;
     const serialized = JSON.stringify(snapshot);
     if (serialized === lastCloudSnapshotRef.current) return;
 
     cloudSaveInFlightRef.current = true;
-    void persistShopDataSnapshot(snapshot, cloudUserIdRef.current)
+    void cipher.encrypt(snapshot)
+      .then((envelope) => writeEncryptedShopVault(userId, envelope))
       .then(() => {
         lastCloudSnapshotRef.current = serialized;
         cloudRetryAttemptRef.current = 0;
       })
       .catch((error) => {
-        console.error('Dukaan Dost cloud save failed; it will retry automatically.', error);
+        console.error('Dukaan Dost encrypted cloud save failed; it will retry automatically.', error);
         cloudRetryAttemptRef.current += 1;
         if (cloudRetryTimerRef.current !== null) {
           window.clearTimeout(cloudRetryTimerRef.current);
@@ -536,46 +654,264 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const delay = Math.min(60000, 2000 * (2 ** Math.min(cloudRetryAttemptRef.current - 1, 5)));
         cloudRetryTimerRef.current = window.setTimeout(() => {
           cloudRetryTimerRef.current = null;
-          pushCloudSnapshotRef.current();
+          pushCloudRef.current();
         }, delay);
       })
       .finally(() => {
         cloudSaveInFlightRef.current = false;
-        // If data changed while a write was in flight, immediately enqueue the latest version.
-        if (JSON.stringify(currentSnapshotRef.current) !== lastCloudSnapshotRef.current) {
-          if (cloudRetryTimerRef.current === null) {
-            window.setTimeout(() => pushCloudSnapshotRef.current(), 0);
-          }
+        if (
+          JSON.stringify(currentSnapshotRef.current) !== lastCloudSnapshotRef.current &&
+          cloudRetryTimerRef.current === null
+        ) {
+          window.setTimeout(() => pushCloudRef.current(), 0);
         }
       });
   };
 
+  // Reconnect after an offline unlock. If there is no encrypted row yet, migrate the
+  // legacy plaintext snapshot only after the new ciphertext is read back and decrypted.
+  connectCloudRef.current = async () => {
+    const userId = userIdRef.current;
+    const passphrase = passphraseRef.current;
+    if (!userId || !passphrase || remoteCipherRef.current) return;
+
+    const row = await readEncryptedShopVault(userId);
+    let remoteCipher: VaultCipher;
+    let remoteSnapshot: ShopDataSnapshot;
+
+    if (row) {
+      remoteCipher = await createVaultCipher(passphrase, row.kdf_salt);
+      const decoded = normalizeShopDataSnapshot(await remoteCipher.decrypt<unknown>(row));
+      if (!decoded) throw new Error('The encrypted cloud vault could not be validated.');
+      remoteSnapshot = decoded;
+      lastCloudSnapshotRef.current = JSON.stringify(remoteSnapshot);
+      const remoteTime = Date.parse(row.updated_at);
+      remoteUpdatedAtRef.current = Number.isFinite(remoteTime) ? remoteTime : 0;
+
+      const merged = mergeShopDataSnapshots(currentSnapshotRef.current, remoteSnapshot);
+      tombstonesRef.current = merged.tombstones;
+      currentSnapshotRef.current = merged;
+      previousSnapshotRef.current = merged;
+      dispatch({
+        type: 'RESTORE_LOCAL_STATE',
+        payload: applySnapshotToState(stateRef.current, merged),
+      });
+    } else {
+      const legacyRow = await readLegacyShopSnapshot(userId);
+      let legacySnapshot: ShopDataSnapshot | null = null;
+      if (legacyRow) {
+        legacySnapshot = normalizeShopDataSnapshot(legacyRow.state);
+        if (!legacySnapshot) {
+          throw new Error('The old cloud shop data could not be validated. It was left untouched.');
+        }
+      }
+
+      const localSnapshot = currentSnapshotRef.current;
+      remoteSnapshot = legacySnapshot
+        ? mergeShopDataSnapshots(localSnapshot, legacySnapshot)
+        : localSnapshot;
+      const salt = createVaultSalt();
+      remoteCipher = await createVaultCipher(passphrase, salt);
+      const envelope = await remoteCipher.encrypt(remoteSnapshot);
+      await writeEncryptedShopVault(userId, envelope);
+
+      const verifiedRow = await readEncryptedShopVault(userId);
+      if (!verifiedRow || verifiedRow.ciphertext !== envelope.ciphertext ||
+          verifiedRow.iv !== envelope.iv || verifiedRow.kdf_salt !== envelope.kdf_salt) {
+        throw new Error('The encrypted cloud vault could not be verified. The old cloud copy was retained.');
+      }
+      const verified = normalizeShopDataSnapshot(await remoteCipher.decrypt<unknown>(verifiedRow));
+      if (!verified || JSON.stringify(verified) !== JSON.stringify(remoteSnapshot)) {
+        throw new Error('The encrypted cloud vault did not pass its verification check.');
+      }
+      if (legacyRow) await deleteLegacyShopSnapshot(userId);
+      lastCloudSnapshotRef.current = JSON.stringify(remoteSnapshot);
+      const remoteTime = Date.parse(verifiedRow.updated_at);
+      remoteUpdatedAtRef.current = Number.isFinite(remoteTime) ? remoteTime : 0;
+    }
+
+    remoteCipherRef.current = remoteCipher;
+    setCloudReady(true);
+    setVaultError('');
+    subscribeRef.current();
+    if (JSON.stringify(currentSnapshotRef.current) !== lastCloudSnapshotRef.current) {
+      window.setTimeout(() => pushCloudRef.current(), 0);
+    }
+  };
+
+  const unlockVault = async (passphrase: string): Promise<void> => {
+    if (passphrase.length < 12) {
+      throw new Error('Use at least 12 characters for your private vault passphrase.');
+    }
+
+    setVaultError('');
+    const userId = userIdRef.current ?? await ensureShopVaultSession();
+    userIdRef.current = userId;
+
+    const localCache = readLocalEncryptedCache(userId);
+    let cachedState: AppState | null = null;
+    if (localCache) {
+      try {
+        const localCipher = await createVaultCipher(passphrase, localCache.salt);
+        const decrypted = await localCipher.decrypt<unknown>(localCache.envelope);
+        if (isAppState(decrypted)) cachedState = decrypted;
+      } catch {
+        // The cloud vault, if present, remains the authoritative passphrase check.
+      }
+    }
+
+    let row: EncryptedShopVaultRow | null = null;
+    let cloudAvailable = true;
+    try {
+      row = await readEncryptedShopVault(userId);
+    } catch {
+      cloudAvailable = false;
+    }
+
+    if (localCache && !cachedState && !row) {
+      throw new Error('This passphrase did not unlock the encrypted data saved on this device.');
+    }
+
+    const localBase = cachedState ?? stateRef.current;
+    const localSnapshot = createShopDataSnapshot(localBase, tombstonesRef.current);
+    let mergedSnapshot: ShopDataSnapshot;
+    let remoteCipher: VaultCipher | null = null;
+    let remoteUpdatedAt = 0;
+
+    if (row) {
+      remoteCipher = await createVaultCipher(passphrase, row.kdf_salt);
+      const decoded = await remoteCipher.decrypt<unknown>(row);
+      const remoteSnapshot = normalizeShopDataSnapshot(decoded);
+      if (!remoteSnapshot) {
+        throw new Error('The encrypted cloud vault could not be validated. Your data was not changed.');
+      }
+
+      const preferLocalPreferences = Boolean(
+        localBase.language || localBase.onboardingComplete || hasLocalProfileData(localBase.shopProfile)
+      );
+      mergedSnapshot = mergeShopDataSnapshots(
+        localSnapshot,
+        remoteSnapshot,
+        { preferLocalPreferences },
+      );
+      lastCloudSnapshotRef.current = JSON.stringify(remoteSnapshot);
+      const remoteTime = Date.parse(row.updated_at);
+      remoteUpdatedAt = Number.isFinite(remoteTime) ? remoteTime : 0;
+    } else if (cloudAvailable) {
+      const legacyRow = await readLegacyShopSnapshot(userId);
+      let legacySnapshot: ShopDataSnapshot | null = null;
+      if (legacyRow) {
+        if (legacyRow.schema_version !== 1 && legacyRow.schema_version !== 2) {
+          throw new Error('The old cloud shop data uses an unsupported version. It was left untouched.');
+        }
+        legacySnapshot = normalizeShopDataSnapshot(legacyRow.state);
+        if (!legacySnapshot) {
+          throw new Error('The old cloud shop data could not be validated. It was left untouched.');
+        }
+      }
+
+      mergedSnapshot = legacySnapshot
+        ? mergeShopDataSnapshots(localSnapshot, legacySnapshot)
+        : localSnapshot;
+
+      const salt = createVaultSalt();
+      remoteCipher = await createVaultCipher(passphrase, salt);
+      const envelope = await remoteCipher.encrypt(mergedSnapshot);
+      await writeEncryptedShopVault(userId, envelope);
+
+      const verifiedRow = await readEncryptedShopVault(userId);
+      if (!verifiedRow || verifiedRow.ciphertext !== envelope.ciphertext ||
+          verifiedRow.iv !== envelope.iv || verifiedRow.kdf_salt !== envelope.kdf_salt) {
+        throw new Error('The encrypted cloud vault could not be verified. Your previous cloud copy was retained.');
+      }
+      const verified = normalizeShopDataSnapshot(await remoteCipher.decrypt<unknown>(verifiedRow));
+      if (!verified || JSON.stringify(verified) !== JSON.stringify(mergedSnapshot)) {
+        throw new Error('The encrypted cloud vault did not pass its verification check.');
+      }
+
+      // Delete the old plaintext row only after ciphertext read-back and decryption pass.
+      if (legacyRow) await deleteLegacyShopSnapshot(userId);
+      lastCloudSnapshotRef.current = JSON.stringify(mergedSnapshot);
+      const remoteTime = Date.parse(verifiedRow.updated_at);
+      remoteUpdatedAt = Number.isFinite(remoteTime) ? remoteTime : 0;
+    } else {
+      if (!cachedState || !localCache) {
+        throw new Error('Connect to the internet once to create your encrypted vault. No data has been changed.');
+      }
+      mergedSnapshot = createShopDataSnapshot(cachedState);
+      lastCloudSnapshotRef.current = '';
+    }
+
+    const restoredState = applySnapshotToState(localBase, mergedSnapshot);
+    const localSalt = cachedState && localCache ? localCache.salt : createVaultSalt();
+    const localCipher = await createVaultCipher(passphrase, localSalt);
+
+    // Commit an encrypted local copy before removing the old plaintext cache.
+    const localEnvelope = await localCipher.encrypt(restoredState);
+    localStorage.setItem(localVaultCacheKey(userId), JSON.stringify(localEnvelope));
+    localStorage.setItem(localVaultSaltKey(userId), localSalt);
+    localStorage.setItem('dukaandost_active_vault_user', userId);
+    localStorage.removeItem('dukaandost_state');
+
+    passphraseRef.current = passphrase;
+    remoteCipherRef.current = remoteCipher;
+    localCipherRef.current = localCipher;
+    remoteUpdatedAtRef.current = remoteUpdatedAt;
+    tombstonesRef.current = mergedSnapshot.tombstones;
+    currentSnapshotRef.current = mergedSnapshot;
+    previousSnapshotRef.current = mergedSnapshot;
+
+    dispatch({ type: 'RESTORE_LOCAL_STATE', payload: restoredState });
+    setCloudReady(Boolean(remoteCipher && cloudAvailable));
+    setVaultStatus('unlocked');
+
+    if (remoteCipher && cloudAvailable) {
+      subscribeRef.current();
+    } else {
+      setVaultError('Your encrypted device copy is open. Cloud sync will reconnect when internet access returns.');
+    }
+  };
+
+  // Save the latest state to the encrypted cloud vault after small bursts of edits.
   useEffect(() => {
-    if (!cloudReady) return;
-    const timer = window.setTimeout(() => pushCloudSnapshotRef.current(), 700);
+    if (vaultStatus !== 'unlocked' || !cloudReady) return;
+    const timer = window.setTimeout(() => pushCloudRef.current(), 700);
     return () => window.clearTimeout(timer);
-  }, [state, cloudReady]);
+  }, [state, vaultStatus, cloudReady]);
 
   useEffect(() => {
-    const retryWhenOnline = () => pushCloudSnapshotRef.current();
-    const flushWhenHidden = () => {
-      if (document.visibilityState === 'hidden') pushCloudSnapshotRef.current();
+    const retryCloud = () => {
+      if (vaultStatus === 'unlocked' && !cloudReady) {
+        void connectCloudRef.current().catch((error) => {
+          setVaultError(error instanceof Error
+            ? error.message
+            : 'Cloud vault sync could not reconnect. Your local encrypted copy remains available.');
+        });
+      } else if (vaultStatus === 'unlocked') {
+        pushCloudRef.current();
+      }
     };
-    window.addEventListener('online', retryWhenOnline);
+    window.addEventListener('online', retryCloud);
+    const flushWhenHidden = () => {
+      if (document.visibilityState === 'hidden') pushCloudRef.current();
+    };
     document.addEventListener('visibilitychange', flushWhenHidden);
     return () => {
-      window.removeEventListener('online', retryWhenOnline);
+      window.removeEventListener('online', retryCloud);
       document.removeEventListener('visibilitychange', flushWhenHidden);
     };
-  }, []);
+  }, [vaultStatus, cloudReady]);
+
+  // The prototype uses anonymous Supabase accounts. Signing out would orphan cloud
+  // data until real, recoverable phone authentication is available.
+  const signOut = async (): Promise<void> => {
+    throw new Error('Account switching will be available after real phone verification is integrated. Your vault and shop data have been kept safe.');
+  };
 
   useEffect(() => () => {
-    if (cloudRetryTimerRef.current !== null) {
-      window.clearTimeout(cloudRetryTimerRef.current);
-    }
-    if (cloudBootstrapRetryTimerRef.current !== null) {
-      window.clearTimeout(cloudBootstrapRetryTimerRef.current);
-    }
+    cloudSubscriptionCleanupRef.current?.();
+    if (cloudRetryTimerRef.current !== null) window.clearTimeout(cloudRetryTimerRef.current);
+    if (localSaveTimerRef.current !== null) window.clearTimeout(localSaveTimerRef.current);
   }, []);
 
   useEffect(() => {
@@ -587,7 +923,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [state.theme]);
 
   return (
-    <StoreContext.Provider value={{ state, dispatch }}>
+    <StoreContext.Provider value={{
+      state,
+      dispatch,
+      vaultStatus,
+      vaultError,
+      unlockVault,
+      signOut,
+    }}>
       {children}
     </StoreContext.Provider>
   );
