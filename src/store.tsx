@@ -202,8 +202,11 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, streak: action.payload.streak, lastEntryDate: action.payload.lastDate };
     case 'SET_TEXT_SIZE':
       return { ...state, textSize: action.payload };
-    case 'SET_LOCK':
-      return { ...state, lockEnabled: action.payload.enabled, lockPin: action.payload.pin };
+    case 'SET_LOCK': {
+      const pin = action.payload.pin.replace(/\D/g, '').slice(0, 4);
+      const enabled = action.payload.enabled && pin.length === 4;
+      return { ...state, lockEnabled: enabled, lockPin: enabled ? pin : '' };
+    }
     case 'TOGGLE_ALERT_TYPE':
       return {
         ...state,
