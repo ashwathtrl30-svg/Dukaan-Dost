@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { LockKeyhole, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, LockKeyhole, ShieldCheck } from 'lucide-react';
 import { useStore } from '../store';
 
 export function VaultAccessScreen() {
   const { vaultStatus, vaultError, unlockVault } = useStore();
   const [passphrase, setPassphrase] = useState('');
   const [confirmation, setConfirmation] = useState('');
+  const [showPassphrase, setShowPassphrase] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -77,32 +79,56 @@ export function VaultAccessScreen() {
         <label className="text-small font-medium text-text block mb-2" htmlFor="vault-passphrase">
           Private vault passphrase
         </label>
-        <input
-          id="vault-passphrase"
-          type="password"
-          autoComplete={isNewVault ? 'new-password' : 'current-password'}
-          value={passphrase}
-          onChange={(e) => setPassphrase(e.target.value)}
-          className="input-field mb-3"
-          minLength={12}
-          placeholder="At least 12 characters"
-        />
+        <div className="relative mb-3">
+          <input
+            id="vault-passphrase"
+            type={showPassphrase ? 'text' : 'password'}
+            autoComplete={isNewVault ? 'new-password' : 'current-password'}
+            value={passphrase}
+            onChange={(e) => setPassphrase(e.target.value)}
+            className="input-field pr-12"
+            minLength={12}
+            placeholder="At least 12 characters"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassphrase((visible) => !visible)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+            aria-label={showPassphrase ? 'Hide passphrase' : 'Show passphrase'}
+            aria-pressed={showPassphrase}
+            title={showPassphrase ? 'Hide passphrase' : 'Show passphrase'}
+          >
+            {showPassphrase ? <EyeOff size={19} /> : <Eye size={19} />}
+          </button>
+        </div>
 
         {isNewVault && (
           <>
             <label className="text-small font-medium text-text block mb-2" htmlFor="vault-confirmation">
               Confirm passphrase
             </label>
-            <input
-              id="vault-confirmation"
-              type="password"
-              autoComplete="new-password"
-              value={confirmation}
-              onChange={(e) => setConfirmation(e.target.value)}
-              className="input-field mb-3"
-              minLength={12}
-              placeholder="Enter it again"
-            />
+            <div className="relative mb-3">
+              <input
+                id="vault-confirmation"
+                type={showConfirmation ? 'text' : 'password'}
+                autoComplete="new-password"
+                value={confirmation}
+                onChange={(e) => setConfirmation(e.target.value)}
+                className="input-field pr-12"
+                minLength={12}
+                placeholder="Enter it again"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmation((visible) => !visible)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+                aria-label={showConfirmation ? 'Hide confirmation passphrase' : 'Show confirmation passphrase'}
+                aria-pressed={showConfirmation}
+                title={showConfirmation ? 'Hide confirmation passphrase' : 'Show confirmation passphrase'}
+              >
+                {showConfirmation ? <EyeOff size={19} /> : <Eye size={19} />}
+              </button>
+            </div>
           </>
         )}
 
