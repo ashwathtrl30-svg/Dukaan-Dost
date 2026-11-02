@@ -7,7 +7,7 @@ import {
   mergeShopDataSnapshots,
 } from './shopDataSnapshot';
 import type { ShopDataSnapshot } from './shopDataSnapshot';
-import { loadOrCreateCloudSnapshot, persistShopDataSnapshot } from './cloudPersistence';
+import { loadOrCreateCloudSnapshot, persistShopDataSnapshot, subscribeToShopDataSnapshot } from './cloudPersistence';
 import { supabase } from './supabaseClient';
 
 const initialState: AppState = {
@@ -82,7 +82,8 @@ type Action =
   | { type: 'EXPORT_DATA' }
   | { type: 'DELETE_ALL_DATA' }
   | { type: 'RESET_ONBOARDING' }
-  | { type: 'HYDRATE_SHOP_DATA'; payload: ShopDataSnapshot };
+  | { type: 'HYDRATE_SHOP_DATA'; payload: ShopDataSnapshot }
+  | { type: 'SYNC_SHOP_DATA'; payload: ShopDataSnapshot };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -240,6 +241,38 @@ function reducer(state: AppState, action: Action): AppState {
             ?? null,
       };
     }
+    case 'SYNC_SHOP_DATA': {
+      // The payload is already reconciled with this device's pending changes.
+      // Replace only cloud-owned fields; device PIN and phone details remain local.
+      const merged = action.payload;
+      return {
+        ...state,
+        shopProfile: merged.shopProfile,
+        sales: merged.sales,
+        expenses: merged.expenses,
+        udhaar: merged.udhaar,
+        notebookNotes: merged.notebookNotes,
+        chatSessions: merged.chatSessions,
+        insights: merged.insights,
+        language: merged.preferences.language,
+        theme: merged.preferences.theme,
+        onboardingComplete: merged.preferences.onboardingComplete,
+        userName: merged.preferences.userName,
+        reminderTime: merged.preferences.reminderTime,
+        streak: merged.preferences.streak,
+        lastEntryDate: merged.preferences.lastEntryDate,
+        textSize: merged.preferences.textSize,
+        notificationsEnabled: merged.preferences.notificationsEnabled,
+        alertTypes: merged.preferences.alertTypes,
+        activeSessionId: state.activeSessionId && merged.chatSessions.some(
+          (session) => session.id === state.activeSessionId
+        )
+          ? state.activeSessionId
+          : merged.chatSessions.find((session) => session.messages.length === 0)?.id
+            ?? merged.chatSessions[0]?.id
+            ?? null,
+      };
+    }
     case 'DELETE_ALL_DATA':
       return { ...initialState, language: state.language, theme: state.theme };
     case 'RESET_ONBOARDING':
@@ -342,6 +375,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const cloudRetryTimerRef = useRef<number | null>(null);
   const cloudBootstrapRetryTimerRef = useRef<number | null>(null);
   const cloudUserIdRef = useRef<string | null>(null);
+  const cloudSubscriptionCleanupRef = useRef<(() => void) | null>(null);
+  const lastRemoteUpdatedAtRef = useRef(0);
 
   currentSnapshotRef.current = createShopDataSnapshot(state, tombstonesRef.current);
 
@@ -374,13 +409,62 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) throw sessionError;
-        cloudUserIdRef.current = sessionData.session?.user?.id ?? null;
+        const activeUserId = sessionData.session?.user?.id ?? null;
+        if (!activeUserId) throw new Error('There is no authenticated shop session.');
+        cloudUserIdRef.current = activeUserId;
 
         tombstonesRef.current = result.snapshot.tombstones;
+        currentSnapshotRef.current = result.snapshot;
+        previousSnapshotRef.current = result.snapshot;
         lastCloudSnapshotRef.current = result.schemaVersion >= 2
           ? JSON.stringify(result.remoteSnapshot ?? result.snapshot)
           : '';
+        lastRemoteUpdatedAtRef.current = result.updatedAt
+          ? Date.parse(result.updatedAt)
+          : 0;
+
         dispatch({ type: 'HYDRATE_SHOP_DATA', payload: result.snapshot });
+
+        // Subscribe only to this owner's row. Reconnection performs a fresh cloud read,
+        // so changes made while this device was offline are recovered automatically.
+        cloudSubscriptionCleanupRef.current?.();
+        cloudSubscriptionCleanupRef.current = subscribeToShopDataSnapshot(
+          activeUserId,
+          (remoteSnapshot, updatedAt) => {
+            if (!active) return;
+
+            const remoteTime = Date.parse(updatedAt);
+            if (Number.isFinite(remoteTime) && remoteTime < lastRemoteUpdatedAtRef.current) {
+              return;
+            }
+            if (Number.isFinite(remoteTime)) {
+              lastRemoteUpdatedAtRef.current = remoteTime;
+            }
+
+            const remoteSerialized = JSON.stringify(remoteSnapshot);
+            if (remoteSerialized === lastCloudSnapshotRef.current) return;
+
+            const currentSnapshot = currentSnapshotRef.current;
+            const hasUnsavedLocalChanges =
+              JSON.stringify(currentSnapshot) !== lastCloudSnapshotRef.current;
+
+            // Pending local edits are retained. Otherwise the cloud copy is authoritative
+            // for the profile and preferences on a device receiving another device's update.
+            const reconciled = hasUnsavedLocalChanges
+              ? mergeShopDataSnapshots(currentSnapshot, remoteSnapshot)
+              : mergeShopDataSnapshots(remoteSnapshot, currentSnapshot);
+
+            lastCloudSnapshotRef.current = remoteSerialized;
+            tombstonesRef.current = reconciled.tombstones;
+
+            if (JSON.stringify(reconciled) === JSON.stringify(currentSnapshot)) return;
+
+            currentSnapshotRef.current = reconciled;
+            previousSnapshotRef.current = reconciled;
+            dispatch({ type: 'SYNC_SHOP_DATA', payload: reconciled });
+          },
+        );
+
         setCloudReady(true);
       } catch (error) {
         console.error('Dukaan Dost cloud persistence could not initialize; local data remains available.', error);
@@ -398,6 +482,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     void bootstrap();
     return () => {
       active = false;
+      cloudSubscriptionCleanupRef.current?.();
+      cloudSubscriptionCleanupRef.current = null;
       if (cloudBootstrapRetryTimerRef.current !== null) {
         window.clearTimeout(cloudBootstrapRetryTimerRef.current);
       }
