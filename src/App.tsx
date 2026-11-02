@@ -12,12 +12,13 @@ import { AskScreen } from './screens/Ask';
 import { ToolsScreen } from './screens/Tools';
 import { LearnScreen } from './screens/Learn';
 import { ProfileScreen } from './screens/Profile';
+import { VaultAccessScreen } from './screens/VaultAccess';
 import { Home, BarChart3, MessageCircle, Wrench, BookOpen, User, WifiOff, Check, X, Lock, Eye, EyeOff } from 'lucide-react';
 
 type Tab = 'home' | 'insights' | 'ask' | 'tools' | 'learn';
 
 function AppContent() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, vaultStatus } = useStore();
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [showProfile, setShowProfile] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
@@ -35,15 +36,20 @@ function AppContent() {
   const [showUnlockPin, setShowUnlockPin] = useState(true);
   const [unlockError, setUnlockError] = useState('');
 
-  // A configured PIN must be entered after a fresh app load. Disabling the lock
-  // immediately restores access; PIN credentials stay local to this device.
+  const wasAppLockEnabledRef = useRef(hasValidAppLock);
   useEffect(() => {
-    if (!state.lockEnabled || !/^\d{4}$/.test(state.lockPin)) {
+    if (!hasValidAppLock) {
       setIsAppUnlocked(true);
       setUnlockPin('');
       setUnlockError('');
+    } else if (!wasAppLockEnabledRef.current) {
+      // State is restored only after vault unlock, so re-lock after every app load.
+      setIsAppUnlocked(false);
+      setUnlockPin('');
+      setUnlockError('');
     }
-  }, [state.lockEnabled, state.lockPin]);
+    wasAppLockEnabledRef.current = hasValidAppLock;
+  }, [hasValidAppLock]);
 
   // Re-lock whenever the app is backgrounded or the page is being left.
   useEffect(() => {
@@ -268,6 +274,11 @@ function AppContent() {
     setVoiceUndoEntries([]);
     showTemporaryVoiceStatus(lang === 'hi' ? 'आख़िरी वॉइस एंट्री हटा दी।' : 'Undid the last voice entry.');
   };
+
+  // Do not render shop data until the encrypted vault has been unlocked.
+  if (vaultStatus !== 'unlocked') {
+    return <VaultAccessScreen />;
+  }
 
   // The lock gate is above onboarding and all app screens, so no tab,
   // profile page, or onboarding route can be reached without the local PIN.
