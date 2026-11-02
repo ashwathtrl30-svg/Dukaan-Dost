@@ -97,13 +97,19 @@ export async function writeEncryptedShopVault(
 }
 
 /** Delete the legacy plaintext copy only after the encrypted copy has been read back and verified. */
-export async function deleteLegacyShopSnapshot(userId: string): Promise<void> {
+export async function deleteLegacyShopSnapshot(
+  userId: string,
+  expectedUpdatedAt: string,
+): Promise<void> {
   const client = requireSupabase();
   await assertActiveShopUser(userId);
+  // Compare-and-delete avoids removing a newer plaintext write from an older
+  // app tab while a vault migration is in progress.
   const { error } = await client
     .from('shop_state_snapshots')
     .delete()
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .eq('updated_at', expectedUpdatedAt);
   if (error) throw error;
 }
 
