@@ -156,7 +156,7 @@ export function PhoneScreen() {
             <input
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\\D/g, '').slice(0, 10))}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
               placeholder="+91 XXXXX XXXXX"
               className="input-field text-body text-center tracking-wider mb-4"
               autoFocus
@@ -185,7 +185,7 @@ export function PhoneScreen() {
             <input
               type="tel"
               value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\\D/g, '').slice(0, 6))}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="______"
               className="input-field text-body text-center tracking-[0.5em] mb-4"
               autoFocus
