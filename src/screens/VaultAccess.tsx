@@ -3,7 +3,7 @@ import { LockKeyhole, ShieldCheck } from 'lucide-react';
 import { useStore } from '../store';
 
 export function VaultAccessScreen() {
-  const { vaultStatus, unlockVault, signOut } = useStore();
+  const { vaultStatus, vaultError, unlockVault } = useStore();
   const [passphrase, setPassphrase] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [busy, setBusy] = useState(false);
@@ -46,14 +46,13 @@ export function VaultAccessScreen() {
     );
   }
 
-  if (vaultStatus === 'error' || vaultStatus === 'signed_out') {
+  if (vaultStatus === 'error') {
     return (
       <div className="h-full flex flex-col items-center justify-center px-6 bg-bg">
         <div className="card w-full max-w-sm">
           <h1 className="text-section-title text-text mb-2">Private vault unavailable</h1>
-          <p className="text-body text-text-secondary mb-4">We could not check your vault. Your shop data has not been opened.</p>
+          <p className="text-body text-text-secondary mb-4">{vaultError || 'We could not check your vault. Your shop data has not been opened.'}</p>
           <button onClick={() => window.location.reload()} className="btn-primary mb-3">Try again</button>
-          <button onClick={() => { void signOut().catch(() => undefined); }} className="btn-secondary">Sign out</button>
         </div>
       </div>
     );
@@ -73,6 +72,7 @@ export function VaultAccessScreen() {
             ? 'Your shop records will be encrypted on this device before they are saved online. Choose a passphrase only you know.'
             : 'Enter the passphrase you created for this vault. Neither the database nor the app stores it.'}
         </p>
+        {vaultError && <p className="text-small text-warning text-center mb-3" role="status">{vaultError}</p>}
 
         <label className="text-small font-medium text-text block mb-2" htmlFor="vault-passphrase">
           Private vault passphrase
@@ -123,12 +123,9 @@ export function VaultAccessScreen() {
           </p>
         </div>
 
-        <button
-          onClick={() => { void signOut().catch((err) => setError(err instanceof Error ? err.message : 'Could not sign out.')); }}
-          className="btn-text mx-auto mt-4"
-        >
-          Use a different phone number
-        </button>
+        <p className="text-small text-text-secondary text-center mt-4">
+          Account switching and passphrase recovery will be available after verified phone sign-in is integrated.
+        </p>
       </div>
     </div>
   );
