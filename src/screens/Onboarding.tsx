@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
-import { supabase } from '../supabaseClient';
 import { t } from '../i18n';
 import { ShopType, Duration, Ownership, MonthlySales, UdhaarLevel, AccountingMethod, Worry } from '../types';
 import { ArrowLeft, SkipForward } from 'lucide-react';
@@ -111,167 +110,25 @@ export function PhoneScreen() {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [verifying, setVerifying] = useState(false);
-  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
 
-  const phoneE164 = '+91' + phone;
-
-  const showAuthError = (error: unknown) => {
-    const message = error instanceof Error
-      ? error.message
-      : typeof error === 'string'
-        ? error
-        : 'Unknown authentication error';
-    const normalized = message.toLowerCase();
-
-    let friendlyMessage = message;
-    if (normalized.includes('manual linking')) {
-      friendlyMessage = 'Phone identity linking is not enabled for this Supabase project. Enable manual identity linking in Supabase Auth settings.';
-    } else if (
-      normalized.includes('phone provider') ||
-      normalized.includes('sms provider') ||
-      normalized.includes('sms not configured') ||
-      normalized.includes('provider is not configured')
-    ) {
-      friendlyMessage = 'Real phone OTP is not configured yet. Enable Phone Auth and configure an SMS provider in Supabase Auth settings.';
-    } else if (
-      normalized.includes('already registered') ||
-      normalized.includes('already exists') ||
-      normalized.includes('phone number') && normalized.includes('taken')
-    ) {
-      friendlyMessage = 'This phone number is already linked to another Dukaan Dost account. Do not create a second account; sign-in/recovery for existing phone accounts must be used.';
-    } else if (
-      normalized.includes('rate limit') ||
-      normalized.includes('too many requests') ||
-      normalized.includes('frequency')
-    ) {
-      friendlyMessage = 'Too many OTP requests. Please wait before trying again.';
-    }
-
-    window.alert(
-      (lang === 'hi' ? 'फ़ोन सत्यापन नहीं हो सका: ' : 'Phone verification failed: ') +
-      friendlyMessage
-    );
+  // Prototype-only flow: no SMS is sent and no phone identity is verified.
+  // Replace this with real Supabase Phone Auth when production OTP is integrated.
+  const handleSendOtp = () => {
+    if (phone.length !== 10) return;
+    setOtp('');
+    setStep('otp');
   };
 
-  const handleSendOtp = async () => {
-    if (phone.length !== 10 || verifying) return;
-    if (!/^[6-9]\d{9}$/.test(phone)) {
-      window.alert(lang === 'hi'
-        ? 'कृपया सही 10 अंकों का भारतीय मोबाइल नंबर लिखें।'
-        : 'Enter a valid 10-digit Indian mobile number.');
-      return;
-    }
-    if (!supabase) {
-      window.alert(lang === 'hi'
-        ? 'सत्यापन सेवा अभी उपलब्ध नहीं है।'
-        : 'The phone verification service is unavailable.');
-      return;
-    }
-
-    setVerifying(true);
-    try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      if (!sessionData.session) {
-        throw new Error('Your secure shop session is not ready. Refresh the page and try again.');
-      }
-
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-      if (!userData.user) {
-        throw new Error('Could not confirm the current shop account. Refresh the page and try again.');
-      }
-
-      // Preserve the anonymous user's ID so the existing shop snapshot and RLS ownership remain intact.
-      if (!userData.user.is_anonymous) {
-        if (userData.user.phone === phoneE164 && userData.user.phone_confirmed_at) {
-          dispatch({ type: 'SET_PHONE', payload: phone });
-          dispatch({ type: 'SET_ONBOARDING_STEP', payload: 3 });
-          return;
-        }
-        throw new Error('This browser is already signed in to a permanent account with a different phone identity. Do not replace that account during onboarding.');
-      }
-
-      setPendingUserId(userData.user.id);
-      const { error: updateError } = await supabase.auth.updateUser({ phone: phoneE164 });
-      if (updateError) throw updateError;
-
-      // Supabase sends a phone_change OTP to the number. No local or simulated code is accepted.
-      setOtp('');
-      setStep('otp');
-    } catch (error) {
-      showAuthError(error);
-    } finally {
-      setVerifying(false);
-    }
+  // Any six digits complete the prototype onboarding step.
+  const handleVerify = () => {
+    if (otp.length !== 6) return;
+    dispatch({ type: 'SET_PHONE', payload: phone });
+    dispatch({ type: 'SET_ONBOARDING_STEP', payload: 3 });
   };
 
-  const handleVerify = async () => {
-    if (otp.length !== 6 || verifying) return;
-    if (!supabase || !pendingUserId) {
-      window.alert(lang === 'hi'
-        ? 'सत्यापन सत्र उपलब्ध नहीं है। कृपया फिर से OTP भेजें।'
-        : 'The verification session is missing. Please request a new OTP.');
-      return;
-    }
-
-    setVerifying(true);
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: phoneE164,
-        token: otp,
-        type: 'phone_change',
-      });
-      if (error) throw error;
-
-      const verifiedUser = data.user;
-      if (
-        !verifiedUser ||
-        verifiedUser.id !== pendingUserId ||
-        verifiedUser.phone !== phoneE164 ||
-        !verifiedUser.phone_confirmed_at ||
-        verifiedUser.is_anonymous
-      ) {
-        throw new Error('Supabase did not return the expected permanently verified phone identity. Your onboarding has not been advanced.');
-      }
-
-      dispatch({ type: 'SET_PHONE', payload: phone });
-      dispatch({ type: 'SET_ONBOARDING_STEP', payload: 3 });
-    } catch (error) {
-      showAuthError(error);
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  const handleResendOtp = async () => {
-    if (verifying) return;
-    if (!supabase || !pendingUserId) {
-      window.alert(lang === 'hi'
-        ? 'सत्यापन सत्र उपलब्ध नहीं है। कृपया फिर से मोबाइल नंबर दर्ज करें।'
-        : 'The verification session is missing. Please enter your phone number again.');
-      return;
-    }
-
-    setVerifying(true);
-    try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError) throw userError;
-      if (!userData.user || userData.user.id !== pendingUserId) {
-        throw new Error('The active shop account changed. Request a new OTP from the current account.');
-      }
-
-      const { error } = await supabase.auth.resend({
-        type: 'phone_change',
-        phone: phoneE164,
-      });
-      if (error) throw error;
-    } catch (error) {
-      showAuthError(error);
-    } finally {
-      setVerifying(false);
-    }
+  const handleChangeNumber = () => {
+    setOtp('');
+    setStep('phone');
   };
 
   return (
@@ -292,7 +149,9 @@ export function PhoneScreen() {
               {t('phoneTitle', lang)}
             </h2>
             <p className="text-body text-text-secondary mb-4">
-              {t('phoneDesc', lang)}
+              {lang === 'hi'
+                ? 'प्रोटोटाइप में आगे बढ़ने के लिए अपना 10 अंकों का नंबर डालें।'
+                : 'Enter a phone number to continue with the prototype.'}
             </p>
             <input
               type="tel"
@@ -302,14 +161,17 @@ export function PhoneScreen() {
               className="input-field text-body text-center tracking-wider mb-4"
               autoFocus
             />
+            <p className="text-sm font-semibold text-primary text-center bg-primary/10 border border-primary/20 rounded-xl px-3 py-2 mb-4">
+              {lang === 'hi'
+                ? 'यह एक प्रोटोटाइप है, आप कोई भी 10 अंकों का नंबर डाल सकते हैं।'
+                : 'This is a prototype, you can enter any 10 digit number.'}
+            </p>
             <button
               onClick={handleSendOtp}
-              disabled={phone.length < 10 || verifying}
+              disabled={phone.length !== 10}
               className="btn-primary"
             >
-              {verifying
-                ? (lang === 'hi' ? 'OTP भेज रहा है...' : 'Sending OTP...')
-                : t('sendOtp', lang)}
+              {t('next', lang)} →
             </button>
           </>
         ) : (
@@ -318,7 +180,7 @@ export function PhoneScreen() {
               {t('enterOtp', lang)}
             </h2>
             <p className="text-body text-text-secondary mb-4">
-              {t('otpSent', lang)} +91 {phone}
+              {lang === 'hi' ? 'प्रोटोटाइप सत्यापन के लिए: ' : 'Prototype verification for: '}+91 {phone}
             </p>
             <input
               type="tel"
@@ -330,19 +192,23 @@ export function PhoneScreen() {
               maxLength={6}
               autoComplete="one-time-code"
             />
+            <p className="text-sm font-semibold text-primary text-center bg-primary/10 border border-primary/20 rounded-xl px-3 py-2 mb-4">
+              {lang === 'hi'
+                ? 'कोई भी 6 अंकों का नंबर डालें।'
+                : 'Enter any 6 digit number.'}
+            </p>
             <button
               onClick={handleVerify}
-              disabled={otp.length !== 6 || verifying}
+              disabled={otp.length !== 6}
               className="btn-primary mb-3"
             >
-              {verifying ? (lang === 'hi' ? 'सत्यापित हो रहा है...' : 'Verifying...') : t('verify', lang)}
+              {t('next', lang)} →
             </button>
             <button
               className="btn-text mx-auto"
-              onClick={handleResendOtp}
-              disabled={verifying}
+              onClick={handleChangeNumber}
             >
-              {t('resend', lang)}
+              {lang === 'hi' ? 'मोबाइल नंबर बदलें' : 'Change number'}
             </button>
           </>
         )}
