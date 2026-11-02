@@ -388,9 +388,10 @@ function readLocalEncryptedCache(userId: string): { envelope: EncryptedVaultEnve
       typeof envelope.ciphertext !== 'string' ||
       typeof envelope.iv !== 'string' ||
       typeof envelope.kdf_salt !== 'string' ||
-      envelope.crypto_version !== 1
+      envelope.crypto_version !== 1 ||
+      envelope.kdf_salt !== salt
     ) return null;
-    return { envelope, salt };
+    return { envelope, salt: envelope.kdf_salt };
   } catch {
     return null;
   }
