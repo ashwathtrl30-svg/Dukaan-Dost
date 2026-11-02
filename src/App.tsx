@@ -29,7 +29,7 @@ function AppContent() {
   const [homeVoiceAIResult, setHomeVoiceAIResult] = useState<VoiceInterpretation | null>(null);
   const [voiceUndoEntries, setVoiceUndoEntries] = useState<Array<{ type: 'sale' | 'expense' | 'udhaar'; id: string }>>([]);
   const lang = state.language || 'en';
-  const hasValidAppLock = state.lockEnabled && /^\\d{4}$/.test(state.lockPin);
+  const hasValidAppLock = state.lockEnabled && /^\d{4}$/.test(state.lockPin);
   const [isAppUnlocked, setIsAppUnlocked] = useState(() => !hasValidAppLock);
   const [unlockPin, setUnlockPin] = useState('');
   const [showUnlockPin, setShowUnlockPin] = useState(true);
@@ -38,7 +38,7 @@ function AppContent() {
   // A configured PIN must be entered after a fresh app load. Disabling the lock
   // immediately restores access; PIN credentials stay local to this device.
   useEffect(() => {
-    if (!state.lockEnabled || !/^\\d{4}$/.test(state.lockPin)) {
+    if (!state.lockEnabled || !/^\d{4}$/.test(state.lockPin)) {
       setIsAppUnlocked(true);
       setUnlockPin('');
       setUnlockError('');
@@ -307,7 +307,7 @@ function AppContent() {
                 autoFocus
                 value={unlockPin}
                 onChange={(event) => {
-                  setUnlockPin(event.target.value.replace(/\\D/g, '').slice(0, 4));
+                  setUnlockPin(event.target.value.replace(/\D/g, '').slice(0, 4));
                   setUnlockError('');
                 }}
                 className="input-field w-full text-center text-hero tracking-[1em] pr-14"
