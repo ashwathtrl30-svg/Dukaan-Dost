@@ -64,6 +64,7 @@ export interface UdhaarEntry {
   dueDate?: string;
   paid: boolean;
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface NotebookNote {
@@ -86,6 +87,7 @@ export interface ChatSession {
   id: string;
   title: string;
   createdAt: number;
+  updatedAt?: number;
   messages: ChatMessage[];
 }
 
@@ -98,6 +100,7 @@ export interface Insight {
   dataSource: string;
   useful?: boolean;
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface Lesson {
