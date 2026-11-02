@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { StoreProvider, useStore, generateId, getToday, formatRupee } from './store';
 import { VoiceMicButton } from './components/VoiceMicButton';
 import { interpretVoiceTransactions } from './voice/voiceInterpreter';
@@ -12,7 +12,7 @@ import { AskScreen } from './screens/Ask';
 import { ToolsScreen } from './screens/Tools';
 import { LearnScreen } from './screens/Learn';
 import { ProfileScreen } from './screens/Profile';
-import { Home, BarChart3, MessageCircle, Wrench, BookOpen, User, WifiOff, Check, X } from 'lucide-react';
+import { Home, BarChart3, MessageCircle, Wrench, BookOpen, User, WifiOff, Check, X, Lock, Eye, EyeOff } from 'lucide-react';
 
 type Tab = 'home' | 'insights' | 'ask' | 'tools' | 'learn';
 
@@ -29,6 +29,42 @@ function AppContent() {
   const [homeVoiceAIResult, setHomeVoiceAIResult] = useState<VoiceInterpretation | null>(null);
   const [voiceUndoEntries, setVoiceUndoEntries] = useState<Array<{ type: 'sale' | 'expense' | 'udhaar'; id: string }>>([]);
   const lang = state.language || 'en';
+  const hasValidAppLock = state.lockEnabled && /^\\d{4}$/.test(state.lockPin);
+  const [isAppUnlocked, setIsAppUnlocked] = useState(() => !hasValidAppLock);
+  const [unlockPin, setUnlockPin] = useState('');
+  const [showUnlockPin, setShowUnlockPin] = useState(true);
+  const [unlockError, setUnlockError] = useState('');
+
+  // A configured PIN must be entered after a fresh app load. Disabling the lock
+  // immediately restores access; PIN credentials stay local to this device.
+  useEffect(() => {
+    if (!state.lockEnabled || !/^\\d{4}$/.test(state.lockPin)) {
+      setIsAppUnlocked(true);
+      setUnlockPin('');
+      setUnlockError('');
+    }
+  }, [state.lockEnabled, state.lockPin]);
+
+  // Re-lock whenever the app is backgrounded or the page is being left.
+  useEffect(() => {
+    if (!hasValidAppLock) return;
+
+    const lockWhenHidden = () => {
+      if (document.visibilityState === 'hidden') {
+        setIsAppUnlocked(false);
+        setUnlockPin('');
+        setUnlockError('');
+        setShowUnlockPin(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', lockWhenHidden);
+    window.addEventListener('pagehide', lockWhenHidden);
+    return () => {
+      document.removeEventListener('visibilitychange', lockWhenHidden);
+      window.removeEventListener('pagehide', lockWhenHidden);
+    };
+  }, [hasValidAppLock]);
 
   const showTemporaryVoiceStatus = (message: string) => {
     setHomeVoiceStatus(message);
@@ -231,6 +267,75 @@ function AppContent() {
     setVoiceUndoEntries([]);
     showTemporaryVoiceStatus(lang === 'hi' ? 'आख़िरी वॉइस एंट्री हटा दी।' : 'Undid the last voice entry.');
   };
+
+  // The lock gate is above onboarding and all app screens, so no tab,
+  // profile page, or onboarding route can be reached without the local PIN.
+  if (hasValidAppLock && !isAppUnlocked) {
+    return (
+      <div className="h-full min-h-screen flex flex-col items-center justify-center bg-bg px-6 py-8">
+        <div className="w-full max-w-sm">
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-5">
+            <Lock size={30} />
+          </div>
+          <h1 className="text-section-title text-text text-center mb-2">
+            {lang === 'hi' ? 'ऐप लॉक है' : 'Dukaan Dost is locked'}
+          </h1>
+          <p className="text-body text-text-secondary text-center mb-6">
+            {lang === 'hi' ? 'आगे बढ़ने के लिए अपना 4 अंकों का PIN डालें।' : 'Enter your 4-digit PIN to continue.'}
+          </p>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (unlockPin === state.lockPin) {
+                setIsAppUnlocked(true);
+                setUnlockPin('');
+                setUnlockError('');
+              } else {
+                setUnlockError(lang === 'hi' ? 'गलत PIN। फिर से कोशिश करें।' : 'Incorrect PIN. Please try again.');
+                setUnlockPin('');
+              }
+            }}
+            className="space-y-4"
+          >
+            <div className="relative">
+              <input
+                type={showUnlockPin ? 'text' : 'password'}
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="off"
+                maxLength={4}
+                autoFocus
+                value={unlockPin}
+                onChange={(event) => {
+                  setUnlockPin(event.target.value.replace(/\\D/g, '').slice(0, 4));
+                  setUnlockError('');
+                }}
+                className="input-field w-full text-center text-hero tracking-[1em] pr-14"
+                placeholder="••••"
+                aria-label={lang === 'hi' ? '4 अंकों का PIN' : '4-digit PIN'}
+              />
+              <button
+                type="button"
+                onClick={() => setShowUnlockPin((visible) => !visible)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center text-text-secondary"
+                aria-label={showUnlockPin
+                  ? (lang === 'hi' ? 'PIN छिपाएँ' : 'Hide PIN')
+                  : (lang === 'hi' ? 'PIN दिखाएँ' : 'Show PIN')}
+              >
+                {showUnlockPin ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+            {unlockError && (
+              <p className="text-sm text-problem text-center" role="alert">{unlockError}</p>
+            )}
+            <button type="submit" disabled={unlockPin.length !== 4} className="btn-primary">
+              <Lock size={20} /> {lang === 'hi' ? 'अनलॉक करें' : 'Unlock App'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   // Handle onboarding flow
   if (!state.language) {
