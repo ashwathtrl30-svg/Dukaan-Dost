@@ -470,7 +470,7 @@ async function reconcileAndRemoveLegacySnapshot(
 
   // Remove the readable legacy row only after the encrypted version has been
   // decrypted and validated, including any newer data found in that legacy row.
-  await deleteLegacyShopSnapshot(userId);
+  await deleteLegacyShopSnapshot(userId, legacyRow.updated_at);
   return { snapshot: merged, updatedAt: verifiedUpdatedAt };
 }
 
@@ -793,7 +793,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!verified || JSON.stringify(verified) !== JSON.stringify(remoteSnapshot)) {
         throw new Error('The encrypted cloud vault did not pass its verification check.');
       }
-      if (legacyRow) await deleteLegacyShopSnapshot(userId);
+      if (legacyRow) await deleteLegacyShopSnapshot(userId, legacyRow.updated_at);
       lastCloudSnapshotRef.current = JSON.stringify(remoteSnapshot);
       const remoteTime = Date.parse(verifiedRow.updated_at);
       remoteUpdatedAtRef.current = Number.isFinite(remoteTime) ? remoteTime : 0;
@@ -910,7 +910,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
 
       // Delete the old plaintext row only after ciphertext read-back and decryption pass.
-      if (legacyRow) await deleteLegacyShopSnapshot(userId);
+      if (legacyRow) await deleteLegacyShopSnapshot(userId, legacyRow.updated_at);
       lastCloudSnapshotRef.current = JSON.stringify(mergedSnapshot);
       const remoteTime = Date.parse(verifiedRow.updated_at);
       remoteUpdatedAt = Number.isFinite(remoteTime) ? remoteTime : 0;
