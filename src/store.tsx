@@ -457,7 +457,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             lastCloudSnapshotRef.current = remoteSerialized;
             tombstonesRef.current = reconciled.tombstones;
 
-            if (JSON.stringify(reconciled) === JSON.stringify(currentSnapshot)) return;
+            // Dispatch even when the merged data matches local state: this schedules
+            // a cloud write if the local device had unsaved edits while the event arrived.
 
             currentSnapshotRef.current = reconciled;
             previousSnapshotRef.current = reconciled;
