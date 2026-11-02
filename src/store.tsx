@@ -7,7 +7,8 @@ import {
   mergeShopDataSnapshots,
 } from './shopDataSnapshot';
 import type { ShopDataSnapshot } from './shopDataSnapshot';
-import { loadOrCreateCloudSnapshot, persistShopDataSnapshot, subscribeToShopDataSnapshot } from './cloudPersistence';
+import { ensureShopVaultSession, readEncryptedShopVault, readLegacyShopSnapshot, writeEncryptedShopVault, deleteLegacyShopSnapshot, subscribeToEncryptedShopVault, type EncryptedShopVaultRow } from './cloudVault';
+import { createVaultSalt, createVaultCipher, type EncryptedVaultEnvelope, type VaultCipher } from './secureVault';
 import { supabase } from './supabaseClient';
 
 const initialState: AppState = {
@@ -82,6 +83,7 @@ type Action =
   | { type: 'EXPORT_DATA' }
   | { type: 'DELETE_ALL_DATA' }
   | { type: 'RESET_ONBOARDING' }
+  | { type: 'RESTORE_LOCAL_STATE'; payload: AppState }
   | { type: 'HYDRATE_SHOP_DATA'; payload: ShopDataSnapshot }
   | { type: 'SYNC_SHOP_DATA'; payload: ShopDataSnapshot };
 
@@ -280,6 +282,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...initialState, language: state.language, theme: state.theme };
     case 'RESET_ONBOARDING':
       return { ...state, onboardingComplete: false, onboardingStep: 0 };
+    case 'RESTORE_LOCAL_STATE':
+      return action.payload;
     default:
       return state;
   }
