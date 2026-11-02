@@ -10,7 +10,6 @@ import {
 import type { ShopDataSnapshot } from './shopDataSnapshot';
 import { ensureShopVaultSession, readEncryptedShopVault, readLegacyShopSnapshot, writeEncryptedShopVault, deleteLegacyShopSnapshot, subscribeToEncryptedShopVault, type EncryptedShopVaultRow } from './cloudVault';
 import { createVaultSalt, createVaultCipher, type EncryptedVaultEnvelope, type VaultCipher } from './secureVault';
-import { supabase } from './supabaseClient';
 
 const initialState: AppState = {
   language: null,
@@ -353,15 +352,6 @@ function loadState(): AppState {
   return initialState;
 }
 
-// Save to localStorage
-function saveState(state: AppState) {
-  try {
-    localStorage.setItem('dukaandost_state', JSON.stringify(state));
-  } catch (e) {
-    console.error('Failed to save state:', e);
-  }
-}
-
 type VaultStatus = 'checking' | 'new' | 'locked' | 'unlocked' | 'error';
 
 interface StoreContextType {
@@ -434,6 +424,13 @@ function applySnapshotToState(base: AppState, snapshot: ShopDataSnapshot): AppSt
     udhaar: snapshot.udhaar,
     notebookNotes: snapshot.notebookNotes,
     chatSessions: snapshot.chatSessions,
+    activeSessionId: base.activeSessionId && snapshot.chatSessions.some(
+      (session) => session.id === base.activeSessionId
+    )
+      ? base.activeSessionId
+      : snapshot.chatSessions.find((session) => session.messages.length === 0)?.id
+        ?? snapshot.chatSessions[0]?.id
+        ?? null,
     insights: snapshot.insights,
     language: snapshot.preferences.language,
     theme: snapshot.preferences.theme,
@@ -689,6 +686,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       remoteUpdatedAtRef.current = Number.isFinite(remoteTime) ? remoteTime : 0;
 
       const merged = mergeShopDataSnapshots(currentSnapshotRef.current, remoteSnapshot);
+      // If an older plaintext row survived an earlier migration attempt, remove it
+      // only after the encrypted row has successfully decrypted and validated.
+      const staleLegacyRow = await readLegacyShopSnapshot(userId);
+      if (staleLegacyRow) await deleteLegacyShopSnapshot(userId);
       tombstonesRef.current = merged.tombstones;
       currentSnapshotRef.current = merged;
       previousSnapshotRef.current = merged;
@@ -708,7 +709,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       const localSnapshot = currentSnapshotRef.current;
       remoteSnapshot = legacySnapshot
-        ? mergeShopDataSnapshots(localSnapshot, legacySnapshot)
+        ? mergeShopDataSnapshots(localSnapshot, legacySnapshot, {
+            preferLocalPreferences: Boolean(
+              stateRef.current.language || stateRef.current.onboardingComplete
+            ),
+          })
         : localSnapshot;
       const salt = createVaultSalt();
       remoteCipher = await createVaultCipher(passphrase, salt);
@@ -794,6 +799,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         remoteSnapshot,
         { preferLocalPreferences },
       );
+      // Clean up a legacy readable copy only after the encrypted backup was
+      // successfully decrypted and its structure passed validation.
+      const staleLegacyRow = await readLegacyShopSnapshot(userId);
+      if (staleLegacyRow) await deleteLegacyShopSnapshot(userId);
       lastCloudSnapshotRef.current = JSON.stringify(remoteSnapshot);
       const remoteTime = Date.parse(row.updated_at);
       remoteUpdatedAt = Number.isFinite(remoteTime) ? remoteTime : 0;
@@ -811,7 +820,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
 
       mergedSnapshot = legacySnapshot
-        ? mergeShopDataSnapshots(localSnapshot, legacySnapshot)
+        ? mergeShopDataSnapshots(localSnapshot, legacySnapshot, {
+            preferLocalPreferences: Boolean(
+              localBase.language || localBase.onboardingComplete
+            ),
+          })
         : localSnapshot;
 
       const salt = createVaultSalt();
