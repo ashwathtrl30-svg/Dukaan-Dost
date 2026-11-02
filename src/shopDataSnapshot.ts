@@ -45,6 +45,13 @@ export interface ShopDataSnapshot {
   tombstones: SnapshotTombstones;
 }
 
+export interface SnapshotMergeOptions {
+  /** Whether this device has a pending local shop-profile edit. */
+  preferLocalProfile?: boolean;
+  /** Whether this device has pending local preference edits. */
+  preferLocalPreferences?: boolean;
+}
+
 type SnapshotSource = Pick<
   AppState,
   | 'shopProfile'
@@ -274,13 +281,16 @@ export function collectSnapshotTombstones(
 export function mergeShopDataSnapshots(
   local: ShopDataSnapshot,
   remote: ShopDataSnapshot,
+  options: SnapshotMergeOptions = {},
 ): ShopDataSnapshot {
   const tombstones = mergeSnapshotTombstones(local.tombstones, remote.tombstones);
   const useLocalProfileAndPreferences = hasConfiguredShopProfile(local.shopProfile);
+  const useLocalProfile = options.preferLocalProfile ?? useLocalProfileAndPreferences;
+  const useLocalPreferences = options.preferLocalPreferences ?? useLocalProfileAndPreferences;
 
   return {
     shopProfile: clone(
-      useLocalProfileAndPreferences ? local.shopProfile : remote.shopProfile
+      useLocalProfile ? local.shopProfile : remote.shopProfile
     ),
     sales: mergeById(remote.sales, local.sales, tombstones.sales),
     expenses: mergeById(remote.expenses, local.expenses, tombstones.expenses),
@@ -289,7 +299,7 @@ export function mergeShopDataSnapshots(
     chatSessions: mergeById(remote.chatSessions, local.chatSessions, tombstones.chatSessions),
     insights: mergeById(remote.insights, local.insights, tombstones.insights),
     preferences: clone(
-      useLocalProfileAndPreferences ? local.preferences : remote.preferences
+      useLocalPreferences ? local.preferences : remote.preferences
     ),
     tombstones,
   };
