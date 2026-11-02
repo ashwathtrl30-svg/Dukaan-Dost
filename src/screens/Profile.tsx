@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useStore, formatRupee, getTotalUdhaar } from '../store';
 import { t, tArray } from '../i18n';
-import { ArrowLeft, Globe, Moon, Sun, Lock, Shield, Download, Trash2, Share2, HelpCircle, Bell, Type, Clock, Info } from 'lucide-react';
+import { ArrowLeft, Globe, Moon, Sun, Lock, Shield, Download, Trash2, Share2, HelpCircle, Bell, Type, Clock, Info, Eye, EyeOff } from 'lucide-react';
 
 // ============ PROFILE SCREEN ============
 export function ProfileScreen() {
@@ -10,6 +10,7 @@ export function ProfileScreen() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [pin, setPin] = useState('');
+  const [showPinValue, setShowPinValue] = useState(true);
   
   const profile = state.shopProfile;
   const totalUdhaar = getTotalUdhaar(state.udhaar);
@@ -52,14 +53,33 @@ export function ProfileScreen() {
           <p className="text-body text-text-secondary mb-4">
             {lang === 'hi' ? '4 अंक का PIN लगाएँ। यह तब काम आएगा जब फ़ोन किसी और के हाथ में हो।' : 'Set a 4-digit PIN. Useful when phone is with family or staff.'}
           </p>
-          <input
-            type="password"
-            maxLength={4}
-            value={pin}
-            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
-            className="input-field text-center text-hero tracking-[1em] mb-4"
-            placeholder="••••"
-          />
+          <div className="relative mb-2">
+            <input
+              type={showPinValue ? 'text' : 'password'}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="off"
+              maxLength={4}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              className="input-field w-full text-center text-hero tracking-[1em] pr-14"
+              placeholder="••••"
+              aria-label={lang === 'hi' ? '4 अंकों का PIN' : '4-digit PIN'}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPinValue((visible) => !visible)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center text-text-secondary"
+              aria-label={showPinValue
+                ? (lang === 'hi' ? 'PIN छिपाएँ' : 'Hide PIN')
+                : (lang === 'hi' ? 'PIN दिखाएँ' : 'Show PIN')}
+            >
+              {showPinValue ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
+          <p className="text-sm font-semibold text-primary mb-4">
+            {lang === 'hi' ? 'अपना 4 अंकों का PIN हमेशा याद रखें।' : 'Always remember the 4-digit pin.'}
+          </p>
           <button
             onClick={() => {
               dispatch({ type: 'SET_LOCK', payload: { enabled: pin.length === 4, pin } });
