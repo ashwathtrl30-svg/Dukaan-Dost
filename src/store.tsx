@@ -415,6 +415,65 @@ function hasLocalProfileData(profile: ShopProfile): boolean {
   );
 }
 
+async function reconcileAndRemoveLegacySnapshot(
+  userId: string,
+  cipher: VaultCipher,
+  encryptedSnapshot: ShopDataSnapshot,
+  encryptedUpdatedAt: string,
+): Promise<{ snapshot: ShopDataSnapshot; updatedAt: string }> {
+  const legacyRow = await readLegacyShopSnapshot(userId);
+  if (!legacyRow) return { snapshot: encryptedSnapshot, updatedAt: encryptedUpdatedAt };
+
+  if (legacyRow.schema_version !== 1 && legacyRow.schema_version !== 2) {
+    throw new Error('The old cloud shop data uses an unsupported version. It was left untouched.');
+  }
+  const legacySnapshot = normalizeShopDataSnapshot(legacyRow.state);
+  if (!legacySnapshot) {
+    throw new Error('The old cloud shop data could not be validated. It was left untouched.');
+  }
+
+  // If a stale client wrote after the vault was created, retain the newer snapshot.
+  // Record-level updates are still reconciled by their timestamps and tombstones.
+  const encryptedTime = Date.parse(encryptedUpdatedAt);
+  const legacyTime = Date.parse(legacyRow.updated_at);
+  const legacyIsNewer =
+    Number.isFinite(legacyTime) &&
+    (!Number.isFinite(encryptedTime) || legacyTime > encryptedTime);
+  const merged = mergeShopDataSnapshots(
+    encryptedSnapshot,
+    legacySnapshot,
+    {
+      preferLocalProfile: !legacyIsNewer && hasLocalProfileData(encryptedSnapshot.shopProfile),
+      preferLocalPreferences: !legacyIsNewer && Boolean(
+        encryptedSnapshot.preferences.language || encryptedSnapshot.preferences.onboardingComplete
+      ),
+    },
+  );
+
+  let verifiedUpdatedAt = encryptedUpdatedAt;
+  if (JSON.stringify(merged) !== JSON.stringify(encryptedSnapshot)) {
+    const replacement = await cipher.encrypt(merged);
+    await writeEncryptedShopVault(userId, replacement);
+    const verifiedRow = await readEncryptedShopVault(userId);
+    if (!verifiedRow ||
+        verifiedRow.ciphertext !== replacement.ciphertext ||
+        verifiedRow.iv !== replacement.iv ||
+        verifiedRow.kdf_salt !== replacement.kdf_salt) {
+      throw new Error('The updated encrypted vault could not be verified. The old cloud copy was retained.');
+    }
+    const verified = normalizeShopDataSnapshot(await cipher.decrypt<unknown>(verifiedRow));
+    if (!verified || JSON.stringify(verified) !== JSON.stringify(merged)) {
+      throw new Error('The updated encrypted vault did not pass its verification check. The old cloud copy was retained.');
+    }
+    verifiedUpdatedAt = verifiedRow.updated_at;
+  }
+
+  // Remove the readable legacy row only after the encrypted version has been
+  // decrypted and validated, including any newer data found in that legacy row.
+  await deleteLegacyShopSnapshot(userId);
+  return { snapshot: merged, updatedAt: verifiedUpdatedAt };
+}
+
 function applySnapshotToState(base: AppState, snapshot: ShopDataSnapshot): AppState {
   return {
     ...base,
@@ -680,16 +739,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       remoteCipher = await createVaultCipher(passphrase, row.kdf_salt);
       const decoded = normalizeShopDataSnapshot(await remoteCipher.decrypt<unknown>(row));
       if (!decoded) throw new Error('The encrypted cloud vault could not be validated.');
-      remoteSnapshot = decoded;
+      const legacyReconciled = await reconcileAndRemoveLegacySnapshot(
+        userId,
+        remoteCipher,
+        decoded,
+        row.updated_at,
+      );
+      remoteSnapshot = legacyReconciled.snapshot;
       lastCloudSnapshotRef.current = JSON.stringify(remoteSnapshot);
-      const remoteTime = Date.parse(row.updated_at);
+      const remoteTime = Date.parse(legacyReconciled.updatedAt);
       remoteUpdatedAtRef.current = Number.isFinite(remoteTime) ? remoteTime : 0;
 
       const merged = mergeShopDataSnapshots(currentSnapshotRef.current, remoteSnapshot);
-      // If an older plaintext row survived an earlier migration attempt, remove it
-      // only after the encrypted row has successfully decrypted and validated.
-      const staleLegacyRow = await readLegacyShopSnapshot(userId);
-      if (staleLegacyRow) await deleteLegacyShopSnapshot(userId);
       tombstonesRef.current = merged.tombstones;
       currentSnapshotRef.current = merged;
       previousSnapshotRef.current = merged;
@@ -701,6 +762,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const legacyRow = await readLegacyShopSnapshot(userId);
       let legacySnapshot: ShopDataSnapshot | null = null;
       if (legacyRow) {
+        if (legacyRow.schema_version !== 1 && legacyRow.schema_version !== 2) {
+          throw new Error('The old cloud shop data uses an unsupported version. It was left untouched.');
+        }
         legacySnapshot = normalizeShopDataSnapshot(legacyRow.state);
         if (!legacySnapshot) {
           throw new Error('The old cloud shop data could not be validated. It was left untouched.');
@@ -791,20 +855,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         throw new Error('The encrypted cloud vault could not be validated. Your data was not changed.');
       }
 
+      const legacyReconciled = await reconcileAndRemoveLegacySnapshot(
+        userId,
+        remoteCipher,
+        remoteSnapshot,
+        row.updated_at,
+      );
+      const authoritativeRemoteSnapshot = legacyReconciled.snapshot;
       const preferLocalPreferences = Boolean(
         localBase.language || localBase.onboardingComplete || hasLocalProfileData(localBase.shopProfile)
       );
       mergedSnapshot = mergeShopDataSnapshots(
         localSnapshot,
-        remoteSnapshot,
+        authoritativeRemoteSnapshot,
         { preferLocalPreferences },
       );
-      // Clean up a legacy readable copy only after the encrypted backup was
-      // successfully decrypted and its structure passed validation.
-      const staleLegacyRow = await readLegacyShopSnapshot(userId);
-      if (staleLegacyRow) await deleteLegacyShopSnapshot(userId);
-      lastCloudSnapshotRef.current = JSON.stringify(remoteSnapshot);
-      const remoteTime = Date.parse(row.updated_at);
+      lastCloudSnapshotRef.current = JSON.stringify(authoritativeRemoteSnapshot);
+      const remoteTime = Date.parse(legacyReconciled.updatedAt);
       remoteUpdatedAt = Number.isFinite(remoteTime) ? remoteTime : 0;
     } else if (cloudAvailable) {
       const legacyRow = await readLegacyShopSnapshot(userId);
