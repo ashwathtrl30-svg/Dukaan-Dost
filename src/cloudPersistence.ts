@@ -13,6 +13,7 @@ interface SnapshotRow {
 export interface CloudBootstrapResult {
   snapshot: ShopDataSnapshot;
   remoteSnapshot: ShopDataSnapshot | null;
+  schemaVersion: number;
 }
 
 /**
@@ -52,10 +53,10 @@ export async function loadOrCreateCloudSnapshot(
   if (!row) {
     // First cloud save is additive and uses the current browser's complete local ledger.
     await persistShopDataSnapshot(localSnapshot, session.user.id);
-    return { snapshot: localSnapshot, remoteSnapshot: null };
+    return { snapshot: localSnapshot, remoteSnapshot: null, schemaVersion: 2 };
   }
 
-  if (row.schema_version !== 1) {
+  if (row.schema_version !== 1 && row.schema_version !== 2) {
     throw new Error('The cloud shop data uses an unsupported schema version.');
   }
 
@@ -67,6 +68,7 @@ export async function loadOrCreateCloudSnapshot(
   return {
     snapshot: mergeShopDataSnapshots(localSnapshot, remoteSnapshot),
     remoteSnapshot,
+    schemaVersion: row.schema_version,
   };
 }
 
@@ -92,7 +94,7 @@ export async function persistShopDataSnapshot(
       {
         user_id: userId,
         state: snapshot,
-        schema_version: 1,
+        schema_version: 2,
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' },
