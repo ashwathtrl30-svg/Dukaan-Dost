@@ -445,14 +445,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             if (remoteSerialized === lastCloudSnapshotRef.current) return;
 
             const currentSnapshot = currentSnapshotRef.current;
-            const hasUnsavedLocalChanges =
-              JSON.stringify(currentSnapshot) !== lastCloudSnapshotRef.current;
+            let preferLocalProfile = true;
+            let preferLocalPreferences = true;
 
-            // Pending local edits are retained. Otherwise the cloud copy is authoritative
-            // for the profile and preferences on a device receiving another device's update.
-            const reconciled = hasUnsavedLocalChanges
-              ? mergeShopDataSnapshots(currentSnapshot, remoteSnapshot)
-              : mergeShopDataSnapshots(remoteSnapshot, currentSnapshot);
+            // Compare these fields independently. A pending sale must not prevent a
+            // remote shop-profile or preference edit from reaching this device.
+            if (lastCloudSnapshotRef.current) {
+              try {
+                const lastSynced = JSON.parse(lastCloudSnapshotRef.current) as ShopDataSnapshot;
+                preferLocalProfile =
+                  JSON.stringify(currentSnapshot.shopProfile) !== JSON.stringify(lastSynced.shopProfile);
+                preferLocalPreferences =
+                  JSON.stringify(currentSnapshot.preferences) !== JSON.stringify(lastSynced.preferences);
+              } catch {
+                // Until a valid cloud baseline exists, preserve local setup choices.
+              }
+            }
+
+            const reconciled = mergeShopDataSnapshots(
+              currentSnapshot,
+              remoteSnapshot,
+              { preferLocalProfile, preferLocalPreferences },
+            );
 
             lastCloudSnapshotRef.current = remoteSerialized;
             tombstonesRef.current = reconciled.tombstones;
