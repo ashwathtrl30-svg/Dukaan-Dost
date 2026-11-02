@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useReducer, useEffect, useRef, useState, ReactNode } from 'react';
 import { AppState, Language, Theme, ShopProfile, SaleEntry, ExpenseEntry, UdhaarEntry, NotebookNote, ChatMessage, ChatSession, Insight } from './types';
-import { createShopDataSnapshot, mergeShopDataSnapshots } from './shopDataSnapshot';
+import {
+  collectSnapshotTombstones,
+  createEmptySnapshotTombstones,
+  createShopDataSnapshot,
+  mergeShopDataSnapshots,
+} from './shopDataSnapshot';
 import type { ShopDataSnapshot } from './shopDataSnapshot';
 import { loadOrCreateCloudSnapshot, persistShopDataSnapshot } from './cloudPersistence';
 import { supabase } from './supabaseClient';
@@ -114,7 +119,9 @@ function reducer(state: AppState, action: Action): AppState {
     case 'TOGGLE_UDHAAR_PAID':
       return {
         ...state,
-        udhaar: state.udhaar.map(u => u.id === action.payload ? { ...u, paid: !u.paid } : u),
+        udhaar: state.udhaar.map(u => u.id === action.payload
+          ? { ...u, paid: !u.paid, updatedAt: Date.now() }
+          : u),
       };
     case 'DELETE_ENTRY': {
       if (action.payload.type === 'sale') {
@@ -132,6 +139,7 @@ function reducer(state: AppState, action: Action): AppState {
           id: Date.now().toString(),
           title: action.payload.content.slice(0, 30) + (action.payload.content.length > 30 ? '...' : ''),
           createdAt: Date.now(),
+          updatedAt: action.payload.timestamp,
           messages: [action.payload],
         };
         return {
@@ -145,7 +153,7 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         chatSessions: state.chatSessions.map(session =>
           session.id === state.activeSessionId
-            ? { ...session, messages: [...session.messages, action.payload] }
+            ? { ...session, messages: [...session.messages, action.payload], updatedAt: action.payload.timestamp }
             : session
         ),
       };
@@ -155,6 +163,7 @@ function reducer(state: AppState, action: Action): AppState {
         id: Date.now().toString(),
         title: 'New Chat',
         createdAt: Date.now(),
+        updatedAt: Date.now(),
         messages: [],
       };
       return {
@@ -178,7 +187,9 @@ function reducer(state: AppState, action: Action): AppState {
     case 'MARK_INSIGHT_USEFUL':
       return {
         ...state,
-        insights: state.insights.map(i => i.id === action.payload.id ? { ...i, useful: action.payload.useful } : i),
+        insights: state.insights.map(i => i.id === action.payload.id
+          ? { ...i, useful: action.payload.useful, updatedAt: Date.now() }
+          : i),
       };
     case 'SET_PHONE':
       return { ...state, phoneNumber: action.payload };
@@ -198,9 +209,36 @@ function reducer(state: AppState, action: Action): AppState {
         alertTypes: { ...state.alertTypes, [action.payload]: !state.alertTypes[action.payload] },
       };
     case 'HYDRATE_SHOP_DATA': {
-      // Merge by stable entry ID so a user action made during initial cloud loading is never discarded.
+      // Merge stable records while restoring the complete cloud-safe app state.
+      // Phone identity and device lock credentials intentionally remain local.
       const merged = mergeShopDataSnapshots(createShopDataSnapshot(state), action.payload);
-      return { ...state, ...merged };
+      return {
+        ...state,
+        shopProfile: merged.shopProfile,
+        sales: merged.sales,
+        expenses: merged.expenses,
+        udhaar: merged.udhaar,
+        notebookNotes: merged.notebookNotes,
+        chatSessions: merged.chatSessions,
+        insights: merged.insights,
+        language: merged.preferences.language,
+        theme: merged.preferences.theme,
+        onboardingComplete: merged.preferences.onboardingComplete,
+        userName: merged.preferences.userName,
+        reminderTime: merged.preferences.reminderTime,
+        streak: merged.preferences.streak,
+        lastEntryDate: merged.preferences.lastEntryDate,
+        textSize: merged.preferences.textSize,
+        notificationsEnabled: merged.preferences.notificationsEnabled,
+        alertTypes: merged.preferences.alertTypes,
+        activeSessionId: state.activeSessionId && merged.chatSessions.some(
+          (session) => session.id === state.activeSessionId
+        )
+          ? state.activeSessionId
+          : merged.chatSessions.find((session) => session.messages.length === 0)?.id
+            ?? merged.chatSessions[0]?.id
+            ?? null,
+      };
     }
     case 'DELETE_ALL_DATA':
       return { ...initialState, language: state.language, theme: state.theme };
@@ -293,14 +331,28 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, null, loadState);
   const [cloudReady, setCloudReady] = useState(false);
-  const currentSnapshotRef = useRef<ShopDataSnapshot>(createShopDataSnapshot(state));
+  const tombstonesRef = useRef(createEmptySnapshotTombstones());
+  const currentSnapshotRef = useRef<ShopDataSnapshot>(
+    createShopDataSnapshot(state, tombstonesRef.current)
+  );
+  const previousSnapshotRef = useRef<ShopDataSnapshot>(currentSnapshotRef.current);
   const lastCloudSnapshotRef = useRef('');
   const cloudSaveInFlightRef = useRef(false);
   const cloudRetryAttemptRef = useRef(0);
   const cloudRetryTimerRef = useRef<number | null>(null);
+  const cloudBootstrapRetryTimerRef = useRef<number | null>(null);
   const cloudUserIdRef = useRef<string | null>(null);
 
-  currentSnapshotRef.current = createShopDataSnapshot(state);
+  currentSnapshotRef.current = createShopDataSnapshot(state, tombstonesRef.current);
+
+  // Persist deletions as tombstones. This prevents an older offline copy from
+  // re-introducing a sale, expense, udhaar, note, chat, or insight after sync.
+  useEffect(() => {
+    const latest = createShopDataSnapshot(state, tombstonesRef.current);
+    tombstonesRef.current = collectSnapshotTombstones(previousSnapshotRef.current, latest);
+    currentSnapshotRef.current = createShopDataSnapshot(state, tombstonesRef.current);
+    previousSnapshotRef.current = currentSnapshotRef.current;
+  }, [state]);
 
   // Keep the existing local cache for offline use and as a non-destructive migration source.
   useEffect(() => {
@@ -308,8 +360,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [state]);
 
   // Establish the authenticated owner and reconcile local data with that owner's cloud copy.
+  // Initialization is retried after transient network failures; local use remains available.
   useEffect(() => {
     let active = true;
+    let attempts = 0;
 
     const bootstrap = async () => {
       if (!supabase) return;
@@ -322,20 +376,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (sessionError) throw sessionError;
         cloudUserIdRef.current = sessionData.session?.user?.id ?? null;
 
-        lastCloudSnapshotRef.current = JSON.stringify(
-          result.remoteSnapshot ?? result.snapshot
-        );
+        tombstonesRef.current = result.snapshot.tombstones;
+        lastCloudSnapshotRef.current = result.schemaVersion >= 2
+          ? JSON.stringify(result.remoteSnapshot ?? result.snapshot)
+          : '';
         dispatch({ type: 'HYDRATE_SHOP_DATA', payload: result.snapshot });
         setCloudReady(true);
       } catch (error) {
-        // Cloud failure must never block the existing local-only app from opening or recording entries.
         console.error('Dukaan Dost cloud persistence could not initialize; local data remains available.', error);
+        if (active && attempts < 5) {
+          const delay = Math.min(30000, 2000 * (2 ** attempts));
+          attempts += 1;
+          cloudBootstrapRetryTimerRef.current = window.setTimeout(() => {
+            cloudBootstrapRetryTimerRef.current = null;
+            void bootstrap();
+          }, delay);
+        }
       }
     };
 
     void bootstrap();
     return () => {
       active = false;
+      if (cloudBootstrapRetryTimerRef.current !== null) {
+        window.clearTimeout(cloudBootstrapRetryTimerRef.current);
+      }
     };
   }, []);
 
@@ -385,13 +450,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const retryWhenOnline = () => pushCloudSnapshotRef.current();
+    const flushWhenHidden = () => {
+      if (document.visibilityState === 'hidden') pushCloudSnapshotRef.current();
+    };
     window.addEventListener('online', retryWhenOnline);
-    return () => window.removeEventListener('online', retryWhenOnline);
+    document.addEventListener('visibilitychange', flushWhenHidden);
+    return () => {
+      window.removeEventListener('online', retryWhenOnline);
+      document.removeEventListener('visibilitychange', flushWhenHidden);
+    };
   }, []);
 
   useEffect(() => () => {
     if (cloudRetryTimerRef.current !== null) {
       window.clearTimeout(cloudRetryTimerRef.current);
+    }
+    if (cloudBootstrapRetryTimerRef.current !== null) {
+      window.clearTimeout(cloudBootstrapRetryTimerRef.current);
     }
   }, []);
 
