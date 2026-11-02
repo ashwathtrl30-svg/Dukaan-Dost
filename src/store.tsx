@@ -359,7 +359,7 @@ interface StoreContextType {
   dispatch: React.Dispatch<Action>;
   vaultStatus: VaultStatus;
   vaultError: string;
-  unlockVault: (passphrase: string) => Promise<void>;
+  unlockVault: (passphrase: string, selectedLanguage?: Language) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -809,7 +809,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const unlockVault = async (passphrase: string): Promise<void> => {
+  const unlockVault = async (passphrase: string, selectedLanguage?: Language): Promise<void> => {
     if (passphrase.length < 12) {
       throw new Error('Use at least 12 characters for your private vault passphrase.');
     }
@@ -921,6 +921,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       mergedSnapshot = createShopDataSnapshot(cachedState);
       lastCloudSnapshotRef.current = '';
+    }
+
+    // The language chosen before vault access becomes the app's saved language.
+    // The selector preference is not secret and may be remembered across reloads.
+    if (selectedLanguage === 'en' || selectedLanguage === 'hi') {
+      mergedSnapshot = {
+        ...mergedSnapshot,
+        preferences: {
+          ...mergedSnapshot.preferences,
+          language: selectedLanguage,
+        },
+      };
+      localStorage.setItem('dukaandost_vault_language', selectedLanguage);
     }
 
     const restoredState = applySnapshotToState(localBase, mergedSnapshot);
