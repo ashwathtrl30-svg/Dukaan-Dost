@@ -1,7 +1,6 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { StoreProvider, useStore, generateId, getToday, formatRupee } from './store';
 import { VoiceMicButton } from './components/VoiceMicButton';
-import { interpretVoiceTransactions } from './voice/voiceInterpreter';
 import type { VoiceInterpretation } from './voice/voiceInterpreter';
 import { getSaleCountCopy, getSaleItemCountFromQuantity, parseSaleQuantityInput } from './quantity';
 import { t } from './i18n';
@@ -117,6 +116,8 @@ function AppContent() {
       const requestedTranscript = homeVoiceDraft;
       setHomeVoiceParsing(true);
       try {
+        // Load the voice interpretation code only when the shopkeeper confirms a voice entry.
+        const { interpretVoiceTransactions } = await import('./voice/voiceInterpreter');
         const result = await interpretVoiceTransactions({
           transcript: requestedTranscript,
           shopType: state.shopProfile.shopType,
