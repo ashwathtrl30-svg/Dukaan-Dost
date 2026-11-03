@@ -67,6 +67,14 @@ export function AccountAccessGate({ children }: { children: ReactNode }) {
       }
     });
 
+    const recoveryParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const queryParams = new URLSearchParams(window.location.search);
+    if (recoveryParams.get('type') === 'recovery' || queryParams.get('type') === 'recovery') {
+      // Some clients complete the URL exchange before this component subscribes.
+      // Inspect the recovery marker so the password form still appears.
+      setIsPasswordRecovery(true);
+    }
+
     void supabase.auth.getSession()
       .then(({ data, error: sessionError }) => {
         if (!active) return;
@@ -198,9 +206,9 @@ export function AccountAccessGate({ children }: { children: ReactNode }) {
     setError('');
     setMessage('');
     try {
-      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword, data: { dukaandost_recovery_password_set: true } });
       if (updateError) throw updateError;
-      setPasswordRecovery(false);
+      setIsPasswordRecovery(false);
       setNewPassword('');
       setMessage(hi ? 'पासवर्ड अपडेट हो गया।' : 'Your password has been updated.');
     } catch (updateError) {

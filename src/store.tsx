@@ -806,6 +806,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (data.user.is_anonymous) {
       throw new Error('Protect this shop with a verified recovery email and password before signing out. Anonymous accounts cannot be recovered after sign-out.');
     }
+    if (data.user.user_metadata?.dukaandost_recovery_password_set !== true) {
+      throw new Error('Save a recovery password before signing out. This protects access to your shop on another device.');
+    }
 
     // Flush the latest shop state to the cloud before ending this device session.
     await persistShopDataSnapshot(currentSnapshotRef.current, data.user.id);

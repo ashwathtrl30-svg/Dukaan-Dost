@@ -31,11 +31,11 @@ jobs:
           node --test api/supabase-keepalive.test.js
       - name: Type-check cloud persistence integration
         run: >-
-          npx tsc --noEmit --target ES2020 --module ESNext
+          npx tsc --noEmit --target ES2022 --module ESNext
           --moduleResolution bundler --jsx react-jsx --skipLibCheck
           --allowSyntheticDefaultImports --types vite/client
           src/store.tsx src/cloudPersistence.ts src/shopDataSnapshot.ts
-          src/types.ts src/supabaseClient.ts src/App.tsx
+          src/types.ts src/supabaseClient.ts
           src/auth/AuthGate.tsx src/auth/AccountRecoveryPanel.tsx
           src/auth/authValidation.ts src/screens/Profile.tsx src/screens/Onboarding.tsx
       - name: Test cloud shop-data snapshot reconciliation

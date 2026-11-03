@@ -20,6 +20,7 @@ export function AccountRecoveryPanel() {
 
   const isAnonymous = authUser?.is_anonymous ?? true;
   const isEmailVerified = Boolean(authUser?.email && authUser.email_confirmed_at);
+  const hasRecoveryPassword = authUser?.user_metadata?.dukaandost_recovery_password_set === true;
 
   useEffect(() => {
     if (authUser?.email) setEmail(authUser.email);
@@ -95,7 +96,7 @@ export function AccountRecoveryPanel() {
     setError('');
     setMessage('');
     try {
-      const { error: passwordError } = await supabase.auth.updateUser({ password });
+      const { error: passwordError } = await supabase.auth.updateUser({ password, data: { dukaandost_recovery_password_set: true } });
       if (passwordError) throw passwordError;
 
       setPassword('');
@@ -116,7 +117,7 @@ export function AccountRecoveryPanel() {
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">🔐</div>
         <div className="min-w-0 flex-1">
           <h2 id="account-recovery-heading" className="text-body-lg font-bold text-text">
-            {isEmailVerified ? 'Account recovery is set up' : 'Protect and recover your shop'}
+            {isEmailVerified && hasRecoveryPassword ? 'Account recovery is set up' : 'Finish protecting your shop'}
           </h2>
           <p className="text-sm text-text-secondary mt-1">
             {isAnonymous

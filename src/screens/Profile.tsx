@@ -259,7 +259,7 @@ export function ProfileScreen() {
           </button>
           
           {/* Only permanent, recoverable accounts can sign out. */}
-          {authUser && !authUser.is_anonymous && (
+          {authUser && !authUser.is_anonymous && authUser.user_metadata?.dukaandost_recovery_password_set === true && (
             <button
               onClick={() => {
                 const ok = confirm(lang === 'hi'
