@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -160,25 +160,55 @@ export function InsightsScreen() {
   const { state } = useStore();
   const lang: Language = state.language === 'hi' ? 'hi' : 'en';
   const now = new Date();
-  const dashboard = getInsightsDashboard(state.sales, state.expenses, now);
-  const advice = getMyAdvice(dashboard.week, dashboard.month, state.sales, state.udhaar, lang, state.shopProfile.shopType, now);
-  const insights = buildBusinessInsights({
-    today: dashboard.today,
-    week: dashboard.week,
-    month: dashboard.month,
-    sales: state.sales,
-    expenses: state.expenses,
-    udhaar: state.udhaar,
-    shopType: state.shopProfile.shopType,
-    udhaarLevel: state.shopProfile.udhaarLevel,
-    language: lang,
-    now,
-  });
-  const insightGroups: { period: InsightsPeriod; items: BusinessInsight[] }[] = [
-    { period: 'day', items: insights.filter(item => item.period === 'day') },
-    { period: 'week', items: insights.filter(item => item.period === 'week') },
-    { period: 'month', items: insights.filter(item => item.period === 'month') },
-  ];
+  const calculationMinute = [
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    now.getHours(),
+    now.getMinutes(),
+  ].join('-');
+  const dashboard = useMemo(
+    () => getInsightsDashboard(state.sales, state.expenses, now),
+    [state.sales, state.expenses, calculationMinute],
+  );
+  const advice = useMemo(
+    () => getMyAdvice(dashboard.week, dashboard.month, state.sales, state.udhaar, lang, state.shopProfile.shopType, now),
+    [dashboard.week, dashboard.month, state.sales, state.udhaar, lang, state.shopProfile.shopType, calculationMinute],
+  );
+  const insights = useMemo(
+    () => buildBusinessInsights({
+      today: dashboard.today,
+      week: dashboard.week,
+      month: dashboard.month,
+      sales: state.sales,
+      expenses: state.expenses,
+      udhaar: state.udhaar,
+      shopType: state.shopProfile.shopType,
+      udhaarLevel: state.shopProfile.udhaarLevel,
+      language: lang,
+      now,
+    }),
+    [
+      dashboard.today,
+      dashboard.week,
+      dashboard.month,
+      state.sales,
+      state.expenses,
+      state.udhaar,
+      state.shopProfile.shopType,
+      state.shopProfile.udhaarLevel,
+      lang,
+      calculationMinute,
+    ],
+  );
+  const insightGroups = useMemo<{ period: InsightsPeriod; items: BusinessInsight[] }[]>(
+    () => [
+      { period: 'day', items: insights.filter(item => item.period === 'day') },
+      { period: 'week', items: insights.filter(item => item.period === 'week') },
+      { period: 'month', items: insights.filter(item => item.period === 'month') },
+    ],
+    [insights],
+  );
 
   return (
     <div className="h-full flex flex-col bg-bg">
