@@ -116,11 +116,11 @@ export function NotebookScreen({ onClose }: NotebookScreenProps) {
           <button
             type="button"
             onClick={openNewNote}
-            className="btn-primary flex h-10 w-10 shrink-0 items-center justify-center p-0 col-start-2 row-start-2 justify-self-end sm:h-auto sm:w-auto sm:px-4 sm:col-start-3 sm:row-start-1 sm:row-span-2 sm:self-center"
+            className="inline-flex h-11 w-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 p-0 text-primary shadow-none transition-colors hover:bg-primary/15 active:scale-95 col-start-2 row-start-2 justify-self-end sm:h-auto sm:w-auto sm:min-w-0 sm:px-4 sm:rounded-2xl sm:border-transparent sm:bg-primary sm:text-white sm:shadow-sm sm:hover:bg-primary/90 sm:col-start-3 sm:row-start-1 sm:row-span-2 sm:self-center"
             aria-label={hindi ? 'नई नोट' : 'New note'}
             title={hindi ? 'नई नोट' : 'New note'}
           >
-            <Plus size={18} /> <span className="hidden sm:inline">{hindi ? 'नई नोट' : 'New note'}</span>
+            <Plus size={19} strokeWidth={2.1} /> <span className="hidden sm:inline">{hindi ? 'नई नोट' : 'New note'}</span>
           </button>
         )}
       </header>
