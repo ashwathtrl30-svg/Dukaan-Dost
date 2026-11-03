@@ -142,3 +142,48 @@ test('cancels a queued microphone when its component unmounts', async () => {
 
   assert.deepEqual(events, ['start-ask', 'stop-ask']);
 });
+
+
+test('uses one final-only recognition session on Android phones', async () => {
+  const { getSpeechRecognitionMode } = await import('./speechRecognition');
+
+  assert.deepEqual(
+    getSpeechRecognitionMode(
+      'Mozilla/5.0 (Linux; Android 16; Pixel 8) AppleWebKit/537.36 Chrome/130.0.0.0 Mobile Safari/537.36',
+      'Linux armv8l',
+      5,
+    ),
+    { continuous: false, interimResults: false, restartOnEnd: false },
+  );
+});
+
+test('uses one final-only recognition session on iPhones and iPads', async () => {
+  const { getSpeechRecognitionMode } = await import('./speechRecognition');
+
+  assert.deepEqual(
+    getSpeechRecognitionMode(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile',
+      'iPhone',
+      5,
+    ),
+    { continuous: false, interimResults: false, restartOnEnd: false },
+  );
+
+  assert.deepEqual(
+    getSpeechRecognitionMode('Mozilla/5.0 (Macintosh) AppleWebKit/605.1.15', 'MacIntel', 5),
+    { continuous: false, interimResults: false, restartOnEnd: false },
+  );
+});
+
+test('preserves continuous interim recognition on laptops and desktops', async () => {
+  const { getSpeechRecognitionMode } = await import('./speechRecognition');
+
+  assert.deepEqual(
+    getSpeechRecognitionMode(
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36',
+      'MacIntel',
+      0,
+    ),
+    { continuous: true, interimResults: true, restartOnEnd: true },
+  );
+});

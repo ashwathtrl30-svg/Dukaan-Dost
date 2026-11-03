@@ -123,3 +123,30 @@ export function cancelVoiceRecordingRequest(owner: symbol): void {
     releaseVoiceRecording(owner);
   }
 }
+
+
+export interface SpeechRecognitionMode {
+  continuous: boolean;
+  interimResults: boolean;
+  restartOnEnd: boolean;
+}
+
+/**
+ * Desktop browsers can keep a continuous recognition session and provide
+ * replaceable interim hypotheses. Mobile browser implementations are less
+ * consistent; use one final-only utterance and never auto-restart into the
+ * same live speech stream.
+ */
+export function getSpeechRecognitionMode(
+  userAgent: string,
+  platform: string,
+  maxTouchPoints: number,
+): SpeechRecognitionMode {
+  const isMobileBrowser =
+    /Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(userAgent) ||
+    (platform === 'MacIntel' && maxTouchPoints > 1);
+
+  return isMobileBrowser
+    ? { continuous: false, interimResults: false, restartOnEnd: false }
+    : { continuous: true, interimResults: true, restartOnEnd: true };
+}

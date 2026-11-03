@@ -4,6 +4,7 @@ import {
   buildSpeechTranscriptParts,
   joinSpeechTranscript,
   updateSpeechRecognitionSegments,
+  getSpeechRecognitionMode,
   requestVoiceRecording,
   releaseVoiceRecording,
   cancelVoiceRecordingRequest,
@@ -221,8 +222,13 @@ export function VoiceMicButton({
     }
 
     recognition.lang = languageRef.current === 'hi' ? 'hi-IN' : 'en-IN';
-    recognition.continuous = true;
-    recognition.interimResults = true;
+    const speechMode = getSpeechRecognitionMode(
+      navigator.userAgent,
+      navigator.platform,
+      navigator.maxTouchPoints,
+    );
+    recognition.continuous = speechMode.continuous;
+    recognition.interimResults = speechMode.interimResults;
     recognition.maxAlternatives = 3;
     sessionSegmentsRef.current = [];
     recognitionRef.current = recognition;
@@ -233,9 +239,14 @@ export function VoiceMicButton({
         recordingSessionId !== recordingSessionIdRef.current ||
         !shouldListenRef.current
       ) return;
+      const mobileMode = !speechMode.continuous;
       setStatus(languageRef.current === 'hi'
-        ? 'सुन रहा हूँ… पूरा बोलें। रोकने के लिए माइक्रोफ़ोन फिर दबाएँ।'
-        : 'Listening… say your full message. Tap the microphone again when finished.');
+        ? (mobileMode
+          ? 'सुन रहा हूँ… एक पूरा निर्देश बोलें। आवाज़ पहचान पूरी होने पर टेक्स्ट दिखेगा।'
+          : 'सुन रहा हूँ… पूरा बोलें। रोकने के लिए माइक्रोफ़ोन फिर दबाएँ।')
+        : (mobileMode
+          ? 'Listening… speak one complete instruction. The text will appear when recognition finishes.'
+          : 'Listening… say your full message. Tap the microphone again when finished.'));
     };
 
     recognition.onresult = (event) => {
@@ -255,7 +266,9 @@ export function VoiceMicButton({
         committedTranscriptRef.current,
         sessionSegmentsRef.current,
       );
-      publishInterim(parts.transcript);
+      // Mobile recognition is intentionally final-only; do not stream unstable
+      // partial hypotheses into the editable transcript.
+      if (speechMode.interimResults) publishInterim(parts.transcript);
     };
 
     recognition.onerror = (event) => {
@@ -285,7 +298,7 @@ export function VoiceMicButton({
       );
       sessionSegmentsRef.current = [];
 
-      if (shouldListenRef.current && !fatalErrorRef.current) {
+      if (speechMode.restartOnEnd && shouldListenRef.current && !fatalErrorRef.current) {
         // A browser may end a recognizer after silence. Preserve only final segments
         // and restart within the same logical recording session.
         lastInterimTranscriptRef.current = '';
