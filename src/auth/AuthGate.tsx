@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
+import { Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import {
   describeAuthError,
@@ -42,6 +43,8 @@ export function AccountAccessGate({ children }: { children: ReactNode }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -124,6 +127,7 @@ export function AccountAccessGate({ children }: { children: ReactNode }) {
       clearLocalDataForAnotherIdentity(data.session.user.id);
       setSession(data.session);
       setPassword('');
+      setShowPassword(false);
     } catch (signInError) {
       setError(describeAuthError(signInError));
     } finally {
@@ -210,6 +214,7 @@ export function AccountAccessGate({ children }: { children: ReactNode }) {
       if (updateError) throw updateError;
       setIsPasswordRecovery(false);
       setNewPassword('');
+      setShowNewPassword(false);
       setMessage(hi ? 'पासवर्ड अपडेट हो गया।' : 'Your password has been updated.');
     } catch (updateError) {
       setError(describeAuthError(updateError));
@@ -239,14 +244,25 @@ export function AccountAccessGate({ children }: { children: ReactNode }) {
           <p className="text-sm text-text-secondary text-center">
             {hi ? 'अपने दुकान खाते के लिए नया पासवर्ड डालें।' : 'Set a new password for your shop account.'}
           </p>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={newPassword}
-            onChange={(event) => setNewPassword(event.target.value)}
-            className="input-field w-full"
-            placeholder={hi ? 'नया पासवर्ड (कम से कम 8 अक्षर)' : 'New password (at least 8 characters)'}
-          />
+          <div className="relative">
+            <input
+              type={showNewPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              className="input-field w-full pr-12"
+              placeholder={hi ? 'नया पासवर्ड (कम से कम 8 अक्षर)' : 'New password (at least 8 characters)'}
+            />
+            <button
+              type="button"
+              onClick={() => setShowNewPassword((visible) => !visible)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label={showNewPassword ? (hi ? 'पासवर्ड छिपाएँ' : 'Hide password') : (hi ? 'पासवर्ड दिखाएँ' : 'Show password')}
+              aria-pressed={showNewPassword}
+            >
+              {showNewPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+            </button>
+          </div>
           {error && <p className="text-sm text-problem" role="alert">{error}</p>}
           {message && <p className="text-sm text-positive" role="status">{message}</p>}
           <button type="submit" disabled={busy || !newPassword} className="btn-primary w-full">
@@ -305,14 +321,25 @@ export function AccountAccessGate({ children }: { children: ReactNode }) {
               className="input-field w-full"
               placeholder={hi ? 'ईमेल पता' : 'Recovery email'}
             />
-            <input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className="input-field w-full"
-              placeholder={hi ? 'पासवर्ड' : 'Password'}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="input-field w-full pr-12"
+                placeholder={hi ? 'पासवर्ड' : 'Password'}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((visible) => !visible)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label={showPassword ? (hi ? 'पासवर्ड छिपाएँ' : 'Hide password') : (hi ? 'पासवर्ड दिखाएँ' : 'Show password')}
+                aria-pressed={showPassword}
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
             <button type="submit" disabled={busy} className="btn-primary w-full">
               {busy ? (hi ? 'साइन इन हो रहा है…' : 'Signing in…') : (hi ? 'साइन इन करें' : 'Sign in')}
             </button>
