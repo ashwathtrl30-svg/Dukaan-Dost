@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useRef, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { AppState, Language, Theme, ShopProfile, SaleEntry, ExpenseEntry, UdhaarEntry, NotebookNote, ChatMessage, ChatSession, Insight } from './types';
 import {
   collectSnapshotTombstones,
@@ -367,6 +367,10 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, null, loadState);
   const [cloudReady, setCloudReady] = useState(false);
+  const latestStateRef = useRef(state);
+  latestStateRef.current = state;
+  const localSaveTimerRef = useRef<number | null>(null);
+  const localSaveIdleRef = useRef<number | null>(null);
   const tombstonesRef = useRef(createEmptySnapshotTombstones());
   const currentSnapshotRef = useRef<ShopDataSnapshot>(
     createShopDataSnapshot(state, tombstonesRef.current)
@@ -381,21 +385,81 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const cloudSubscriptionCleanupRef = useRef<(() => void) | null>(null);
   const lastRemoteUpdatedAtRef = useRef(0);
 
-  currentSnapshotRef.current = createShopDataSnapshot(state, tombstonesRef.current);
+  // Build the cloud-safe snapshot once per actual state change. The old flow deep-cloned
+  // every transaction and chat three times for one update, blocking weaker mobile CPUs.
+  const stateSnapshot = useMemo(
+    () => createShopDataSnapshot(state, tombstonesRef.current),
+    [state],
+  );
+  currentSnapshotRef.current = stateSnapshot;
 
-  // Persist deletions as tombstones. This prevents an older offline copy from
-  // re-introducing a sale, expense, udhaar, note, chat, or insight after sync.
+  // Persist deletions as tombstones without cloning every collection again.
   useEffect(() => {
-    const latest = createShopDataSnapshot(state, tombstonesRef.current);
-    tombstonesRef.current = collectSnapshotTombstones(previousSnapshotRef.current, latest);
-    currentSnapshotRef.current = createShopDataSnapshot(state, tombstonesRef.current);
-    previousSnapshotRef.current = currentSnapshotRef.current;
+    const nextTombstones = collectSnapshotTombstones(previousSnapshotRef.current, stateSnapshot);
+    tombstonesRef.current = nextTombstones;
+    const nextSnapshot = { ...stateSnapshot, tombstones: nextTombstones };
+    currentSnapshotRef.current = nextSnapshot;
+    previousSnapshotRef.current = nextSnapshot;
+  }, [stateSnapshot]);
+
+  // localStorage is synchronous. Write during an idle period instead of blocking the
+  // interaction that changed state; always flush immediately when the app is backgrounded.
+  const flushLocalState = () => {
+    const idleWindow = window as Window & {
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    if (localSaveIdleRef.current !== null) {
+      idleWindow.cancelIdleCallback?.(localSaveIdleRef.current);
+      localSaveIdleRef.current = null;
+    }
+    if (localSaveTimerRef.current !== null) {
+      window.clearTimeout(localSaveTimerRef.current);
+      localSaveTimerRef.current = null;
+    }
+    saveState(latestStateRef.current);
+  };
+
+  useEffect(() => {
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    if (idleWindow.requestIdleCallback) {
+      localSaveIdleRef.current = idleWindow.requestIdleCallback(() => {
+        localSaveIdleRef.current = null;
+        saveState(latestStateRef.current);
+      }, { timeout: 500 });
+    } else {
+      localSaveTimerRef.current = window.setTimeout(() => {
+        localSaveTimerRef.current = null;
+        saveState(latestStateRef.current);
+      }, 100);
+    }
+
+    return () => {
+      if (localSaveIdleRef.current !== null) {
+        idleWindow.cancelIdleCallback?.(localSaveIdleRef.current);
+        localSaveIdleRef.current = null;
+      }
+      if (localSaveTimerRef.current !== null) {
+        window.clearTimeout(localSaveTimerRef.current);
+        localSaveTimerRef.current = null;
+      }
+    };
   }, [state]);
 
-  // Keep the existing local cache for offline use and as a non-destructive migration source.
   useEffect(() => {
-    saveState(state);
-  }, [state]);
+    const flushWhenHidden = () => {
+      if (document.visibilityState === 'hidden') flushLocalState();
+    };
+    window.addEventListener('pagehide', flushLocalState);
+    document.addEventListener('visibilitychange', flushWhenHidden);
+    return () => {
+      window.removeEventListener('pagehide', flushLocalState);
+      document.removeEventListener('visibilitychange', flushWhenHidden);
+      flushLocalState();
+    };
+  }, []);
 
   // Establish the authenticated owner and reconcile local data with that owner's cloud copy.
   // Initialization is retried after transient network failures; local use remains available.
@@ -582,8 +646,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [state.theme]);
 
+  const contextValue = useMemo(() => ({ state, dispatch }), [state, dispatch]);
+
   return (
-    <StoreContext.Provider value={{ state, dispatch }}>
+    <StoreContext.Provider value={contextValue}>
       {children}
     </StoreContext.Provider>
   );
