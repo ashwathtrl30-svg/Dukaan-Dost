@@ -817,6 +817,9 @@ export function AskScreen() {
   const [showHistory, setShowHistory] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScrollRef = useRef(true);
+  const forceScrollToLatestRef = useRef(false);
+  const previousSessionIdRef = useRef(state.activeSessionId);
   
   // Get active session
   const activeSession = state.chatSessions.find(s => s.id === state.activeSessionId);
@@ -831,10 +834,25 @@ export function AskScreen() {
   ];
   
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+
+    const sessionChanged = previousSessionIdRef.current !== state.activeSessionId;
+    previousSessionIdRef.current = state.activeSessionId;
+
+    // Follow new messages only while the reader is already near the bottom.
+    // Preserve the reading position when someone scrolls up through chat history.
+    if (
+      sessionChanged ||
+      forceScrollToLatestRef.current ||
+      shouldAutoScrollRef.current
+    ) {
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      shouldAutoScrollRef.current = true;
     }
-  }, [messages, isSending]);
+
+    forceScrollToLatestRef.current = false;
+  }, [messages, isSending, state.activeSessionId]);
   
   const handleSend = async (text?: string, fromVoice = false) => {
     const message = (text || input.trim()).trim();
@@ -848,6 +866,7 @@ export function AskScreen() {
       content: message,
       timestamp: Date.now(),
     };
+    forceScrollToLatestRef.current = true;
     dispatch({ type: 'ADD_CHAT_MESSAGE', payload: userMsg });
     setInput('');
     setInputFromVoice(false);
@@ -1100,7 +1119,16 @@ export function AskScreen() {
       </div>
       
       {/* Chat area */}
-      <div ref={scrollRef} className="flex-1 scroll-area px-5 py-4">
+      <div
+        ref={scrollRef}
+        onScroll={(event) => {
+          const container = event.currentTarget;
+          const distanceFromBottom =
+            container.scrollHeight - container.scrollTop - container.clientHeight;
+          shouldAutoScrollRef.current = distanceFromBottom <= 96;
+        }}
+        className="flex-1 min-h-0 scroll-area px-5 py-4"
+      >
         {messages.length === 0 && (
           <div className="text-center py-8">
             <div className="text-6xl mb-4">🤝</div>
