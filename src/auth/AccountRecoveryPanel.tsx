@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useStore } from '../store';
 import { supabase } from '../supabaseClient';
 import {
@@ -12,6 +13,7 @@ export function AccountRecoveryPanel() {
   const { authUser } = useStore();
   const [email, setEmail] = useState(authUser?.email ?? '');
   const [password, setPassword] = useState('');
+  const [showRecoveryPassword, setShowRecoveryPassword] = useState(false);
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
   const [pendingEmail, setPendingEmail] = useState('');
   const [busy, setBusy] = useState(false);
@@ -100,6 +102,7 @@ export function AccountRecoveryPanel() {
       if (passwordError) throw passwordError;
 
       setPassword('');
+      setShowRecoveryPassword(false);
       setShowPasswordSetup(false);
       setMessage('Password saved. You can now sign in with this email and password on another device.');
     } catch (passwordError) {
@@ -192,14 +195,25 @@ export function AccountRecoveryPanel() {
             </button>
           ) : (
             <div className="space-y-2">
-              <input
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="input-field w-full"
-                placeholder="New password (at least 8 characters)"
-              />
+              <div className="relative">
+                <input
+                  type={showRecoveryPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  className="input-field w-full pr-12"
+                  placeholder="New password (at least 8 characters)"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRecoveryPassword((visible) => !visible)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label={showRecoveryPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showRecoveryPassword}
+                >
+                  {showRecoveryPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={handleSetPassword}
@@ -210,7 +224,7 @@ export function AccountRecoveryPanel() {
               </button>
               <button
                 type="button"
-                onClick={() => { setShowPasswordSetup(false); setPassword(''); }}
+                onClick={() => { setShowPasswordSetup(false); setPassword(''); setShowRecoveryPassword(false); }}
                 className="btn-text w-full"
               >
                 Cancel
