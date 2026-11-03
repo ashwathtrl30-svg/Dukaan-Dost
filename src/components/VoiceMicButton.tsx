@@ -4,6 +4,7 @@ import {
   buildSpeechTranscriptParts,
   joinSpeechTranscript,
   updateSpeechRecognitionSegments,
+  appendFinalSpeechRecognitionSession,
   getSpeechRecognitionMode,
   requestVoiceRecording,
   releaseVoiceRecording,
@@ -242,10 +243,10 @@ export function VoiceMicButton({
       const mobileMode = !speechMode.continuous;
       setStatus(languageRef.current === 'hi'
         ? (mobileMode
-          ? 'सुन रहा हूँ… एक पूरा निर्देश बोलें। आवाज़ पहचान पूरी होने पर टेक्स्ट दिखेगा।'
+          ? 'सुन रहा हूँ… बोलते रहें। पूरा होने पर माइक्रोफ़ोन फिर दबाएँ।'
           : 'सुन रहा हूँ… पूरा बोलें। रोकने के लिए माइक्रोफ़ोन फिर दबाएँ।')
         : (mobileMode
-          ? 'Listening… speak one complete instruction. The text will appear when recognition finishes.'
+          ? 'Listening… keep speaking. Tap the microphone again when you are finished.'
           : 'Listening… say your full message. Tap the microphone again when finished.'));
     };
 
@@ -291,10 +292,9 @@ export function VoiceMicButton({
       ) return;
       recognitionRef.current = null;
 
-      const parts = buildSpeechTranscriptParts('', sessionSegmentsRef.current);
-      committedTranscriptRef.current = joinSpeechTranscript(
+      committedTranscriptRef.current = appendFinalSpeechRecognitionSession(
         committedTranscriptRef.current,
-        parts.finalTranscript,
+        sessionSegmentsRef.current,
       );
       sessionSegmentsRef.current = [];
 
@@ -302,7 +302,7 @@ export function VoiceMicButton({
         // A browser may end a recognizer after silence. Preserve only final segments
         // and restart within the same logical recording session.
         lastInterimTranscriptRef.current = '';
-        publishInterim(committedTranscriptRef.current);
+        if (speechMode.interimResults) publishInterim(committedTranscriptRef.current);
         clearRestartTimer();
         restartTimerRef.current = window.setTimeout(() => {
           restartTimerRef.current = null;

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  appendFinalSpeechRecognitionSession,
   buildSpeechTranscriptParts,
   updateSpeechRecognitionSegments,
   type SpeechRecognitionEventLike,
@@ -153,7 +154,7 @@ test('uses one final-only recognition session on Android phones', async () => {
       'Linux armv8l',
       5,
     ),
-    { continuous: false, interimResults: false, restartOnEnd: false },
+    { continuous: false, interimResults: false, restartOnEnd: true },
   );
 });
 
@@ -166,12 +167,12 @@ test('uses one final-only recognition session on iPhones and iPads', async () =>
       'iPhone',
       5,
     ),
-    { continuous: false, interimResults: false, restartOnEnd: false },
+    { continuous: false, interimResults: false, restartOnEnd: true },
   );
 
   assert.deepEqual(
     getSpeechRecognitionMode('Mozilla/5.0 (Macintosh) AppleWebKit/605.1.15', 'MacIntel', 5),
-    { continuous: false, interimResults: false, restartOnEnd: false },
+    { continuous: false, interimResults: false, restartOnEnd: true },
   );
 });
 
@@ -186,4 +187,35 @@ test('preserves continuous interim recognition on laptops and desktops', async (
     ),
     { continuous: true, interimResults: true, restartOnEnd: true },
   );
+});
+
+
+test('keeps one mobile recording active across separate final recognition sessions', () => {
+  const firstSession = updateSpeechRecognitionSegments([], event(0, [
+    { transcript: 'two packets lace chips', isFinal: true },
+  ]));
+  const afterFirstSession = appendFinalSpeechRecognitionSession('', firstSession);
+
+  const secondSession = updateSpeechRecognitionSegments([], event(0, [
+    { transcript: 'twenty rupees', isFinal: true },
+  ]));
+  const afterSecondSession = appendFinalSpeechRecognitionSession(afterFirstSession, secondSession);
+
+  const thirdSession = updateSpeechRecognitionSegments([], event(0, [
+    { transcript: 'quantity two', isFinal: true },
+  ]));
+  const completeRecording = appendFinalSpeechRecognitionSession(afterSecondSession, thirdSession);
+
+  assert.equal(
+    completeRecording,
+    'two packets lace chips twenty rupees quantity two',
+  );
+});
+
+test('does not append interim-only text when a mobile recognition session ends', () => {
+  const session = updateSpeechRecognitionSegments([], event(0, [
+    { transcript: 'unconfirmed partial phrase', isFinal: false },
+  ]));
+
+  assert.equal(appendFinalSpeechRecognitionSession('confirmed words', session), 'confirmed words');
 });

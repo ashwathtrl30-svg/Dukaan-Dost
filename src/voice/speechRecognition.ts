@@ -132,10 +132,10 @@ export interface SpeechRecognitionMode {
 }
 
 /**
- * Desktop browsers can keep a continuous recognition session and provide
- * replaceable interim hypotheses. Mobile browser implementations are less
- * consistent; use one final-only utterance and never auto-restart into the
- * same live speech stream.
+ * Desktop browsers can keep one continuous recognition session and provide
+ * replaceable interim hypotheses. Mobile browsers use short final-only sessions;
+ * the UI keeps one logical recording active and restarts safely after each session
+ * until the user explicitly taps the microphone to finish.
  */
 export function getSpeechRecognitionMode(
   userAgent: string,
@@ -147,6 +147,16 @@ export function getSpeechRecognitionMode(
     (platform === 'MacIntel' && maxTouchPoints > 1);
 
   return isMobileBrowser
-    ? { continuous: false, interimResults: false, restartOnEnd: false }
+    ? { continuous: false, interimResults: false, restartOnEnd: true }
     : { continuous: true, interimResults: true, restartOnEnd: true };
+}
+
+
+/** Adds only finalized segments from one recognizer instance to a logical recording. */
+export function appendFinalSpeechRecognitionSession(
+  committedTranscript: string,
+  sessionSegments: SpeechRecognitionSegment[],
+): string {
+  const finalTranscript = buildSpeechTranscriptParts('', sessionSegments).finalTranscript;
+  return joinSpeechTranscript(committedTranscript, finalTranscript);
 }
