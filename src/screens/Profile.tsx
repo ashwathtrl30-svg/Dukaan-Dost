@@ -12,7 +12,7 @@ export function ProfileScreen() {
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [pin, setPin] = useState('');
-  const [showPinValue, setShowPinValue] = useState(true);
+  const [showPinValue, setShowPinValue] = useState(false);
   
   const profile = state.shopProfile;
   const totalUdhaar = getTotalUdhaar(state.udhaar);
