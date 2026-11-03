@@ -7,6 +7,8 @@ import {
   normalizeShopDataSnapshot,
 } from './shopDataSnapshot';
 import type { AppState, ShopProfile } from './types';
+import { persistSnapshotWithConflictResolution } from './snapshotSync';
+import type { CloudSnapshotRow, SnapshotWriteAdapter } from './snapshotSync';
 
 const profile: ShopProfile = {
   shopType: 'kirana',
@@ -209,4 +211,124 @@ testCase('deletion tombstones stop an old local cache from restoring deleted rec
   const merged = mergeShopDataSnapshots(baseSnapshot, afterDelete);
   assert.equal(merged.sales.some((sale) => sale.id === 'sale-1'), false);
   assert.deepEqual(merged.tombstones.sales, ['sale-1']);
+});
+
+
+testCase('concurrent snapshot writes merge both clients before updating the row', async () => {
+  const competingRemote = {
+    ...baseSnapshot,
+    expenses: [
+      ...baseSnapshot.expenses,
+      { id: 'expense-remote', date: '2026-11-03', amount: 75, category: 'stock' as const, createdAt: 25 },
+    ],
+  };
+  const local = {
+    ...baseSnapshot,
+    sales: [
+      ...baseSnapshot.sales,
+      { id: 'sale-local-sync', date: '2026-11-03', amount: 90, itemName: 'Tea', paymentType: 'cash' as const, createdAt: 26 },
+    ],
+  };
+
+  let row: CloudSnapshotRow = {
+    state: baseSnapshot,
+    schema_version: 2,
+    updated_at: '2026-11-03T10:00:00.000Z',
+  };
+  let competingWriteHappened = false;
+
+  const adapter: SnapshotWriteAdapter = {
+    read: async () => ({ ...row }),
+    insert: async () => {
+      throw new Error('The row already exists.');
+    },
+    compareAndSwap: async (_userId, expectedUpdatedAt, nextSnapshot) => {
+      if (!competingWriteHappened) {
+        competingWriteHappened = true;
+        row = {
+          state: competingRemote,
+          schema_version: 2,
+          updated_at: '2026-11-03T10:00:00.100Z',
+        };
+        return null;
+      }
+      if (row.updated_at !== expectedUpdatedAt) return null;
+      row = {
+        state: nextSnapshot,
+        schema_version: 2,
+        updated_at: '2026-11-03T10:00:00.200Z',
+      };
+      return { ...row };
+    },
+  };
+
+  const result = await persistSnapshotWithConflictResolution(
+    'owner-1',
+    local,
+    adapter,
+    { preferLocalProfile: false, preferLocalPreferences: false },
+  );
+
+  const saved = normalizeShopDataSnapshot(row.state);
+  assert.ok(saved);
+  assert.ok(result.snapshot.sales.some((sale) => sale.id === 'sale-local-sync'));
+  assert.ok(result.snapshot.expenses.some((expense) => expense.id === 'expense-remote'));
+  assert.ok(saved.sales.some((sale) => sale.id === 'sale-local-sync'));
+  assert.ok(saved.expenses.some((expense) => expense.id === 'expense-remote'));
+  assert.equal(result.updatedAt, '2026-11-03T10:00:00.200Z');
+});
+
+testCase('simultaneous first saves cannot replace the client that creates the row first', async () => {
+  const remoteFirstSave = {
+    ...baseSnapshot,
+    sales: [
+      ...baseSnapshot.sales,
+      { id: 'sale-first-device', date: '2026-11-03', amount: 110, itemName: 'Oil', paymentType: 'cash' as const, createdAt: 31 },
+    ],
+  };
+  const localSecondSave = {
+    ...baseSnapshot,
+    expenses: [
+      ...baseSnapshot.expenses,
+      { id: 'expense-second-device', date: '2026-11-03', amount: 45, category: 'other' as const, createdAt: 32 },
+    ],
+  };
+
+  let row: CloudSnapshotRow | null = null;
+  const adapter: SnapshotWriteAdapter = {
+    read: async () => row ? { ...row } : null,
+    insert: async () => {
+      row = {
+        state: remoteFirstSave,
+        schema_version: 2,
+        updated_at: '2026-11-03T11:00:00.000Z',
+      };
+      const conflict = new Error('duplicate key');
+      Object.assign(conflict, { code: '23505' });
+      throw conflict;
+    },
+    compareAndSwap: async (_userId, expectedUpdatedAt, nextSnapshot) => {
+      if (!row || row.updated_at !== expectedUpdatedAt) return null;
+      row = {
+        state: nextSnapshot,
+        schema_version: 2,
+        updated_at: '2026-11-03T11:00:00.100Z',
+      };
+      return { ...row };
+    },
+  };
+
+  const result = await persistSnapshotWithConflictResolution(
+    'owner-1',
+    localSecondSave,
+    adapter,
+    { preferLocalProfile: false, preferLocalPreferences: false },
+  );
+
+  const saved = normalizeShopDataSnapshot(row?.state);
+  assert.ok(saved);
+  assert.ok(result.snapshot.sales.some((sale) => sale.id === 'sale-first-device'));
+  assert.ok(result.snapshot.expenses.some((expense) => expense.id === 'expense-second-device'));
+  assert.ok(saved.sales.some((sale) => sale.id === 'sale-first-device'));
+  assert.ok(saved.expenses.some((expense) => expense.id === 'expense-second-device'));
 });

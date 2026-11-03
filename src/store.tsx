@@ -6,7 +6,7 @@ import {
   createShopDataSnapshot,
   mergeShopDataSnapshots,
 } from './shopDataSnapshot';
-import type { ShopDataSnapshot } from './shopDataSnapshot';
+import type { ShopDataSnapshot, SnapshotMergeOptions } from './shopDataSnapshot';
 import { loadOrCreateCloudSnapshot, persistShopDataSnapshot, subscribeToShopDataSnapshot } from './cloudPersistence';
 import { supabase } from './supabaseClient';
 
@@ -383,6 +383,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const cloudBootstrapRetryTimerRef = useRef<number | null>(null);
   const cloudUserIdRef = useRef<string | null>(null);
   const cloudSubscriptionCleanupRef = useRef<(() => void) | null>(null);
+  const cloudRefreshRef = useRef<(() => Promise<void>) | null>(null);
+  const cloudReadyRef = useRef(false);
+  const pushCloudSnapshotRef = useRef<() => void>(() => undefined);
   const lastRemoteUpdatedAtRef = useRef(0);
 
   // Build the cloud-safe snapshot once per actual state change. The old flow deep-cloned
@@ -461,14 +464,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Establish the authenticated owner and reconcile local data with that owner's cloud copy.
-  // Initialization is retried after transient network failures; local use remains available.
+  // Establish the owner session, then keep recovering from temporary network outages.
   useEffect(() => {
     let active = true;
     let attempts = 0;
+    let bootstrapping = false;
 
     const bootstrap = async () => {
-      if (!supabase) return;
+      if (!supabase || !active || bootstrapping || cloudReadyRef.current) return;
+      bootstrapping = true;
+
       try {
         const localSnapshot = currentSnapshotRef.current;
         const result = await loadOrCreateCloudSnapshot(localSnapshot);
@@ -483,19 +488,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         tombstonesRef.current = result.snapshot.tombstones;
         currentSnapshotRef.current = result.snapshot;
         previousSnapshotRef.current = result.snapshot;
-        lastCloudSnapshotRef.current = result.schemaVersion >= 2
-          ? JSON.stringify(result.remoteSnapshot ?? result.snapshot)
-          : '';
+        lastCloudSnapshotRef.current = JSON.stringify(result.remoteSnapshot ?? result.snapshot);
         lastRemoteUpdatedAtRef.current = result.updatedAt
           ? Date.parse(result.updatedAt)
           : 0;
 
         dispatch({ type: 'HYDRATE_SHOP_DATA', payload: result.snapshot });
 
-        // Subscribe only to this owner's row. Reconnection performs a fresh cloud read,
-        // so changes made while this device was offline are recovered automatically.
+        // Realtime delivers low-latency notices; the subscription refreshes the full
+        // row after each successful join to recover any events missed while disconnected.
         cloudSubscriptionCleanupRef.current?.();
-        cloudSubscriptionCleanupRef.current = subscribeToShopDataSnapshot(
+        const subscription = subscribeToShopDataSnapshot(
           activeUserId,
           (remoteSnapshot, updatedAt) => {
             if (!active) return;
@@ -515,8 +518,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             let preferLocalProfile = true;
             let preferLocalPreferences = true;
 
-            // Compare these fields independently. A pending sale must not prevent a
-            // remote shop-profile or preference edit from reaching this device.
+            // Resolve profile and preference conflicts independently from ledger entries.
             if (lastCloudSnapshotRef.current) {
               try {
                 const lastSynced = JSON.parse(lastCloudSnapshotRef.current) as ShopDataSnapshot;
@@ -537,55 +539,151 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
             lastCloudSnapshotRef.current = remoteSerialized;
             tombstonesRef.current = reconciled.tombstones;
-
-            // Dispatch even when the merged data matches local state: this schedules
-            // a cloud write if the local device had unsaved edits while the event arrived.
-
             currentSnapshotRef.current = reconciled;
             previousSnapshotRef.current = reconciled;
             dispatch({ type: 'SYNC_SHOP_DATA', payload: reconciled });
           },
         );
-
+        cloudSubscriptionCleanupRef.current = subscription.unsubscribe;
+        cloudRefreshRef.current = subscription.refresh;
+        cloudReadyRef.current = true;
+        attempts = 0;
         setCloudReady(true);
       } catch (error) {
         console.error('Dukaan Dost cloud persistence could not initialize; local data remains available.', error);
-        if (active && attempts < 5) {
-          const delay = Math.min(30000, 2000 * (2 ** attempts));
+        if (active) {
+          const delay = Math.min(60000, 2000 * (2 ** Math.min(attempts, 5)));
           attempts += 1;
+          if (cloudBootstrapRetryTimerRef.current !== null) {
+            window.clearTimeout(cloudBootstrapRetryTimerRef.current);
+          }
           cloudBootstrapRetryTimerRef.current = window.setTimeout(() => {
             cloudBootstrapRetryTimerRef.current = null;
             void bootstrap();
           }, delay);
         }
+      } finally {
+        bootstrapping = false;
       }
     };
 
+    const recoverCloudConnection = () => {
+      if (!active) return;
+
+      if (!cloudReadyRef.current) {
+        attempts = 0;
+        if (cloudBootstrapRetryTimerRef.current !== null) {
+          window.clearTimeout(cloudBootstrapRetryTimerRef.current);
+          cloudBootstrapRetryTimerRef.current = null;
+        }
+        void bootstrap();
+        return;
+      }
+
+      const refresh = cloudRefreshRef.current;
+      if (!refresh) {
+        pushCloudSnapshotRef.current();
+        return;
+      }
+
+      // Reconcile with the server before pushing local pending changes. This prevents
+      // a device waking from the background from sending a stale whole-row snapshot.
+      void refresh()
+        .then(() => {
+          window.setTimeout(() => pushCloudSnapshotRef.current(), 0);
+        })
+        .catch((error) => {
+          console.warn('Dukaan Dost could not reconcile cloud data after reconnecting.', error);
+        });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        pushCloudSnapshotRef.current();
+      } else {
+        recoverCloudConnection();
+      }
+    };
+
+    window.addEventListener('online', recoverCloudConnection);
+    window.addEventListener('focus', recoverCloudConnection);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     void bootstrap();
+
     return () => {
       active = false;
+      cloudReadyRef.current = false;
+      cloudRefreshRef.current = null;
       cloudSubscriptionCleanupRef.current?.();
       cloudSubscriptionCleanupRef.current = null;
       if (cloudBootstrapRetryTimerRef.current !== null) {
         window.clearTimeout(cloudBootstrapRetryTimerRef.current);
       }
+      window.removeEventListener('online', recoverCloudConnection);
+      window.removeEventListener('focus', recoverCloudConnection);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 
-  // Serialize cloud writes, skip unchanged state, and retry transient failures without changing the UI.
-  const pushCloudSnapshotRef = useRef<() => void>(() => undefined);
+  // Serialize cloud writes. Each write is conditional on the exact database version
+  // that was read; conflicts are merged and retried by persistShopDataSnapshot().
   pushCloudSnapshotRef.current = () => {
-    if (!cloudReady || !cloudUserIdRef.current || cloudSaveInFlightRef.current) return;
+    if (!cloudReady || !cloudReadyRef.current || !cloudUserIdRef.current || cloudSaveInFlightRef.current) return;
 
     const snapshot = currentSnapshotRef.current;
     const serialized = JSON.stringify(snapshot);
     if (serialized === lastCloudSnapshotRef.current) return;
 
+    let mergeOptions: SnapshotMergeOptions = {};
+    if (lastCloudSnapshotRef.current) {
+      try {
+        const lastSynced = JSON.parse(lastCloudSnapshotRef.current) as ShopDataSnapshot;
+        mergeOptions = {
+          preferLocalProfile:
+            JSON.stringify(snapshot.shopProfile) !== JSON.stringify(lastSynced.shopProfile),
+          preferLocalPreferences:
+            JSON.stringify(snapshot.preferences) !== JSON.stringify(lastSynced.preferences),
+        };
+      } catch {
+        // A missing or invalid baseline falls back to the snapshot merge defaults.
+      }
+    }
+
+    if (cloudRetryTimerRef.current !== null) {
+      window.clearTimeout(cloudRetryTimerRef.current);
+      cloudRetryTimerRef.current = null;
+    }
+
     cloudSaveInFlightRef.current = true;
-    void persistShopDataSnapshot(snapshot, cloudUserIdRef.current)
-      .then(() => {
-        lastCloudSnapshotRef.current = serialized;
+    void persistShopDataSnapshot(snapshot, cloudUserIdRef.current, mergeOptions)
+      .then((result) => {
+        lastCloudSnapshotRef.current = JSON.stringify(result.snapshot);
+        const remoteTime = Date.parse(result.updatedAt);
+        if (Number.isFinite(remoteTime)) lastRemoteUpdatedAtRef.current = remoteTime;
         cloudRetryAttemptRef.current = 0;
+
+        if (cloudRetryTimerRef.current !== null) {
+          window.clearTimeout(cloudRetryTimerRef.current);
+          cloudRetryTimerRef.current = null;
+        }
+
+        // A concurrent client may have contributed records while this write was in
+        // flight. Merge that response with edits made locally after the request began.
+        const latestSnapshot = currentSnapshotRef.current;
+        const reconciled = mergeShopDataSnapshots(latestSnapshot, result.snapshot, {
+          preferLocalProfile:
+            JSON.stringify(latestSnapshot.shopProfile) !== JSON.stringify(snapshot.shopProfile),
+          preferLocalPreferences:
+            JSON.stringify(latestSnapshot.preferences) !== JSON.stringify(snapshot.preferences),
+        });
+
+        if (JSON.stringify(reconciled) !== JSON.stringify(latestSnapshot)) {
+          tombstonesRef.current = reconciled.tombstones;
+          currentSnapshotRef.current = reconciled;
+          previousSnapshotRef.current = reconciled;
+          dispatch({ type: 'SYNC_SHOP_DATA', payload: reconciled });
+        }
       })
       .catch((error) => {
         console.error('Dukaan Dost cloud save failed; it will retry automatically.', error);
@@ -601,7 +699,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => {
         cloudSaveInFlightRef.current = false;
-        // If data changed while a write was in flight, immediately enqueue the latest version.
+        // If data changed while a write was in flight, enqueue the latest state.
         if (JSON.stringify(currentSnapshotRef.current) !== lastCloudSnapshotRef.current) {
           if (cloudRetryTimerRef.current === null) {
             window.setTimeout(() => pushCloudSnapshotRef.current(), 0);
@@ -615,19 +713,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const timer = window.setTimeout(() => pushCloudSnapshotRef.current(), 700);
     return () => window.clearTimeout(timer);
   }, [state, cloudReady]);
-
-  useEffect(() => {
-    const retryWhenOnline = () => pushCloudSnapshotRef.current();
-    const flushWhenHidden = () => {
-      if (document.visibilityState === 'hidden') pushCloudSnapshotRef.current();
-    };
-    window.addEventListener('online', retryWhenOnline);
-    document.addEventListener('visibilitychange', flushWhenHidden);
-    return () => {
-      window.removeEventListener('online', retryWhenOnline);
-      document.removeEventListener('visibilitychange', flushWhenHidden);
-    };
-  }, []);
 
   useEffect(() => () => {
     if (cloudRetryTimerRef.current !== null) {

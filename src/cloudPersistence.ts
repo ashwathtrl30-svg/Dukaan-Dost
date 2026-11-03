@@ -3,13 +3,14 @@ import {
   mergeShopDataSnapshots,
   normalizeShopDataSnapshot,
   type ShopDataSnapshot,
+  type SnapshotMergeOptions,
 } from './shopDataSnapshot';
-
-interface SnapshotRow {
-  state: unknown;
-  schema_version: number;
-  updated_at: string;
-}
+import {
+  persistSnapshotWithConflictResolution,
+  type CloudSnapshotRow,
+  type SnapshotWriteAdapter,
+  type SnapshotWriteResult,
+} from './snapshotSync';
 
 export interface CloudBootstrapResult {
   snapshot: ShopDataSnapshot;
@@ -22,6 +23,13 @@ export type CloudSnapshotListener = (
   snapshot: ShopDataSnapshot,
   updatedAt: string,
 ) => void;
+
+export interface CloudSnapshotSubscription {
+  /** Fetch the latest owner-scoped row and reconcile it with the local client. */
+  refresh: () => Promise<void>;
+  /** Stop listening and release the Realtime channel. */
+  unsubscribe: () => void;
+}
 
 /**
  * Establish an Auth identity, then load the owner's cloud snapshot.
@@ -56,15 +64,16 @@ export async function loadOrCreateCloudSnapshot(
 
   if (error) throw error;
 
-  const row = data as SnapshotRow | null;
+  const row = data as CloudSnapshotRow | null;
   if (!row) {
-    // First cloud save is additive and uses the current browser's complete local ledger.
-    await persistShopDataSnapshot(localSnapshot, session.user.id);
+    // Insert is intentionally not an upsert. If another client creates the row first,
+    // the conflict-safe writer re-reads and merges that row before retrying.
+    const created = await persistShopDataSnapshot(localSnapshot, session.user.id);
     return {
-      snapshot: localSnapshot,
-      remoteSnapshot: null,
-      schemaVersion: 2,
-      updatedAt: null,
+      snapshot: created.snapshot,
+      remoteSnapshot: created.snapshot,
+      schemaVersion: created.schemaVersion,
+      updatedAt: created.updatedAt,
     };
   }
 
@@ -85,8 +94,8 @@ export async function loadOrCreateCloudSnapshot(
   };
 }
 
-/** Read the latest owner-scoped row after a Realtime channel connects or reconnects. */
-async function readLatestShopSnapshot(userId: string): Promise<SnapshotRow | null> {
+/** Read the latest owner-scoped row and verify the active identity before every refresh. */
+async function readLatestShopSnapshot(userId: string): Promise<CloudSnapshotRow | null> {
   if (!supabase) throw new Error('Supabase client configuration is missing.');
 
   const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
@@ -102,24 +111,23 @@ async function readLatestShopSnapshot(userId: string): Promise<SnapshotRow | nul
     .maybeSingle();
 
   if (error) throw error;
-  return data as SnapshotRow | null;
+  return data as CloudSnapshotRow | null;
 }
 
 /**
- * Listen only to the signed-in owner's snapshot.
- * The table's RLS policy independently controls which rows can be delivered.
- * A fresh read on SUBSCRIBED also recovers updates missed while the device was offline.
+ * Listen only to the signed-in owner's snapshot. Realtime is the fast notification
+ * path; refresh() is the recovery path for missed events after reconnect/backgrounding.
  */
 export function subscribeToShopDataSnapshot(
   userId: string,
   onSnapshot: CloudSnapshotListener,
-): () => void {
+): CloudSnapshotSubscription {
   if (!supabase) throw new Error('Supabase client configuration is missing.');
 
   let cancelled = false;
   let newestDeliveredAt = Number.NEGATIVE_INFINITY;
 
-  const deliver = (row: SnapshotRow | null) => {
+  const deliver = (row: CloudSnapshotRow | null) => {
     if (cancelled || !row) return;
     if (row.schema_version !== 1 && row.schema_version !== 2) {
       console.error('Dukaan Dost received an unsupported cloud snapshot version.');
@@ -139,6 +147,11 @@ export function subscribeToShopDataSnapshot(
     onSnapshot(snapshot, row.updated_at);
   };
 
+  const refresh = async () => {
+    const latestRow = await readLatestShopSnapshot(userId);
+    deliver(latestRow);
+  };
+
   const channel = supabase
     .channel('shop-state-sync:' + userId)
     .on(
@@ -151,34 +164,40 @@ export function subscribeToShopDataSnapshot(
       },
       (payload) => {
         if (payload.eventType === 'DELETE') return;
-        deliver(payload.new as SnapshotRow);
+        deliver(payload.new as CloudSnapshotRow);
       },
     )
     .subscribe((status, error) => {
       if (status === 'SUBSCRIBED') {
-        void readLatestShopSnapshot(userId)
-          .then(deliver)
-          .catch((readError) => {
-            if (!cancelled) {
-              console.error('Dukaan Dost could not refresh cloud data after reconnecting.', readError);
-            }
-          });
+        void refresh().catch((readError) => {
+          if (!cancelled) {
+            console.error('Dukaan Dost could not refresh cloud data after reconnecting.', readError);
+          }
+        });
       } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         console.warn('Dukaan Dost live sync connection interrupted; Supabase will retry.', error);
       }
     });
 
-  return () => {
-    cancelled = true;
-    void supabase.removeChannel(channel);
+  return {
+    refresh,
+    unsubscribe: () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+    },
   };
 }
 
-/** Upsert the current user's snapshot; the database RLS policy independently enforces ownership. */
+/**
+ * Save the current snapshot with optimistic concurrency control. The timestamp
+ * predicate prevents this client from overwriting a row changed by another client
+ * after it was read. Conflicts are merged and retried by snapshotSync.ts.
+ */
 export async function persistShopDataSnapshot(
   snapshot: ShopDataSnapshot,
   expectedUserId?: string,
-): Promise<void> {
+  mergeOptions: SnapshotMergeOptions = {},
+): Promise<SnapshotWriteResult> {
   if (!supabase) throw new Error('Supabase client configuration is missing.');
 
   const { data, error: sessionError } = await supabase.auth.getSession();
@@ -190,16 +209,45 @@ export async function persistShopDataSnapshot(
     throw new Error('The active shop session changed; refusing to write to a different account.');
   }
 
-  const { error } = await supabase
-    .from('shop_state_snapshots')
-    .upsert(
-      {
-        user_id: userId,
-        state: snapshot,
-        schema_version: 2,
-      },
-      { onConflict: 'user_id' },
-    );
+  const adapter: SnapshotWriteAdapter = {
+    read: (ownerId) => readLatestShopSnapshot(ownerId),
 
-  if (error) throw error;
+    insert: async (ownerId, nextSnapshot) => {
+      const { data: inserted, error } = await supabase
+        .from('shop_state_snapshots')
+        .insert({
+          user_id: ownerId,
+          state: nextSnapshot,
+          schema_version: 2,
+        })
+        .select('state, schema_version, updated_at')
+        .single();
+
+      if (error) throw error;
+      return inserted as CloudSnapshotRow;
+    },
+
+    compareAndSwap: async (ownerId, expectedUpdatedAt, nextSnapshot) => {
+      const { data: updated, error } = await supabase
+        .from('shop_state_snapshots')
+        .update({
+          state: nextSnapshot,
+          schema_version: 2,
+        })
+        .eq('user_id', ownerId)
+        .eq('updated_at', expectedUpdatedAt)
+        .select('state, schema_version, updated_at')
+        .maybeSingle();
+
+      if (error) throw error;
+      return updated as CloudSnapshotRow | null;
+    },
+  };
+
+  return persistSnapshotWithConflictResolution(
+    userId,
+    snapshot,
+    adapter,
+    mergeOptions,
+  );
 }
