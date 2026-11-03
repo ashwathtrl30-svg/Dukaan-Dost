@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useStore, formatRupee, getTodaySales, getTodayExpenses, getLast7DaysData, getWeekSales, getTotalUdhaar, generateId, getToday } from '../store';
 import { t } from '../i18n';
 import { NotebookScreen } from './NotebookScreen';
@@ -43,14 +43,24 @@ export function HomeScreen() {
   const [showUdhaarMenu, setShowUdhaarMenu] = useState(false);
   const [showUdhaarList, setShowUdhaarList] = useState(false);
   const [editingEntry, setEditingEntry] = useState<any>(null);
-  const todaySales = getTodaySales(state.sales);
-  const todayExpenses = getTodayExpenses(state.expenses);
+  const todayKey = getToday();
+  const todaySales = useMemo(() => getTodaySales(state.sales), [state.sales, todayKey]);
+  const todayExpenses = useMemo(() => getTodayExpenses(state.expenses), [state.expenses, todayKey]);
   const todayProfit = todaySales - todayExpenses;
-  const weekData = getLast7DaysData(state.sales);
-  const thisWeek = getWeekSales(state.sales, 0);
-  const lastWeek = getWeekSales(state.sales, 1);
+  const weekData = useMemo(() => getLast7DaysData(state.sales), [state.sales, todayKey]);
+  const thisWeek = useMemo(() => getWeekSales(state.sales, 0), [state.sales, todayKey]);
+  const lastWeek = useMemo(() => getWeekSales(state.sales, 1), [state.sales, todayKey]);
   const weekDiff = thisWeek - lastWeek;
-  const totalUdhaar = getTotalUdhaar(state.udhaar);
+  const totalUdhaar = useMemo(() => getTotalUdhaar(state.udhaar), [state.udhaar]);
+  const recentEntries = useMemo<DisplayEntry[]>(() => [
+    ...state.sales.map(entry => ({ ...entry, entryType: 'sale' as const })),
+    ...state.expenses.map(entry => ({ ...entry, entryType: 'expense' as const })),
+    ...state.udhaar.map(entry => ({ ...entry, entryType: 'udhaar' as const })),
+  ].sort((a, b) => (b.createdAt || new Date(b.date).getTime()) - (a.createdAt || new Date(a.date).getTime())).slice(0, 5), [
+    state.sales,
+    state.expenses,
+    state.udhaar,
+  ]);
   const shopName = state.shopProfile.shopName || (state.shopProfile.shopType ? t(`st_${state.shopProfile.shopType}` as any, lang) : '');
   
   const today = new Date();
@@ -289,14 +299,7 @@ export function HomeScreen() {
           </div>
           {(state.sales.length > 0 || state.expenses.length > 0 || state.udhaar.length > 0) ? (
             <div className="space-y-2">
-              {[
-                ...state.sales.map(entry => ({ ...entry, entryType: 'sale' as const })),
-                ...state.expenses.map(entry => ({ ...entry, entryType: 'expense' as const })),
-                ...state.udhaar.map(entry => ({ ...entry, entryType: 'udhaar' as const })),
-              ]
-                .sort((a, b) => (b.createdAt || new Date(b.date).getTime()) - (a.createdAt || new Date(a.date).getTime()))
-                .slice(0, 5)
-                .map(entry => (
+              {recentEntries.map(entry => (
                   <div key={entry.entryType + '-' + entry.id} className="card flex items-center gap-3 px-4 py-3">
                     <span className="text-2xl flex-shrink-0">
                       {entry.entryType === 'sale' ? '💰' : entry.entryType === 'expense' ? '📤' : '📒'}
@@ -430,7 +433,7 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
   };
   const locale = lang === 'hi' ? 'hi-IN' : 'en-IN';
 
-  const entries: DisplayEntry[] = [
+  const entries = useMemo<DisplayEntry[]>(() => [
     ...state.sales.map((entry) => ({ ...entry, entryType: 'sale' as const })),
     ...state.expenses.map((entry) => ({ ...entry, entryType: 'expense' as const })),
     ...state.udhaar.map((entry) => ({ ...entry, entryType: 'udhaar' as const })),
@@ -438,7 +441,7 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
     const aTime = a.createdAt || new Date(a.date).getTime();
     const bTime = b.createdAt || new Date(b.date).getTime();
     return bTime - aTime;
-  });
+  }), [state.sales, state.expenses, state.udhaar]);
 
   const formatFullDate = (date: string) => {
     const [year, month, day] = date.split('-').map(Number);
