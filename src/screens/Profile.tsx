@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useStore, formatRupee, getTotalUdhaar } from '../store';
 import { t, tArray } from '../i18n';
+import { AccountRecoveryPanel } from '../auth/AccountRecoveryPanel';
 import { ArrowLeft, Globe, Moon, Sun, Lock, Shield, Download, Trash2, Share2, HelpCircle, Bell, Type, Clock, Info, Eye, EyeOff } from 'lucide-react';
 
 // ============ PROFILE SCREEN ============
 export function ProfileScreen() {
-  const { state, dispatch, signOut } = useStore();
+  const { state, dispatch, signOut, authUser } = useStore();
   const lang = state.language!;
   const [showPrivacy, setShowPrivacy] = useState(false);
   const [showPin, setShowPin] = useState(false);
@@ -137,7 +138,9 @@ export function ProfileScreen() {
             </div>
           </div>
         </div>
-        
+
+        <AccountRecoveryPanel />
+
         {/* Settings */}
         <div className="space-y-3">
           {/* Language */}
@@ -255,22 +258,26 @@ export function ProfileScreen() {
             </div>
           </button>
           
-          {/* Sign out on shared devices */}
-          <button
-            onClick={() => {
-              const ok = confirm(lang === 'hi' ? 'क्या आप इस दुकान से सुरक्षित रूप से साइन आउट करना चाहते हैं?' : 'Sign out of this private shop account on this device?');
-              if (ok) {
-                void signOut().catch((error) => alert(error instanceof Error ? error.message : 'Could not sign out.'));
-              }
-            }}
-            className="card w-full flex items-center gap-3 h-16 px-4"
-          >
-            <Lock size={24} className="text-primary flex-shrink-0" />
-            <div className="flex-1 text-left min-w-0">
-              <p className="text-body font-medium text-text">{lang === 'hi' ? 'सुरक्षित साइन आउट' : 'Secure Sign Out'}</p>
-              <p className="text-small text-text-secondary">{lang === 'hi' ? 'इस डिवाइस पर दुकान लॉक करें' : 'Lock this shop on this device'}</p>
-            </div>
-          </button>
+          {/* Only permanent, recoverable accounts can sign out. */}
+          {authUser && !authUser.is_anonymous && (
+            <button
+              onClick={() => {
+                const ok = confirm(lang === 'hi'
+                  ? 'इस डिवाइस से साइन आउट करें? आपकी दुकान का डेटा पहले क्लाउड में सेव होगा।'
+                  : 'Sign out on this device? Your latest shop data will be saved to the cloud first.');
+                if (ok) {
+                  void signOut().catch((error) => alert(error instanceof Error ? error.message : 'Could not sign out.'));
+                }
+              }}
+              className="card w-full flex items-center gap-3 h-16 px-4"
+            >
+              <Lock size={24} className="text-primary flex-shrink-0" />
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-body font-medium text-text">{lang === 'hi' ? 'इस डिवाइस से साइन आउट' : 'Sign Out on This Device'}</p>
+                <p className="text-small text-text-secondary">{lang === 'hi' ? 'डेटा सेव करके सुरक्षित साइन आउट' : 'Save cloud data, then sign out'}</p>
+              </div>
+            </button>
+          )}
 
           {/* Delete Data */}
           <button

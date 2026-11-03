@@ -35,9 +35,13 @@ jobs:
           --moduleResolution bundler --jsx react-jsx --skipLibCheck
           --allowSyntheticDefaultImports --types vite/client
           src/store.tsx src/cloudPersistence.ts src/shopDataSnapshot.ts
-          src/types.ts src/supabaseClient.ts
+          src/types.ts src/supabaseClient.ts src/App.tsx
+          src/auth/AuthGate.tsx src/auth/AccountRecoveryPanel.tsx
+          src/auth/authValidation.ts src/screens/Profile.tsx src/screens/Onboarding.tsx
       - name: Test cloud shop-data snapshot reconciliation
         run: npx --yes tsx --test src/shopDataSnapshot.test.ts
+      - name: Test identity and recovery validation
+        run: npx --yes tsx --test src/auth/authValidation.test.ts
       - name: Test four-pillar My Advice recommendations
         run: npx --yes tsx --test src/insights/myAdvice.test.ts
       - name: Test product identity and pack-size aggregation

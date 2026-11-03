@@ -1,5 +1,6 @@
 import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { StoreProvider, useStore, generateId, getToday, formatRupee } from './store';
+import { AccountAccessGate } from './auth/AuthGate';
 import { VoiceMicButton } from './components/VoiceMicButton';
 import type { VoiceInterpretation } from './voice/voiceInterpreter';
 import { getSaleCountCopy, getSaleItemCountFromQuantity, parseSaleQuantityInput } from './quantity';
@@ -615,8 +616,10 @@ function BottomNav({ activeTab, onTabChange }: { activeTab: Tab; onTabChange: (t
 // ============ ROOT APP ============
 export default function App() {
   return (
-    <StoreProvider>
-      <AppContent />
-    </StoreProvider>
+    <AccountAccessGate>
+      <StoreProvider>
+        <AppContent />
+      </StoreProvider>
+    </AccountAccessGate>
   );
 }

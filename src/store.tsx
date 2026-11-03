@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useReducer, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useMemo, useRef, useState, useCallback, ReactNode } from 'react';
+import type { User } from '@supabase/supabase-js';
 import { AppState, Language, Theme, ShopProfile, SaleEntry, ExpenseEntry, UdhaarEntry, NotebookNote, ChatMessage, ChatSession, Insight } from './types';
 import {
   collectSnapshotTombstones,
@@ -82,6 +83,7 @@ type Action =
   | { type: 'EXPORT_DATA' }
   | { type: 'DELETE_ALL_DATA' }
   | { type: 'RESET_ONBOARDING' }
+  | { type: 'RESET_LOCAL_FOR_ACCOUNT_SWITCH' }
   | { type: 'HYDRATE_SHOP_DATA'; payload: ShopDataSnapshot }
   | { type: 'SYNC_SHOP_DATA'; payload: ShopDataSnapshot };
 
@@ -280,6 +282,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...initialState, language: state.language, theme: state.theme };
     case 'RESET_ONBOARDING':
       return { ...state, onboardingComplete: false, onboardingStep: 0 };
+    case 'RESET_LOCAL_FOR_ACCOUNT_SWITCH':
+      return { ...initialState };
     default:
       return state;
   }
@@ -360,6 +364,8 @@ function saveState(state: AppState) {
 interface StoreContextType {
   state: AppState;
   dispatch: React.Dispatch<Action>;
+  authUser: User | null;
+  signOut: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -367,6 +373,7 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, null, loadState);
   const [cloudReady, setCloudReady] = useState(false);
+  const [authUser, setAuthUser] = useState<User | null>(null);
   const latestStateRef = useRef(state);
   latestStateRef.current = state;
   const localSaveTimerRef = useRef<number | null>(null);
@@ -387,6 +394,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const cloudReadyRef = useRef(false);
   const pushCloudSnapshotRef = useRef<() => void>(() => undefined);
   const lastRemoteUpdatedAtRef = useRef(0);
+
+  // Keep the current Supabase identity available to account and recovery settings.
+  useEffect(() => {
+    if (!supabase) return;
+
+    let active = true;
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (active) setAuthUser(session?.user ?? null);
+    });
+
+    void supabase.auth.getUser()
+      .then(({ data, error }) => {
+        if (active && !error) setAuthUser(data.user);
+      })
+      .catch((error) => {
+        console.error('Dukaan Dost could not read the current account identity.', error);
+      });
+
+    return () => {
+      active = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   // Build the cloud-safe snapshot once per actual state change. The old flow deep-cloned
   // every transaction and chat three times for one update, blocking weaker mobile CPUs.
@@ -475,15 +505,48 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       bootstrapping = true;
 
       try {
-        const localSnapshot = currentSnapshotRef.current;
+        const { data: initialSessionData, error: initialSessionError } = await supabase.auth.getSession();
+        if (initialSessionError) throw initialSessionError;
+
+        let activeSession = initialSessionData.session;
+        if (!activeSession) {
+          const { data: anonymousData, error: anonymousError } = await supabase.auth.signInAnonymously();
+          if (anonymousError) throw anonymousError;
+          activeSession = anonymousData.session;
+        }
+        const activeUserId = activeSession?.user?.id ?? null;
+        if (!activeUserId) throw new Error('There is no authenticated shop session.');
+
+        // Local business data belongs to one Auth user. Never merge a previous shop's
+        // browser cache into a different signed-in identity.
+        const savedOwnerId = localStorage.getItem('dukaandost_owner_id');
+        const hasSavedLocalState = Boolean(localStorage.getItem('dukaandost_state'));
+        const ownerChanged = Boolean(savedOwnerId && savedOwnerId !== activeUserId);
+        const unownedCacheForPermanentUser = !savedOwnerId && hasSavedLocalState && !activeSession?.user?.is_anonymous;
+        const mustDiscardLocalCache = ownerChanged || unownedCacheForPermanentUser;
+
+        let localSnapshot = currentSnapshotRef.current;
+        if (mustDiscardLocalCache) {
+          localStorage.removeItem('dukaandost_state');
+          localStorage.removeItem('dukaandost_owner_id');
+          tombstonesRef.current = createEmptySnapshotTombstones();
+          localSnapshot = createShopDataSnapshot(initialState, tombstonesRef.current);
+          currentSnapshotRef.current = localSnapshot;
+          previousSnapshotRef.current = localSnapshot;
+          dispatch({ type: 'RESET_LOCAL_FOR_ACCOUNT_SWITCH' });
+        }
+
         const result = await loadOrCreateCloudSnapshot(localSnapshot);
         if (!active) return;
 
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) throw sessionError;
-        const activeUserId = sessionData.session?.user?.id ?? null;
-        if (!activeUserId) throw new Error('There is no authenticated shop session.');
+        if (sessionData.session?.user?.id !== activeUserId) {
+          throw new Error('The active shop account changed during cloud initialization.');
+        }
         cloudUserIdRef.current = activeUserId;
+        setAuthUser(sessionData.session.user);
+        localStorage.setItem('dukaandost_owner_id', activeUserId);
 
         tombstonesRef.current = result.snapshot.tombstones;
         currentSnapshotRef.current = result.snapshot;
@@ -731,7 +794,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [state.theme]);
 
-  const contextValue = useMemo(() => ({ state, dispatch }), [state, dispatch]);
+  const signOut = useCallback(async () => {
+    if (!supabase) throw new Error('Supabase is not configured for this app.');
+    if (!cloudReadyRef.current || !cloudUserIdRef.current) {
+      throw new Error('The shop account is still syncing. Please try again when sync has finished.');
+    }
+
+    const { data, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    if (!data.user) throw new Error('There is no signed-in shop account.');
+    if (data.user.is_anonymous) {
+      throw new Error('Protect this shop with a verified recovery email and password before signing out. Anonymous accounts cannot be recovered after sign-out.');
+    }
+
+    // Flush the latest shop state to the cloud before ending this device session.
+    await persistShopDataSnapshot(currentSnapshotRef.current, data.user.id);
+    const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+    if (signOutError) throw signOutError;
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({ state, dispatch, authUser, signOut }),
+    [state, dispatch, authUser, signOut],
+  );
 
   return (
     <StoreContext.Provider value={contextValue}>

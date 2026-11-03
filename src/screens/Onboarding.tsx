@@ -107,28 +107,15 @@ export function WelcomeScreen() {
 export function PhoneScreen() {
   const { state, dispatch } = useStore();
   const lang = state.language!;
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [phone, setPhone] = useState(state.phoneNumber || '');
 
-  // Prototype-only flow: no SMS is sent and no phone identity is verified.
-  // Replace this with real Supabase Phone Auth when production OTP is integrated.
-  const handleSendOtp = () => {
-    if (phone.length !== 10) return;
-    setOtp('');
-    setStep('otp');
-  };
+  const normalizedPhone = phone.replace(/\D/g, '').slice(0, 10);
+  const canContinue = normalizedPhone.length === 0 || normalizedPhone.length === 10;
 
-  // Any six digits complete the prototype onboarding step.
-  const handleVerify = () => {
-    if (otp.length !== 6) return;
-    dispatch({ type: 'SET_PHONE', payload: phone });
+  const handleContinue = () => {
+    if (!canContinue) return;
+    dispatch({ type: 'SET_PHONE', payload: normalizedPhone });
     dispatch({ type: 'SET_ONBOARDING_STEP', payload: 3 });
-  };
-
-  const handleChangeNumber = () => {
-    setOtp('');
-    setStep('phone');
   };
 
   return (
@@ -142,76 +129,46 @@ export function PhoneScreen() {
 
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
         <div className="text-5xl mb-4 text-center">📱</div>
-
-        {step === 'phone' ? (
-          <>
-            <h2 className="text-section-title text-text mb-2">
-              {t('phoneTitle', lang)}
-            </h2>
-            <p className="text-body text-text-secondary mb-4">
-              {lang === 'hi'
-                ? 'प्रोटोटाइप में आगे बढ़ने के लिए अपना 10 अंकों का नंबर डालें।'
-                : 'Enter a phone number to continue with the prototype.'}
-            </p>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-              placeholder="+91 XXXXX XXXXX"
-              className="input-field text-body text-center tracking-wider mb-4"
-              autoFocus
-            />
-            <p className="text-sm font-semibold text-primary text-center bg-primary/10 border border-primary/20 rounded-xl px-3 py-2 mb-4">
-              {lang === 'hi'
-                ? 'यह एक प्रोटोटाइप है, आप कोई भी 10 अंकों का नंबर डाल सकते हैं।'
-                : 'This is a prototype, you can enter any 10 digit number.'}
-            </p>
-            <button
-              onClick={handleSendOtp}
-              disabled={phone.length !== 10}
-              className="btn-primary"
-            >
-              {t('next', lang)} →
-            </button>
-          </>
-        ) : (
-          <>
-            <h2 className="text-section-title text-text mb-2">
-              {t('enterOtp', lang)}
-            </h2>
-            <p className="text-body text-text-secondary mb-4">
-              {lang === 'hi' ? 'प्रोटोटाइप सत्यापन के लिए: ' : 'Prototype verification for: '}+91 {phone}
-            </p>
-            <input
-              type="tel"
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="______"
-              className="input-field text-body text-center tracking-[0.5em] mb-4"
-              autoFocus
-              maxLength={6}
-              autoComplete="one-time-code"
-            />
-            <p className="text-sm font-semibold text-primary text-center bg-primary/10 border border-primary/20 rounded-xl px-3 py-2 mb-4">
-              {lang === 'hi'
-                ? 'कोई भी 6 अंकों का नंबर डालें।'
-                : 'Enter any 6 digit number.'}
-            </p>
-            <button
-              onClick={handleVerify}
-              disabled={otp.length !== 6}
-              className="btn-primary mb-3"
-            >
-              {t('next', lang)} →
-            </button>
-            <button
-              className="btn-text mx-auto"
-              onClick={handleChangeNumber}
-            >
-              {lang === 'hi' ? 'मोबाइल नंबर बदलें' : 'Change number'}
-            </button>
-          </>
+        <h2 className="text-section-title text-text mb-2 text-center">
+          {lang === 'hi' ? 'मोबाइल नंबर (वैकल्पिक)' : 'Mobile number (optional)'}
+        </h2>
+        <p className="text-body text-text-secondary mb-4 text-center">
+          {lang === 'hi'
+            ? 'यह नंबर दुकान की संपर्क जानकारी के लिए है। इस चरण में कोई OTP नहीं भेजा जाता। खाता रिकवरी के लिए प्रोफ़ाइल में सत्यापित ईमेल जोड़ें।'
+            : 'This number is saved as shop contact information only. No OTP is sent in this step. Add a verified email in Profile to recover your account.'}
+        </p>
+        <input
+          type="tel"
+          inputMode="numeric"
+          autoComplete="tel-national"
+          value={phone}
+          onChange={(event) => setPhone(event.target.value.replace(/\D/g, '').slice(0, 10))}
+          placeholder="10-digit mobile number"
+          className="input-field text-body text-center tracking-wider mb-4"
+          maxLength={10}
+        />
+        {!canContinue && (
+          <p className="text-sm text-problem mb-3 text-center">
+            {lang === 'hi' ? '10 अंकों का नंबर डालें या खाली छोड़ दें।' : 'Enter a 10-digit number or leave it blank.'}
+          </p>
         )}
+        <button
+          onClick={handleContinue}
+          disabled={!canContinue}
+          className="btn-primary disabled:opacity-40"
+        >
+          {t('next', lang)} →
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            dispatch({ type: 'SET_PHONE', payload: '' });
+            dispatch({ type: 'SET_ONBOARDING_STEP', payload: 3 });
+          }}
+          className="btn-text w-full mt-2"
+        >
+          {lang === 'hi' ? 'अभी छोड़ें' : 'Skip for now'}
+        </button>
       </div>
     </div>
   );
