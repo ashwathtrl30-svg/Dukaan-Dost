@@ -1,17 +1,23 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { StoreProvider, useStore, generateId, getToday, formatRupee } from './store';
 import { VoiceMicButton } from './components/VoiceMicButton';
 import { interpretVoiceTransactions } from './voice/voiceInterpreter';
 import type { VoiceInterpretation } from './voice/voiceInterpreter';
 import { getSaleCountCopy, getSaleItemCountFromQuantity, parseSaleQuantityInput } from './quantity';
 import { t } from './i18n';
-import { LanguageScreen, WelcomeScreen, PhoneScreen, InterviewScreen, ProfileSummaryScreen, TourScreen } from './screens/Onboarding';
 import { HomeScreen } from './screens/Home';
-import { InsightsScreen } from './screens/Insights';
-import { AskScreen } from './screens/Ask';
-import { ToolsScreen } from './screens/Tools';
-import { LearnScreen } from './screens/Learn';
-import { ProfileScreen } from './screens/Profile';
+
+const LanguageScreen = lazy(() => import('./screens/Onboarding').then(module => ({ default: module.LanguageScreen })));
+const WelcomeScreen = lazy(() => import('./screens/Onboarding').then(module => ({ default: module.WelcomeScreen })));
+const PhoneScreen = lazy(() => import('./screens/Onboarding').then(module => ({ default: module.PhoneScreen })));
+const InterviewScreen = lazy(() => import('./screens/Onboarding').then(module => ({ default: module.InterviewScreen })));
+const ProfileSummaryScreen = lazy(() => import('./screens/Onboarding').then(module => ({ default: module.ProfileSummaryScreen })));
+const TourScreen = lazy(() => import('./screens/Onboarding').then(module => ({ default: module.TourScreen })));
+const InsightsScreen = lazy(() => import('./screens/Insights').then(module => ({ default: module.InsightsScreen })));
+const AskScreen = lazy(() => import('./screens/Ask').then(module => ({ default: module.AskScreen })));
+const ToolsScreen = lazy(() => import('./screens/Tools').then(module => ({ default: module.ToolsScreen })));
+const LearnScreen = lazy(() => import('./screens/Learn').then(module => ({ default: module.LearnScreen })));
+const ProfileScreen = lazy(() => import('./screens/Profile').then(module => ({ default: module.ProfileScreen })));
 import { Home, BarChart3, MessageCircle, Wrench, BookOpen, User, WifiOff, Check, X, Lock, Eye, EyeOff } from 'lucide-react';
 
 type Tab = 'home' | 'insights' | 'ask' | 'tools' | 'learn';
@@ -340,17 +346,21 @@ function AppContent() {
 
   // Handle onboarding flow
   if (!state.language) {
-    return <LanguageScreen />;
+    return <Suspense fallback={null}><LanguageScreen /></Suspense>;
   }
 
   if (!state.onboardingComplete) {
     const step = state.onboardingStep;
-    if (step === 0 || step === 1) return <WelcomeScreen />;
-    if (step === 2) return <PhoneScreen />;
-    if (step >= 3 && step <= 12) return <InterviewScreen />;
-    if (step === 13) return <ProfileSummaryScreen />;
-    if (step === 14) return <TourScreen />;
-    return <WelcomeScreen />;
+    const OnboardingStep = step === 2
+      ? PhoneScreen
+      : step >= 3 && step <= 12
+        ? InterviewScreen
+        : step === 13
+          ? ProfileSummaryScreen
+          : step === 14
+            ? TourScreen
+            : WelcomeScreen;
+    return <Suspense fallback={null}><OnboardingStep /></Suspense>;
   }
 
   // Show profile
@@ -358,7 +368,7 @@ function AppContent() {
     return (
       <div className="h-full flex flex-col">
         <div className="flex-1 overflow-hidden">
-          <ProfileScreen />
+          <Suspense fallback={null}><ProfileScreen /></Suspense>
         </div>
         <BottomNav activeTab={activeTab} onTabChange={(tab) => { setActiveTab(tab); setShowProfile(false); }} />
       </div>
@@ -545,11 +555,13 @@ function AppContent() {
 
       {/* Main content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'home' && <HomeScreen />}
-        {activeTab === 'insights' && <InsightsScreen />}
-        {activeTab === 'ask' && <AskScreen />}
-        {activeTab === 'tools' && <ToolsScreen />}
-        {activeTab === 'learn' && <LearnScreen />}
+        <Suspense fallback={null}>
+          {activeTab === 'home' && <HomeScreen />}
+          {activeTab === 'insights' && <InsightsScreen />}
+          {activeTab === 'ask' && <AskScreen />}
+          {activeTab === 'tools' && <ToolsScreen />}
+          {activeTab === 'learn' && <LearnScreen />}
+        </Suspense>
       </div>
 
       {/* Bottom navigation */}
