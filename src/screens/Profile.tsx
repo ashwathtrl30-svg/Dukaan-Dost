@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useStore, formatRupee, getTotalUdhaar } from '../store';
 import { t, tArray } from '../i18n';
 import { AccountRecoveryPanel } from '../auth/AccountRecoveryPanel';
-import { ArrowLeft, Globe, Moon, Sun, Lock, Shield, Download, Trash2, Share2, HelpCircle, Bell, Type, Clock, Info, Eye, EyeOff } from 'lucide-react';
+import { BackupRestorePanel } from '../backup/BackupRestorePanel';
+import { ArrowLeft, Globe, Moon, Sun, Lock, Shield, Trash2, Share2, HelpCircle, Bell, Type, Clock, Info, Eye, EyeOff } from 'lucide-react';
 
 // ============ PROFILE SCREEN ============
 export function ProfileScreen() {
@@ -214,24 +215,7 @@ export function ProfileScreen() {
             </div>
           </button>
           
-          {/* Export Data */}
-          <button
-            onClick={() => {
-              const data = JSON.stringify(state, null, 2);
-              const blob = new Blob([data], { type: 'application/json' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = 'dukaandost-data.json';
-              a.click();
-            }}
-            className="card w-full flex items-center gap-3 h-16 px-4"
-          >
-            <Download size={24} className="text-primary flex-shrink-0" />
-            <div className="flex-1 text-left min-w-0">
-              <p className="text-body font-medium text-text">{t('exportData', lang)}</p>
-            </div>
-          </button>
+          <BackupRestorePanel />
           
           {/* Share App */}
           <button

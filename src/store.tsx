@@ -6,9 +6,11 @@ import {
   createEmptySnapshotTombstones,
   createShopDataSnapshot,
   mergeShopDataSnapshots,
+  normalizeShopDataSnapshot,
 } from './shopDataSnapshot';
 import type { ShopDataSnapshot, SnapshotMergeOptions } from './shopDataSnapshot';
-import { loadOrCreateCloudSnapshot, persistShopDataSnapshot, subscribeToShopDataSnapshot } from './cloudPersistence';
+import type { BackupRestoreMode } from './backup/encryptedBackup';
+import { loadOrCreateCloudSnapshot, persistShopDataSnapshot, replaceShopDataSnapshot, subscribeToShopDataSnapshot } from './cloudPersistence';
 import { supabase } from './supabaseClient';
 
 const initialState: AppState = {
@@ -366,6 +368,13 @@ interface StoreContextType {
   dispatch: React.Dispatch<Action>;
   authUser: User | null;
   signOut: () => Promise<void>;
+  createShopBackup: () => Promise<{ snapshot: ShopDataSnapshot; ownerId: string }>;
+  restoreShopBackup: (
+    snapshot: ShopDataSnapshot,
+    backupOwnerId: string,
+    mode: BackupRestoreMode,
+    allowDifferentOwner: boolean,
+  ) => Promise<void>;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -794,6 +803,91 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [state.theme]);
 
+  const createShopBackup = useCallback(async () => {
+    if (!cloudReadyRef.current || !cloudUserIdRef.current) {
+      throw new Error('Cloud sync is not ready yet. Wait for the shop to finish syncing, then create the backup.');
+    }
+
+    const ownerId = cloudUserIdRef.current;
+    await cloudRefreshRef.current?.();
+    if (cloudUserIdRef.current !== ownerId) {
+      throw new Error('The active shop account changed while preparing the backup.');
+    }
+
+    // Persist pending local edits through the conflict-safe Phase 2 writer before
+    // exporting. The encrypted file therefore represents the latest saved cloud copy.
+    const result = await persistShopDataSnapshot(currentSnapshotRef.current, ownerId);
+    if (cloudUserIdRef.current !== ownerId) {
+      throw new Error('The active shop account changed while preparing the backup.');
+    }
+
+    lastCloudSnapshotRef.current = JSON.stringify(result.snapshot);
+    const updatedAt = Date.parse(result.updatedAt);
+    if (Number.isFinite(updatedAt)) lastRemoteUpdatedAtRef.current = updatedAt;
+    tombstonesRef.current = result.snapshot.tombstones;
+    currentSnapshotRef.current = result.snapshot;
+    previousSnapshotRef.current = result.snapshot;
+    dispatch({ type: 'SYNC_SHOP_DATA', payload: result.snapshot });
+
+    return { snapshot: result.snapshot, ownerId };
+  }, []);
+
+  const restoreShopBackup = useCallback(async (
+    inputSnapshot: ShopDataSnapshot,
+    backupOwnerId: string,
+    mode: BackupRestoreMode,
+    allowDifferentOwner: boolean,
+  ) => {
+    if (!cloudReadyRef.current || !cloudUserIdRef.current) {
+      throw new Error('Cloud sync is not ready yet. Wait for the shop to finish syncing, then restore the backup.');
+    }
+
+    const ownerId = cloudUserIdRef.current;
+    if (backupOwnerId !== ownerId && !allowDifferentOwner) {
+      throw new Error('This backup belongs to another shop account. Explicit confirmation is required before restoring it here.');
+    }
+
+    const backupSnapshot = normalizeShopDataSnapshot(inputSnapshot);
+    if (!backupSnapshot) {
+      throw new Error('The backup does not contain a valid shop-data snapshot.');
+    }
+
+    let targetSnapshot: ShopDataSnapshot;
+    let result;
+
+    if (mode === 'replace') {
+      // Exact restore is intentionally guarded by a database compare-and-swap.
+      // Concurrent edits cause an error instead of being silently discarded.
+      targetSnapshot = backupSnapshot;
+      result = await replaceShopDataSnapshot(targetSnapshot, ownerId);
+    } else {
+      // Merge preserves current records, chooses the backup profile/preferences,
+      // and unions tombstones so a deleted record is not resurrected accidentally.
+      targetSnapshot = mergeShopDataSnapshots(
+        backupSnapshot,
+        currentSnapshotRef.current,
+        { preferLocalProfile: true, preferLocalPreferences: true },
+      );
+      result = await persistShopDataSnapshot(
+        targetSnapshot,
+        ownerId,
+        { preferLocalProfile: true, preferLocalPreferences: true },
+      );
+    }
+
+    if (cloudUserIdRef.current !== ownerId) {
+      throw new Error('The active shop account changed during restore. No local shop state was changed.');
+    }
+
+    lastCloudSnapshotRef.current = JSON.stringify(result.snapshot);
+    const updatedAt = Date.parse(result.updatedAt);
+    if (Number.isFinite(updatedAt)) lastRemoteUpdatedAtRef.current = updatedAt;
+    tombstonesRef.current = result.snapshot.tombstones;
+    currentSnapshotRef.current = result.snapshot;
+    previousSnapshotRef.current = result.snapshot;
+    dispatch({ type: 'SYNC_SHOP_DATA', payload: result.snapshot });
+  }, []);
+
   const signOut = useCallback(async () => {
     if (!supabase) throw new Error('Supabase is not configured for this app.');
     if (!cloudReadyRef.current || !cloudUserIdRef.current) {
@@ -817,8 +911,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const contextValue = useMemo(
-    () => ({ state, dispatch, authUser, signOut }),
-    [state, dispatch, authUser, signOut],
+    () => ({ state, dispatch, authUser, signOut, createShopBackup, restoreShopBackup }),
+    [state, dispatch, authUser, signOut, createShopBackup, restoreShopBackup],
   );
 
   return (

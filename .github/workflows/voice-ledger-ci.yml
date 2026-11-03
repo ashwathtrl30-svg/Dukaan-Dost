@@ -38,10 +38,16 @@ jobs:
           src/types.ts src/supabaseClient.ts
           src/auth/AuthGate.tsx src/auth/AccountRecoveryPanel.tsx
           src/auth/authValidation.ts src/screens/Profile.tsx src/screens/Onboarding.tsx
+          src/backup/encryptedBackup.ts src/backup/BackupRestorePanel.tsx src/snapshotSync.ts
+          src/backup/encryptedBackup.ts src/backup/BackupRestorePanel.tsx
       - name: Test cloud shop-data snapshot reconciliation
         run: npx --yes tsx --test src/shopDataSnapshot.test.ts
+      - name: Test encrypted backup and guarded restore
+        run: npx --yes tsx --test src/backup/encryptedBackup.test.ts src/snapshotRestore.test.ts
       - name: Test identity and recovery validation
         run: npx --yes tsx --test src/auth/authValidation.test.ts
+      - name: Test encrypted shop backup and restore files
+        run: npx --yes tsx --test src/backup/encryptedBackup.test.ts
       - name: Test four-pillar My Advice recommendations
         run: npx --yes tsx --test src/insights/myAdvice.test.ts
       - name: Test product identity and pack-size aggregation

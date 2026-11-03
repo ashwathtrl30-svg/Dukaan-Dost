@@ -10,6 +10,7 @@ import {
   type CloudSnapshotRow,
   type SnapshotWriteAdapter,
   type SnapshotWriteResult,
+  replaceSnapshotWithConflictGuard,
 } from './snapshotSync';
 
 export interface CloudBootstrapResult {
@@ -250,4 +251,60 @@ export async function persistShopDataSnapshot(
     adapter,
     mergeOptions,
   );
+}
+
+/**
+ * Restore an exact backup snapshot with compare-and-swap protection. If another
+ * device writes during the restore, fail visibly instead of silently overwriting it.
+ */
+export async function replaceShopDataSnapshot(
+  snapshot: ShopDataSnapshot,
+  expectedUserId: string,
+): Promise<SnapshotWriteResult> {
+  if (!supabase) throw new Error('Supabase client configuration is missing.');
+
+  const { data, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+
+  const userId = data.session?.user?.id;
+  if (!userId || userId !== expectedUserId) {
+    throw new Error('The active shop account changed; refusing to restore into another account.');
+  }
+
+  const adapter: SnapshotWriteAdapter = {
+    read: (ownerId) => readLatestShopSnapshot(ownerId),
+
+    insert: async (ownerId, nextSnapshot) => {
+      const { data: inserted, error } = await supabase
+        .from('shop_state_snapshots')
+        .insert({
+          user_id: ownerId,
+          state: nextSnapshot,
+          schema_version: 2,
+        })
+        .select('state, schema_version, updated_at')
+        .single();
+
+      if (error) throw error;
+      return inserted as CloudSnapshotRow;
+    },
+
+    compareAndSwap: async (ownerId, expectedUpdatedAt, nextSnapshot) => {
+      const { data: updated, error } = await supabase
+        .from('shop_state_snapshots')
+        .update({
+          state: nextSnapshot,
+          schema_version: 2,
+        })
+        .eq('user_id', ownerId)
+        .eq('updated_at', expectedUpdatedAt)
+        .select('state, schema_version, updated_at')
+        .maybeSingle();
+
+      if (error) throw error;
+      return updated as CloudSnapshotRow | null;
+    },
+  };
+
+  return replaceSnapshotWithConflictGuard(userId, snapshot, adapter);
 }

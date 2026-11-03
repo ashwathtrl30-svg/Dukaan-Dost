@@ -138,3 +138,37 @@ export async function persistSnapshotWithConflictResolution(
     'The cloud shop data is changing on another device. Your changes are still saved locally and will retry.',
   );
 }
+
+/**
+ * Replace a snapshot only if the database row has not changed since it was read.
+ * Unlike normal sync, restore/replace is intentionally exact: it never silently
+ * merges a newer remote snapshot over the selected backup. A racing write aborts.
+ */
+export async function replaceSnapshotWithConflictGuard(
+  userId: string,
+  snapshot: ShopDataSnapshot,
+  adapter: SnapshotWriteAdapter,
+): Promise<SnapshotWriteResult> {
+  if (!userId) throw new Error('There is no authenticated shop session.');
+
+  const currentRow = await adapter.read(userId);
+  if (!currentRow) {
+    const inserted = await adapter.insert(userId, snapshot);
+    return {
+      snapshot: normalizeRow(inserted),
+      updatedAt: inserted.updated_at,
+      schemaVersion: inserted.schema_version,
+    };
+  }
+
+  const updated = await adapter.compareAndSwap(userId, currentRow.updated_at, snapshot);
+  if (!updated) {
+    throw new Error('Cloud shop data changed while the restore was in progress. Refresh and review the restore again.');
+  }
+
+  return {
+    snapshot: normalizeRow(updated),
+    updatedAt: updated.updated_at,
+    schemaVersion: updated.schema_version,
+  };
+}
