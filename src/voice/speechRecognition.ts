@@ -25,7 +25,7 @@ export function joinSpeechTranscript(...parts: string[]): string {
     .map(part => part.trim())
     .filter(Boolean)
     .join(' ')
-    .replace(/\\s+/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 

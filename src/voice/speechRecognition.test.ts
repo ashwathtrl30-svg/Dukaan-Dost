@@ -78,3 +78,14 @@ test('truncates stale result slots when the browser result list shrinks', () => 
     { transcript: 'updated two', isFinal: true },
   ]);
 });
+
+test('normalizes repeated whitespace in assembled transcripts', () => {
+  const parts = buildSpeechTranscriptParts('  previous\n entry  ', [
+    { transcript: '  do   kilo   rice ', isFinal: true },
+    { transcript: '  200   rupaye ', isFinal: false },
+  ]);
+
+  assert.equal(parts.finalTranscript, 'do kilo rice');
+  assert.equal(parts.interimTranscript, '200 rupaye');
+  assert.equal(parts.transcript, 'previous entry do kilo rice 200 rupaye');
+});
