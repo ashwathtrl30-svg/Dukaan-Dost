@@ -72,3 +72,54 @@ export function buildSpeechTranscriptParts(
     transcript: joinSpeechTranscript(committedTranscript, finalTranscript, interimTranscript),
   };
 }
+
+
+export interface VoiceRecordingRequest {
+  owner: symbol;
+  stop: () => void;
+  start: () => void;
+}
+
+let activeVoiceRecording: VoiceRecordingRequest | null = null;
+let pendingVoiceRecording: VoiceRecordingRequest | null = null;
+
+/**
+ * Serializes microphone ownership across all mounted VoiceMicButton instances.
+ * A waiting request starts only after the active browser recognizer releases its
+ * ownership, preventing Home/Notebook overlays from opening two microphones.
+ */
+export function requestVoiceRecording(request: VoiceRecordingRequest): void {
+  if (activeVoiceRecording?.owner === request.owner) return;
+
+  if (!activeVoiceRecording) {
+    activeVoiceRecording = request;
+    request.start();
+    return;
+  }
+
+  pendingVoiceRecording = request;
+  activeVoiceRecording.stop();
+}
+
+export function releaseVoiceRecording(owner: symbol): void {
+  if (activeVoiceRecording?.owner !== owner) return;
+
+  activeVoiceRecording = null;
+  const pending = pendingVoiceRecording;
+  pendingVoiceRecording = null;
+
+  if (pending) {
+    activeVoiceRecording = pending;
+    pending.start();
+  }
+}
+
+/** Removes a request that was queued by a component which is now unmounting. */
+export function cancelVoiceRecordingRequest(owner: symbol): void {
+  if (pendingVoiceRecording?.owner === owner) {
+    pendingVoiceRecording = null;
+  }
+  if (activeVoiceRecording?.owner === owner) {
+    releaseVoiceRecording(owner);
+  }
+}

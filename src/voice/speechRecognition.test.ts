@@ -89,3 +89,56 @@ test('normalizes repeated whitespace in assembled transcripts', () => {
   assert.equal(parts.interimTranscript, '200 rupaye');
   assert.equal(parts.transcript, 'previous entry do kilo rice 200 rupaye');
 });
+
+
+test('serializes recordings across microphone components and hands off after stop', async () => {
+  const {
+    requestVoiceRecording,
+    releaseVoiceRecording,
+  } = await import('./speechRecognition');
+  const firstOwner = Symbol('home');
+  const secondOwner = Symbol('notebook');
+  const events: string[] = [];
+
+  requestVoiceRecording({
+    owner: firstOwner,
+    stop: () => events.push('stop-home'),
+    start: () => events.push('start-home'),
+  });
+  requestVoiceRecording({
+    owner: secondOwner,
+    stop: () => events.push('stop-notebook'),
+    start: () => events.push('start-notebook'),
+  });
+
+  assert.deepEqual(events, ['start-home', 'stop-home']);
+  releaseVoiceRecording(firstOwner);
+  assert.deepEqual(events, ['start-home', 'stop-home', 'start-notebook']);
+  releaseVoiceRecording(secondOwner);
+});
+
+test('cancels a queued microphone when its component unmounts', async () => {
+  const {
+    requestVoiceRecording,
+    releaseVoiceRecording,
+    cancelVoiceRecordingRequest,
+  } = await import('./speechRecognition');
+  const firstOwner = Symbol('ask');
+  const queuedOwner = Symbol('notebook');
+  const events: string[] = [];
+
+  requestVoiceRecording({
+    owner: firstOwner,
+    stop: () => events.push('stop-ask'),
+    start: () => events.push('start-ask'),
+  });
+  requestVoiceRecording({
+    owner: queuedOwner,
+    stop: () => events.push('stop-notebook'),
+    start: () => events.push('start-notebook'),
+  });
+  cancelVoiceRecordingRequest(queuedOwner);
+  releaseVoiceRecording(firstOwner);
+
+  assert.deepEqual(events, ['start-ask', 'stop-ask']);
+});

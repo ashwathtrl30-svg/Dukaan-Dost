@@ -4,6 +4,9 @@ import {
   buildSpeechTranscriptParts,
   joinSpeechTranscript,
   updateSpeechRecognitionSegments,
+  requestVoiceRecording,
+  releaseVoiceRecording,
+  cancelVoiceRecordingRequest,
   type SpeechRecognitionSegment,
 } from '../voice/speechRecognition';
 
@@ -112,6 +115,9 @@ export function VoiceMicButton({
   const sessionSegmentsRef = useRef<SpeechRecognitionSegment[]>([]);
   const lastInterimTranscriptRef = useRef('');
   const restartTimerRef = useRef<number | null>(null);
+  const ownerRef = useRef(Symbol('voice-mic'));
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
 
   // Keep current callbacks without tying microphone lifetime to callback identity.
   const onTranscriptRef = useRef(onTranscript);
@@ -166,6 +172,8 @@ export function VoiceMicButton({
     sessionSegmentsRef.current = [];
     if (transcript) onTranscriptRef.current(transcript);
     notifyRecording(false);
+
+    releaseVoiceRecording(ownerRef.current);
 
     if (fatalErrorRef.current) {
       fatalErrorRef.current = null;
@@ -311,27 +319,31 @@ export function VoiceMicButton({
     }
   };
 
-  const startListening = () => {
-    if (disabled) return;
+  const stopRecording = (showFinishingStatus: boolean) => {
+    if (!recordingRef.current || !shouldListenRef.current) return;
 
-    if (recordingRef.current) {
-      // Ignore repeated taps while stop is already waiting for the browser's onend.
-      if (!shouldListenRef.current) return;
-      shouldListenRef.current = false;
+    shouldListenRef.current = false;
+    if (showFinishingStatus) {
       setStatus(languageRef.current === 'hi' ? 'रिकॉर्डिंग पूरी हो रही है…' : 'Finishing recording…');
-      clearRestartTimer();
-      const recognition = recognitionRef.current;
-      if (recognition) {
-        try {
-          recognition.stop();
-        } catch {
-          recognitionRef.current = null;
-          detachRecognition(recognition, true);
-          finishRecording(recordingSessionIdRef.current);
-        }
-      } else {
+    }
+    clearRestartTimer();
+    const recognition = recognitionRef.current;
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch {
+        recognitionRef.current = null;
+        detachRecognition(recognition, true);
         finishRecording(recordingSessionIdRef.current);
       }
+    } else {
+      finishRecording(recordingSessionIdRef.current);
+    }
+  };
+
+  const beginRecordingSession = () => {
+    if (disabledRef.current || recordingRef.current) {
+      releaseVoiceRecording(ownerRef.current);
       return;
     }
 
@@ -354,8 +366,36 @@ export function VoiceMicButton({
     createRecognitionSession(recordingSessionId);
   };
 
+  const startListening = () => {
+    if (disabledRef.current) return;
+
+    if (recordingRef.current) {
+      // A second tap while stop is pending must not create another recognizer.
+      stopRecording(true);
+      return;
+    }
+
+    // A different screen's microphone is stopped first. The coordinator starts
+    // this request only after the previous recognizer has ended or been aborted.
+    requestVoiceRecording({
+      owner: ownerRef.current,
+      stop: () => stopRecording(false),
+      start: beginRecordingSession,
+    });
+  };
+
   useEffect(() => {
+    const stopWhenHidden = () => {
+      if (document.visibilityState === 'hidden') stopRecording(false);
+    };
+    const stopOnPageHide = () => stopRecording(false);
+
+    document.addEventListener('visibilitychange', stopWhenHidden);
+    window.addEventListener('pagehide', stopOnPageHide);
+
     return () => {
+      document.removeEventListener('visibilitychange', stopWhenHidden);
+      window.removeEventListener('pagehide', stopOnPageHide);
       // Invalidate queued events and timers before aborting the browser recognizer.
       shouldListenRef.current = false;
       recordingSessionIdRef.current += 1;
@@ -364,6 +404,7 @@ export function VoiceMicButton({
       const recognition = recognitionRef.current;
       recognitionRef.current = null;
       if (recognition) detachRecognition(recognition, true);
+      cancelVoiceRecordingRequest(ownerRef.current);
       // App-level state (Home) can outlive this button when tabs change.
       onRecordingChangeRef.current?.(false);
     };
