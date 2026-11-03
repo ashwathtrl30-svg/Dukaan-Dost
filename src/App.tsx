@@ -38,7 +38,7 @@ function AppContent() {
   const hasValidAppLock = state.lockEnabled && /^\d{4}$/.test(state.lockPin);
   const [isAppUnlocked, setIsAppUnlocked] = useState(() => !hasValidAppLock);
   const [unlockPin, setUnlockPin] = useState('');
-  const [showUnlockPin, setShowUnlockPin] = useState(true);
+  const [showUnlockPin, setShowUnlockPin] = useState(false);
   const [unlockError, setUnlockError] = useState('');
 
   // A configured PIN must be entered after a fresh app load. Disabling the lock
@@ -59,7 +59,7 @@ function AppContent() {
       setIsAppUnlocked(false);
       setUnlockPin('');
       setUnlockError('');
-      setShowUnlockPin(true);
+      setShowUnlockPin(false);
     };
     const lockWhenHidden = () => {
       if (document.visibilityState === 'hidden') lockApp();
