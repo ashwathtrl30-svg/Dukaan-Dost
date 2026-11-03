@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useStore } from '../store';
 import {
   decryptShopBackup,
@@ -15,6 +16,9 @@ export function BackupRestorePanel() {
   const [createPassphrase, setCreatePassphrase] = useState('');
   const [confirmPassphrase, setConfirmPassphrase] = useState('');
   const [restorePassphrase, setRestorePassphrase] = useState('');
+  const [showCreatePassphrase, setShowCreatePassphrase] = useState(false);
+  const [showConfirmPassphrase, setShowConfirmPassphrase] = useState(false);
+  const [showRestorePassphrase, setShowRestorePassphrase] = useState(false);
   const [backupText, setBackupText] = useState('');
   const [preparedBackup, setPreparedBackup] = useState<DecryptedShopBackup | null>(null);
   const [restoreMode, setRestoreMode] = useState<BackupRestoreMode>('merge');
@@ -62,6 +66,8 @@ export function BackupRestorePanel() {
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       setCreatePassphrase('');
       setConfirmPassphrase('');
+      setShowCreatePassphrase(false);
+      setShowConfirmPassphrase(false);
       setMessage('Encrypted backup created. Store the file and passphrase separately; Dukaan Dost cannot recover a forgotten backup passphrase.');
     } catch (backupError) {
       setError(backupError instanceof Error ? backupError.message : 'Could not create the backup.');
@@ -123,6 +129,7 @@ export function BackupRestorePanel() {
       setPreparedBackup(null);
       setBackupText('');
       setRestorePassphrase('');
+      setShowRestorePassphrase(false);
       setAllowDifferentOwner(false);
       setConfirmReplace(false);
       setMessage(
@@ -165,24 +172,46 @@ export function BackupRestorePanel() {
             Your latest cloud data is refreshed before the file is created. The phone number and local app-lock PIN are not included.
           </p>
         </div>
-        <input
-          type="password"
-          autoComplete="new-password"
-          value={createPassphrase}
-          onChange={(event) => setCreatePassphrase(event.target.value)}
-          className="input-field w-full"
-          placeholder="Backup passphrase (12+ characters)"
-          disabled={busy}
-        />
-        <input
-          type="password"
-          autoComplete="new-password"
-          value={confirmPassphrase}
-          onChange={(event) => setConfirmPassphrase(event.target.value)}
-          className="input-field w-full"
-          placeholder="Confirm backup passphrase"
-          disabled={busy}
-        />
+        <div className="relative">
+          <input
+            type={showCreatePassphrase ? 'text' : 'password'}
+            autoComplete="new-password"
+            value={createPassphrase}
+            onChange={(event) => setCreatePassphrase(event.target.value)}
+            className="input-field w-full pr-12"
+            placeholder="Backup passphrase (12+ characters)"
+            disabled={busy}
+          />
+          <button
+            type="button"
+            onClick={() => setShowCreatePassphrase((visible) => !visible)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label={showCreatePassphrase ? 'Hide backup passphrase' : 'Show backup passphrase'}
+            aria-pressed={showCreatePassphrase}
+          >
+            {showCreatePassphrase ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        </div>
+        <div className="relative">
+          <input
+            type={showConfirmPassphrase ? 'text' : 'password'}
+            autoComplete="new-password"
+            value={confirmPassphrase}
+            onChange={(event) => setConfirmPassphrase(event.target.value)}
+            className="input-field w-full pr-12"
+            placeholder="Confirm backup passphrase"
+            disabled={busy}
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirmPassphrase((visible) => !visible)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label={showConfirmPassphrase ? 'Hide confirmation passphrase' : 'Show confirmation passphrase'}
+            aria-pressed={showConfirmPassphrase}
+          >
+            {showConfirmPassphrase ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        </div>
         <button
           type="button"
           onClick={handleCreateBackup}
@@ -225,15 +254,26 @@ export function BackupRestorePanel() {
             }
           }}
         />
-        <input
-          type="password"
-          autoComplete="current-password"
-          value={restorePassphrase}
-          onChange={(event) => setRestorePassphrase(event.target.value)}
-          className="input-field w-full"
-          placeholder="Backup passphrase"
-          disabled={busy}
-        />
+        <div className="relative">
+          <input
+            type={showRestorePassphrase ? 'text' : 'password'}
+            autoComplete="current-password"
+            value={restorePassphrase}
+            onChange={(event) => setRestorePassphrase(event.target.value)}
+            className="input-field w-full pr-12"
+            placeholder="Backup passphrase"
+            disabled={busy}
+          />
+          <button
+            type="button"
+            onClick={() => setShowRestorePassphrase((visible) => !visible)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full flex items-center justify-center text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label={showRestorePassphrase ? 'Hide backup passphrase' : 'Show backup passphrase'}
+            aria-pressed={showRestorePassphrase}
+          >
+            {showRestorePassphrase ? <EyeOff size={20} /> : <Eye size={20} />}
+          </button>
+        </div>
         <button
           type="button"
           onClick={handleReadBackup}
