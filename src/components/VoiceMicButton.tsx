@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic } from 'lucide-react';
+import {
+  buildSpeechTranscriptParts,
+  joinSpeechTranscript,
+  updateSpeechRecognitionSegments,
+  type SpeechRecognitionSegment,
+} from '../voice/speechRecognition';
 
 type RecognitionAlternative = { transcript?: string };
 type RecognitionResult = {
@@ -33,7 +39,10 @@ type SpeechWindow = Window & {
 
 type VoiceMicButtonProps = {
   language: 'en' | 'hi';
+  /** Called once, with the final transcript, when a logical recording finishes. */
   onTranscript: (transcript: string) => void;
+  /** Called with replaceable live snapshots while speech is still being recognised. */
+  onInterimTranscript?: (transcript: string) => void;
   onStatus?: (status: string) => void;
   onRecordingChange?: (recording: boolean) => void;
   disabled?: boolean;
@@ -68,9 +77,24 @@ function speechStatus(code: string | undefined, language: 'en' | 'hi'): string {
     : 'We could not understand that clearly. Please speak slowly and clearly, or type instead.';
 }
 
+function detachRecognition(recognition: RecognitionLike, abort: boolean): void {
+  recognition.onstart = null;
+  recognition.onresult = null;
+  recognition.onerror = null;
+  recognition.onend = null;
+  if (abort) {
+    try {
+      recognition.abort();
+    } catch {
+      // The browser may already have closed the recognizer.
+    }
+  }
+}
+
 export function VoiceMicButton({
   language,
   onTranscript,
+  onInterimTranscript,
   onStatus,
   onRecordingChange,
   disabled = false,
@@ -80,23 +104,30 @@ export function VoiceMicButton({
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<RecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
+  const recordingRef = useRef(false);
+  const recordingSessionIdRef = useRef(0);
+  const publishedSessionIdRef = useRef<number | null>(null);
   const fatalErrorRef = useRef<string | null>(null);
   const committedTranscriptRef = useRef('');
-  const sessionFinalTranscriptRef = useRef('');
+  const sessionSegmentsRef = useRef<SpeechRecognitionSegment[]>([]);
+  const lastInterimTranscriptRef = useRef('');
   const restartTimerRef = useRef<number | null>(null);
 
   // Keep current callbacks without tying microphone lifetime to callback identity.
-  // Parent components often pass inline callbacks, which change on every render.
   const onTranscriptRef = useRef(onTranscript);
+  const onInterimTranscriptRef = useRef(onInterimTranscript);
   const onStatusRef = useRef(onStatus);
   const onRecordingChangeRef = useRef(onRecordingChange);
   const languageRef = useRef(language);
   onTranscriptRef.current = onTranscript;
+  onInterimTranscriptRef.current = onInterimTranscript;
   onStatusRef.current = onStatus;
   onRecordingChangeRef.current = onRecordingChange;
   languageRef.current = language;
 
   const notifyRecording = (active: boolean) => {
+    if (recordingRef.current === active) return;
+    recordingRef.current = active;
     setListening(active);
     onRecordingChangeRef.current?.(active);
   };
@@ -105,13 +136,6 @@ export function VoiceMicButton({
     onStatusRef.current?.(message);
   };
 
-  const getTranscript = () =>
-    [committedTranscriptRef.current, sessionFinalTranscriptRef.current]
-      .filter(Boolean)
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-
   const clearRestartTimer = () => {
     if (restartTimerRef.current !== null) {
       window.clearTimeout(restartTimerRef.current);
@@ -119,34 +143,63 @@ export function VoiceMicButton({
     }
   };
 
-  const stopAndPublish = (message?: string) => {
+  const publishInterim = (transcript: string) => {
+    if (!transcript || transcript === lastInterimTranscriptRef.current) return;
+    lastInterimTranscriptRef.current = transcript;
+    onInterimTranscriptRef.current?.(transcript);
+  };
+
+  const finishRecording = (sessionId: number, statusMessage?: string) => {
+    if (
+      sessionId !== recordingSessionIdRef.current ||
+      publishedSessionIdRef.current === sessionId
+    ) return;
+
     shouldListenRef.current = false;
     clearRestartTimer();
-    const transcript = getTranscript();
+    const parts = buildSpeechTranscriptParts('', sessionSegmentsRef.current);
+    const transcript = joinSpeechTranscript(committedTranscriptRef.current, parts.finalTranscript);
+
+    // Set the guard before calling application code so re-entrant events cannot publish twice.
+    publishedSessionIdRef.current = sessionId;
+    committedTranscriptRef.current = transcript;
+    sessionSegmentsRef.current = [];
     if (transcript) onTranscriptRef.current(transcript);
     notifyRecording(false);
-    if (message) {
-      setStatus(message);
+
+    if (fatalErrorRef.current) {
+      fatalErrorRef.current = null;
+    } else if (statusMessage) {
+      setStatus(statusMessage);
     } else if (transcript) {
       setStatus(languageRef.current === 'hi'
         ? 'आवाज़ दर्ज हुई। टेक्स्ट जाँचें, फिर टिक या भेजने का तीर दबाएँ।'
         : 'Speech captured. Review the text, then press the checkmark or send arrow.');
     } else {
       setStatus(languageRef.current === 'hi'
-        ? 'हम आपकी बात साफ़ नहीं सुन पाए। कृपया साफ़ बोलकर फिर कोशिश करें।'
-        : 'We did not hear you clearly. Please speak clearly and try again.');
+        ? 'कोई आवाज़ दर्ज नहीं हुई। कृपया साफ़ बोलकर फिर कोशिश करें।'
+        : 'No speech was captured. Please speak clearly and try again.');
     }
   };
 
-  const createRecognitionSession = () => {
+  const createRecognitionSession = (recordingSessionId: number) => {
+    if (
+      recordingSessionId !== recordingSessionIdRef.current ||
+      !recordingRef.current ||
+      !shouldListenRef.current ||
+      recognitionRef.current
+    ) return;
+
     const speechWindow = window as SpeechWindow;
     const Recognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
     if (!Recognition) {
       shouldListenRef.current = false;
-      notifyRecording(false);
-      setStatus(languageRef.current === 'hi'
-        ? 'इस ब्राउज़र में आवाज़ पहचान उपलब्ध नहीं है। कृपया टाइप करें।'
-        : 'Voice recognition is not supported by this browser. Please type instead.');
+      finishRecording(
+        recordingSessionId,
+        languageRef.current === 'hi'
+          ? 'इस ब्राउज़र में आवाज़ पहचान उपलब्ध नहीं है। कृपया टाइप करें।'
+          : 'Voice recognition is not supported by this browser. Please type instead.',
+      );
       return;
     }
 
@@ -155,8 +208,7 @@ export function VoiceMicButton({
       recognition = new Recognition();
     } catch {
       shouldListenRef.current = false;
-      notifyRecording(false);
-      setStatus(speechStatus(undefined, languageRef.current));
+      finishRecording(recordingSessionId, speechStatus(undefined, languageRef.current));
       return;
     }
 
@@ -164,42 +216,47 @@ export function VoiceMicButton({
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 3;
-    sessionFinalTranscriptRef.current = '';
+    sessionSegmentsRef.current = [];
     recognitionRef.current = recognition;
 
     recognition.onstart = () => {
-      if (recognitionRef.current !== recognition || !shouldListenRef.current) return;
-      notifyRecording(true);
+      if (
+        recognitionRef.current !== recognition ||
+        recordingSessionId !== recordingSessionIdRef.current ||
+        !shouldListenRef.current
+      ) return;
       setStatus(languageRef.current === 'hi'
         ? 'सुन रहा हूँ… पूरा बोलें। रोकने के लिए माइक्रोफ़ोन फिर दबाएँ।'
         : 'Listening… say your full message. Tap the microphone again when finished.');
     };
 
     recognition.onresult = (event) => {
-      if (recognitionRef.current !== recognition) return;
-      const finalParts: string[] = [];
-      const interimParts: string[] = [];
-      for (let i = 0; i < event.results.length; i++) {
-        const result = event.results[i];
-        const phrase = result?.[0]?.transcript?.trim();
-        if (!phrase) continue;
-        if (result.isFinal) finalParts.push(phrase);
-        else interimParts.push(phrase);
-      }
-      sessionFinalTranscriptRef.current = finalParts.join(' ').replace(/\s+/g, ' ').trim();
-      const transcript = [
+      if (
+        recognitionRef.current !== recognition ||
+        recordingSessionId !== recordingSessionIdRef.current ||
+        !recordingRef.current
+      ) return;
+
+      // SpeechRecognition.resultIndex identifies the first result changed by this event.
+      // Retaining earlier segments avoids replaying or appending the full result list.
+      sessionSegmentsRef.current = updateSpeechRecognitionSegments(
+        sessionSegmentsRef.current,
+        event,
+      );
+      const parts = buildSpeechTranscriptParts(
         committedTranscriptRef.current,
-        sessionFinalTranscriptRef.current,
-        interimParts.join(' '),
-      ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
-      if (transcript) onTranscriptRef.current(transcript);
+        sessionSegmentsRef.current,
+      );
+      publishInterim(parts.transcript);
     };
 
     recognition.onerror = (event) => {
-      if (recognitionRef.current !== recognition) return;
+      if (
+        recognitionRef.current !== recognition ||
+        recordingSessionId !== recordingSessionIdRef.current
+      ) return;
       const code = event.error;
-      // Browsers commonly end a session after silence. Treat no-speech as
-      // recoverable and restart listening from onend.
+      // Silence and an intentional abort are recoverable; onend decides whether to restart.
       if (code === 'no-speech' || code === 'aborted') return;
       fatalErrorRef.current = code || 'unknown';
       setStatus(speechStatus(code, languageRef.current));
@@ -207,48 +264,41 @@ export function VoiceMicButton({
     };
 
     recognition.onend = () => {
-      if (recognitionRef.current !== recognition) return;
+      if (
+        recognitionRef.current !== recognition ||
+        recordingSessionId !== recordingSessionIdRef.current
+      ) return;
       recognitionRef.current = null;
 
-      const completed = sessionFinalTranscriptRef.current.trim();
-      if (completed) {
-        committedTranscriptRef.current = [
-          committedTranscriptRef.current,
-          completed,
-        ].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
-      }
-      sessionFinalTranscriptRef.current = '';
+      const parts = buildSpeechTranscriptParts('', sessionSegmentsRef.current);
+      committedTranscriptRef.current = joinSpeechTranscript(
+        committedTranscriptRef.current,
+        parts.finalTranscript,
+      );
+      sessionSegmentsRef.current = [];
 
       if (shouldListenRef.current && !fatalErrorRef.current) {
-        // SpeechRecognition can stop itself after a pause even in continuous
-        // mode. Restart a fresh session while keeping the user in recording mode.
-        const captured = committedTranscriptRef.current;
-        if (captured) onTranscriptRef.current(captured);
+        // A browser may end a recognizer after silence. Preserve only final segments
+        // and restart within the same logical recording session.
+        lastInterimTranscriptRef.current = '';
+        publishInterim(committedTranscriptRef.current);
         clearRestartTimer();
         restartTimerRef.current = window.setTimeout(() => {
           restartTimerRef.current = null;
-          if (shouldListenRef.current && !fatalErrorRef.current) {
-            createRecognitionSession();
+          if (
+            recordingSessionId === recordingSessionIdRef.current &&
+            recordingRef.current &&
+            shouldListenRef.current &&
+            !recognitionRef.current &&
+            !fatalErrorRef.current
+          ) {
+            createRecognitionSession(recordingSessionId);
           }
         }, 250);
         return;
       }
 
-      const transcript = committedTranscriptRef.current;
-      if (transcript) onTranscriptRef.current(transcript);
-      notifyRecording(false);
-      if (fatalErrorRef.current) {
-        // Preserve the specific browser error already shown by onerror.
-        fatalErrorRef.current = null;
-      } else if (!transcript) {
-        setStatus(languageRef.current === 'hi'
-          ? 'कोई आवाज़ दर्ज नहीं हुई। कृपया साफ़ बोलकर फिर कोशिश करें।'
-          : 'No speech was captured. Please speak clearly and try again.');
-      } else {
-        setStatus(languageRef.current === 'hi'
-          ? 'आवाज़ दर्ज हुई। टेक्स्ट जाँचें, फिर टिक या भेजने का तीर दबाएँ।'
-          : 'Speech captured. Review the text, then press the checkmark or send arrow.');
-      }
+      finishRecording(recordingSessionId);
     };
 
     try {
@@ -256,13 +306,17 @@ export function VoiceMicButton({
     } catch {
       recognitionRef.current = null;
       shouldListenRef.current = false;
-      notifyRecording(false);
-      setStatus(speechStatus(undefined, languageRef.current));
+      detachRecognition(recognition, true);
+      finishRecording(recordingSessionId, speechStatus(undefined, languageRef.current));
     }
   };
 
   const startListening = () => {
-    if (listening || shouldListenRef.current) {
+    if (disabled) return;
+
+    if (recordingRef.current) {
+      // Ignore repeated taps while stop is already waiting for the browser's onend.
+      if (!shouldListenRef.current) return;
       shouldListenRef.current = false;
       setStatus(languageRef.current === 'hi' ? 'रिकॉर्डिंग पूरी हो रही है…' : 'Finishing recording…');
       clearRestartTimer();
@@ -271,40 +325,46 @@ export function VoiceMicButton({
         try {
           recognition.stop();
         } catch {
-          stopAndPublish();
+          recognitionRef.current = null;
+          detachRecognition(recognition, true);
+          finishRecording(recordingSessionIdRef.current);
         }
       } else {
-        stopAndPublish();
+        finishRecording(recordingSessionIdRef.current);
       }
       return;
     }
 
+    // A stale recognizer should never overlap a new logical recording.
+    if (recognitionRef.current) {
+      detachRecognition(recognitionRef.current, true);
+      recognitionRef.current = null;
+    }
     if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+    const recordingSessionId = recordingSessionIdRef.current + 1;
+    recordingSessionIdRef.current = recordingSessionId;
+    publishedSessionIdRef.current = null;
     committedTranscriptRef.current = '';
-    sessionFinalTranscriptRef.current = '';
+    sessionSegmentsRef.current = [];
+    lastInterimTranscriptRef.current = '';
     fatalErrorRef.current = null;
     shouldListenRef.current = true;
     notifyRecording(true);
-    createRecognitionSession();
+    createRecognitionSession(recordingSessionId);
   };
 
   useEffect(() => {
     return () => {
+      // Invalidate queued events and timers before aborting the browser recognizer.
       shouldListenRef.current = false;
+      recordingSessionIdRef.current += 1;
+      recordingRef.current = false;
       clearRestartTimer();
       const recognition = recognitionRef.current;
       recognitionRef.current = null;
-      if (recognition) {
-        recognition.onstart = null;
-        recognition.onresult = null;
-        recognition.onerror = null;
-        recognition.onend = null;
-        try {
-          recognition.abort();
-        } catch {
-          // The browser may already have closed the recognizer.
-        }
-      }
+      if (recognition) detachRecognition(recognition, true);
+      // App-level state (Home) can outlive this button when tabs change.
       onRecordingChangeRef.current?.(false);
     };
   }, []);

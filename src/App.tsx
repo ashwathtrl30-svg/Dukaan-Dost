@@ -32,6 +32,7 @@ function AppContent() {
   const [homeVoiceListening, setHomeVoiceListening] = useState(false);
   const [homeVoiceParsing, setHomeVoiceParsing] = useState(false);
   const homeVoiceRequestVersion = useRef(0);
+  const homeVoiceActionLockRef = useRef(false);
   const [homeVoiceAIResult, setHomeVoiceAIResult] = useState<VoiceInterpretation | null>(null);
   const [voiceUndoEntries, setVoiceUndoEntries] = useState<Array<{ type: 'sale' | 'expense' | 'udhaar'; id: string }>>([]);
   const lang = state.language || 'en';
@@ -81,6 +82,7 @@ function AppContent() {
   };
 
   const handleHomeVoiceTranscript = (transcript: string) => {
+    homeVoiceActionLockRef.current = false;
     // Any new speech invalidates an interpretation already in flight.
     homeVoiceRequestVersion.current += 1;
     setHomeVoiceDraft(transcript);
@@ -109,7 +111,10 @@ function AppContent() {
   };
 
   const handleHomeVoiceConfirm = async () => {
-    if (homeVoiceParsing || !homeVoiceDraft.trim()) return;
+    if (homeVoiceActionLockRef.current || homeVoiceParsing || !homeVoiceDraft.trim()) return;
+    homeVoiceActionLockRef.current = true;
+    let didSaveEntries = false;
+    try {
 
     // Interpret first, then require a separate user confirmation before saving.
     if (!homeVoiceAIResult || homeVoiceAIResult.error || !homeVoiceAIResult.transactions.length) {
@@ -265,8 +270,12 @@ function AppContent() {
     setVoiceUndoEntries(created);
     setHomeVoiceDraft('');
     setHomeVoiceAIResult(null);
+    didSaveEntries = true;
     const message = (lang === 'hi' ? 'जोड़ दिया: ' : 'Added: ') + summaries.join(lang === 'hi' ? ' · ' : ' | ') + '.';
     showTemporaryVoiceStatus(message);
+    } finally {
+      if (!didSaveEntries) homeVoiceActionLockRef.current = false;
+    }
   };
 
   const undoVoiceEntries = () => {
@@ -397,6 +406,7 @@ function AppContent() {
                 label={homeVoiceListening
                   ? (lang === 'hi' ? 'रिकॉर्डिंग रोकें' : 'Stop recording')
                   : (lang === 'hi' ? 'आवाज़ से एंट्री जोड़ें' : 'Add entries by voice')}
+                onInterimTranscript={handleHomeVoiceTranscript}
                 onTranscript={handleHomeVoiceTranscript}
                 onRecordingChange={setHomeVoiceListening}
                 onStatus={setHomeVoiceStatus}
@@ -427,7 +437,7 @@ function AppContent() {
               <p className="font-semibold text-text">{lang === 'hi' ? 'एंट्री जोड़ने से पहले जाँचें' : 'Review before adding entries'}</p>
               <p className="text-xs text-text-secondary">{lang === 'hi' ? 'नीचे सुना गया टेक्स्ट ठीक करें। टिक दबाने पर ही एंट्री जोड़ी जाएगी।' : 'Correct the transcript if needed. Entries are added only after you press the checkmark.'}</p>
             </div>
-            <button type="button" aria-label={lang === 'hi' ? 'रद्द करें' : 'Cancel voice entry'} onClick={() => { homeVoiceRequestVersion.current += 1; setHomeVoiceDraft(''); setHomeVoiceAIResult(null); }} className="w-9 h-9 rounded-full flex items-center justify-center bg-bg text-text-secondary"><X size={18}/></button>
+            <button type="button" aria-label={lang === 'hi' ? 'रद्द करें' : 'Cancel voice entry'} onClick={() => { homeVoiceRequestVersion.current += 1; homeVoiceActionLockRef.current = false; setHomeVoiceDraft(''); setHomeVoiceAIResult(null); }} className="w-9 h-9 rounded-full flex items-center justify-center bg-bg text-text-secondary"><X size={18}/></button>
           </div>
           <textarea
             value={homeVoiceDraft}

@@ -20,8 +20,10 @@ export function NotebookScreen({ onClose }: NotebookScreenProps) {
   const [voiceStatus, setVoiceStatus] = useState('');
   const [isListening, setIsListening] = useState(false);
   const voiceBaseContent = useRef('');
+  const noteSaveLockRef = useRef(false);
 
   const openNewNote = () => {
+    noteSaveLockRef.current = false;
     setEditingId(null);
     setTitle('');
     setContent('');
@@ -31,6 +33,7 @@ export function NotebookScreen({ onClose }: NotebookScreenProps) {
   };
 
   const openExistingNote = (note: NotebookNote) => {
+    noteSaveLockRef.current = false;
     setEditingId(note.id);
     setTitle(note.title);
     setContent(note.content);
@@ -40,9 +43,12 @@ export function NotebookScreen({ onClose }: NotebookScreenProps) {
   };
 
   const saveNote = () => {
+    if (noteSaveLockRef.current) return;
+    noteSaveLockRef.current = true;
     const cleanTitle = title.trim();
     const cleanContent = content.trim();
     if (!cleanTitle && !cleanContent) {
+      noteSaveLockRef.current = false;
       setVoiceStatus(hindi ? 'पहले कुछ लिखें या बोलें।' : 'Write or dictate something before saving.');
       return;
     }
@@ -83,6 +89,7 @@ export function NotebookScreen({ onClose }: NotebookScreenProps) {
   };
 
   const cancelEditor = () => {
+    noteSaveLockRef.current = false;
     setEditorOpen(false);
     setEditingId(null);
     setVoiceStatus('');
@@ -160,6 +167,10 @@ export function NotebookScreen({ onClose }: NotebookScreenProps) {
               onRecordingChange={recording => {
                 setIsListening(recording);
                 if (recording) voiceBaseContent.current = content.trim();
+              }}
+              onInterimTranscript={transcript => {
+                const base = voiceBaseContent.current;
+                setContent([base, transcript.trim()].filter(Boolean).join('\n'));
               }}
               onTranscript={transcript => {
                 const base = voiceBaseContent.current;

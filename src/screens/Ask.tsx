@@ -814,6 +814,7 @@ export function AskScreen() {
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [audioErrorMessageId, setAudioErrorMessageId] = useState<string | null>(null);
   const speechRequestIdRef = useRef(0);
+  const sendActionLockRef = useRef(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -856,7 +857,9 @@ export function AskScreen() {
   
   const handleSend = async (text?: string, fromVoice = false) => {
     const message = (text || input.trim()).trim();
-    if (!message || isSending || voiceListening) return;
+    if (sendActionLockRef.current || !message || isSending || voiceListening) return;
+    sendActionLockRef.current = true;
+    try {
 
     const responseLang = detectVoiceLanguage(message, lang);
 
@@ -928,7 +931,9 @@ export function AskScreen() {
     };
     dispatch({ type: 'ADD_CHAT_MESSAGE', payload: assistantMsg });
     setIsSending(false);
-
+    } finally {
+      sendActionLockRef.current = false;
+    }
   };
 
   const handleReadAloud = (msg: ChatMessage) => {
@@ -1223,6 +1228,10 @@ export function AskScreen() {
             label={voiceListening
               ? (lang === 'hi' ? 'रिकॉर्डिंग रोकें' : 'Stop recording')
               : (lang === 'hi' ? 'आवाज़ से सवाल पूछें' : 'Ask by voice')}
+            onInterimTranscript={(transcript) => {
+              setInput(transcript);
+              setInputFromVoice(true);
+            }}
             onTranscript={(transcript) => {
               setInput(transcript);
               setInputFromVoice(true);
