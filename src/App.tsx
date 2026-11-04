@@ -33,6 +33,7 @@ function AppContent() {
   const [homeVoiceParsing, setHomeVoiceParsing] = useState(false);
   const homeVoiceRequestVersion = useRef(0);
   const homeVoiceActionLockRef = useRef(false);
+  const homeVoiceDraftTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [homeVoiceAIResult, setHomeVoiceAIResult] = useState<VoiceInterpretation | null>(null);
   const [voiceUndoEntries, setVoiceUndoEntries] = useState<Array<{ type: 'sale' | 'expense' | 'udhaar'; id: string }>>([]);
   const lang = state.language || 'en';
@@ -41,6 +42,30 @@ function AppContent() {
   const [unlockPin, setUnlockPin] = useState('');
   const [showUnlockPin, setShowUnlockPin] = useState(false);
   const [unlockError, setUnlockError] = useState('');
+
+  // Expand only the mobile Home voice-review transcript field to fit its content.
+  // A screen-relative cap keeps the review panel readable without crowding the rest of the app.
+  useEffect(() => {
+    const textarea = homeVoiceDraftTextareaRef.current;
+    if (!textarea) return;
+
+    if (!window.matchMedia('(max-width: 767px)').matches) {
+      textarea.style.height = '';
+      textarea.style.minHeight = '';
+      textarea.style.maxHeight = '';
+      textarea.style.overflowY = '';
+      return;
+    }
+
+    const maxHeight = Math.max(120, Math.min(Math.round(window.innerHeight * 0.32), 240));
+    textarea.style.height = 'auto';
+    textarea.style.minHeight = '88px';
+    textarea.style.maxHeight = String(maxHeight) + 'px';
+
+    const contentHeight = textarea.scrollHeight;
+    textarea.style.height = String(Math.min(Math.max(contentHeight, 88), maxHeight)) + 'px';
+    textarea.style.overflowY = contentHeight > maxHeight ? 'auto' : 'hidden';
+  }, [homeVoiceDraft]);
 
   // A configured PIN must be entered after a fresh app load. Disabling the lock
   // immediately restores access; PIN credentials stay local to this device.
@@ -440,6 +465,7 @@ function AppContent() {
             <button type="button" aria-label={lang === 'hi' ? 'रद्द करें' : 'Cancel voice entry'} onClick={() => { homeVoiceRequestVersion.current += 1; homeVoiceActionLockRef.current = false; setHomeVoiceDraft(''); setHomeVoiceAIResult(null); }} className="w-9 h-9 rounded-full flex items-center justify-center bg-bg text-text-secondary"><X size={18}/></button>
           </div>
           <textarea
+            ref={homeVoiceDraftTextareaRef}
             value={homeVoiceDraft}
             onChange={(event) => { homeVoiceRequestVersion.current += 1; setHomeVoiceDraft(event.target.value); setHomeVoiceAIResult(null); }}
             rows={2}
