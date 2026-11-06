@@ -97,14 +97,14 @@ export function NotebookScreen({ onClose }: NotebookScreenProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-bg flex flex-col animate-fade-in">
-      <header className="px-4 py-3 border-b border-border bg-card grid grid-cols-[44px_minmax(0,1fr)] sm:grid-cols-[44px_minmax(0,1fr)_auto] gap-x-3 gap-y-2">
+      <header className="px-4 py-3 border-b border-border bg-card grid grid-cols-[44px_minmax(0,1fr)] sm:grid-cols-[44px_minmax(0,1fr)_auto] gap-x-3 gap-y-2 dd-mobile-back-header">
         <button
           type="button"
           onClick={editorOpen ? cancelEditor : onClose}
-          className="w-11 h-11 rounded-full flex items-center justify-center hover:bg-bg shrink-0 row-span-2 row-start-1 col-start-1"
+          className="w-11 h-11 rounded-full flex items-center justify-center hover:bg-bg shrink-0 row-span-2 row-start-1 col-start-1 dd-mobile-back-button"
           aria-label={hindi ? 'वापस जाएँ' : 'Go back'}
         >
-          <ArrowLeft size={21} />
+          <ArrowLeft size={21} className="dd-mobile-back-icon" />
         </button>
         <div className="min-w-0 col-start-2 row-start-1">
           <h1 className="text-lg font-bold text-text whitespace-nowrap">{hindi ? 'दुकान की नोटबुक' : 'Shop notebook'}</h1>

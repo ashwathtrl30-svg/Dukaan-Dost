@@ -994,9 +994,9 @@ export function AskScreen() {
         <div className="px-5 pt-4 pb-3 flex items-center gap-3 border-b border-border">
           <button 
             onClick={() => setShowHistory(false)}
-            className="w-12 h-12 rounded-full flex items-center justify-center"
+            className="w-12 h-12 rounded-full flex items-center justify-center dd-mobile-back-button"
           >
-            <ArrowLeft size={24} className="text-text" />
+            <ArrowLeft size={24} className="text-text dd-mobile-back-icon" />
           </button>
           <h1 className="text-section-title text-text flex-1">
             {lang === 'hi' ? 'बातचीत इतिहास' : 'Chat History'}

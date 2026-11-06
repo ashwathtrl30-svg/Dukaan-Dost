@@ -481,9 +481,9 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={onClose}
           aria-label={lang === 'hi' ? 'होम पर वापस जाएँ' : 'Back to Home'}
-          className="w-12 h-12 rounded-full flex items-center justify-center"
+          className="w-12 h-12 rounded-full flex items-center justify-center dd-mobile-back-button"
         >
-          <ArrowLeft size={24} className="text-text-secondary" />
+          <ArrowLeft size={24} className="text-text-secondary dd-mobile-back-icon" />
         </button>
         <div className="flex-1 min-w-0">
           <h2 className="text-section-title text-text">
@@ -663,8 +663,8 @@ function UdhaarList({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-bg flex flex-col animate-fade-in">
       <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-        <button onClick={onClose} className="w-12 h-12 rounded-full flex items-center justify-center">
-          <ArrowLeft size={24} className="text-text-secondary" />
+        <button onClick={onClose} className="w-12 h-12 rounded-full flex items-center justify-center dd-mobile-back-button">
+          <ArrowLeft size={24} className="text-text-secondary dd-mobile-back-icon" />
         </button>
         <h3 className="text-body-lg font-bold text-text flex-1 text-center">
           {lang === 'hi' ? 'उधार सूची' : 'Udhaar List'}

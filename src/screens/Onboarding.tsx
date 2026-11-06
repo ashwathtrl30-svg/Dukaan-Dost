@@ -122,9 +122,9 @@ export function PhoneScreen() {
     <div className="h-full flex flex-col px-5 pt-4 bg-bg animate-fade-in">
       <button
         onClick={() => dispatch({ type: 'SET_ONBOARDING_STEP', payload: 1 })}
-        className="flex items-center gap-2 text-primary mb-6 h-12"
+        className="flex items-center gap-2 text-primary mb-6 h-12 dd-mobile-back-link"
       >
-        <ArrowLeft size={24} /> <span className="text-body">{t('back', lang)}</span>
+        <ArrowLeft size={24} className="dd-mobile-back-icon" /> <span className="text-body">{t('back', lang)}</span>
       </button>
 
       <div className="flex-1 flex flex-col justify-center max-w-sm mx-auto w-full">
@@ -233,8 +233,8 @@ export function InterviewScreen() {
       {/* Back button */}
       {currentQ > 0 && (
         <div className="px-5 pb-4 safe-bottom">
-          <button onClick={goBack} className="btn-secondary">
-            <ArrowLeft size={20} /> {t('back', lang)}
+          <button onClick={goBack} className="btn-secondary dd-mobile-back-cta">
+            <ArrowLeft size={20} className="dd-mobile-back-icon" /> {t('back', lang)}
           </button>
         </div>
       )}

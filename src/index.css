@@ -350,3 +350,39 @@ button, [role="button"] {
   word-wrap: break-word;
   white-space: normal;
 }
+
+
+/* ===== MOBILE BACK CONTROLS ===== */
+/* Give navigation back controls a clear, comfortable touch target on phones. */
+@media (max-width: 767px) {
+  .dd-mobile-back-button {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    min-height: 56px;
+    flex: 0 0 56px;
+  }
+
+  .dd-mobile-back-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .dd-mobile-back-header {
+    grid-template-columns: 56px minmax(0, 1fr);
+  }
+
+  .dd-mobile-back-link {
+    min-height: 56px;
+  }
+
+  .dd-mobile-back-cta {
+    min-height: 52px;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+  .dd-mobile-back-header {
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+  }
+}
