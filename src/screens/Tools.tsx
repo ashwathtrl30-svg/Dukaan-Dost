@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useStore, formatRupee } from '../store';
 import { t } from '../i18n';
-import { ArrowLeft, Calculator, Tag, Target, BookOpen, Calendar, Package, Gift, Smartphone, Landmark, PiggyBank, Users, DollarSign } from 'lucide-react';
+import { Calculator, Tag, Target, BookOpen, Calendar, Package, Gift, Smartphone, Landmark, PiggyBank, Users, DollarSign } from 'lucide-react';
 import { getFestivalDateLabel, getFestivalName, getFestivalShopAdvice, getLocalDateKey, getUpcomingFestivals } from '../festivals';
 
 type ToolId = 'profit' | 'price' | 'breakeven' | 'udhaar' | 'cost' | 'stock' | 'festival' | 'digital' | 'loan' | 'savings' | 'split' | 'bargain';
@@ -79,8 +79,8 @@ function ToolDetail({ toolId, onBack }: { toolId: ToolId; onBack: () => void }) 
   return (
     <div className="h-full flex flex-col bg-bg">
       <div className="px-5 pt-4 pb-2 flex items-center gap-3">
-        <button onClick={onBack} className="w-12 h-12 rounded-full flex items-center justify-center dd-mobile-back-button" aria-label={lang === 'hi' ? 'वापस जाएँ' : 'Go back'}>
-          <ArrowLeft size={24} className="dd-mobile-back-icon" />
+        <button onClick={onBack} className="w-12 h-12 rounded-full flex items-center justify-center dd-mobile-back-button">
+          <span className="text-body dd-mobile-back-glyph">←</span>
         </button>
         <h2 className="text-body-lg font-bold text-text flex-1">
           {t(`tool_${toolId === 'profit' ? 'profitCalc' : toolId === 'price' ? 'priceSetter' : toolId === 'breakeven' ? 'breakeven' : toolId === 'udhaar' ? 'udhaarTracker' : toolId === 'cost' ? 'costPlanner' : toolId === 'stock' ? 'stockReorder' : toolId === 'festival' ? 'festival' : toolId === 'digital' ? 'digitalPay' : toolId === 'loan' ? 'loanCheck' : toolId === 'savings' ? 'savings' : toolId === 'split' ? 'billSplit' : 'bargain'}` as any, lang)}
