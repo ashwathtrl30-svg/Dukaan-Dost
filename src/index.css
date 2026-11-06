@@ -368,6 +368,16 @@ button, [role="button"] {
     height: 28px;
   }
 
+  .dd-mobile-back-glyph {
+    display: inline-flex;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    line-height: 1;
+  }
+
   .dd-mobile-back-header {
     grid-template-columns: 56px minmax(0, 1fr);
   }
