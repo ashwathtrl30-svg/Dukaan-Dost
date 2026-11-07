@@ -7,8 +7,8 @@ import {
   countCoachShopkeeperTurns,
   selectCoachSimulationPlan,
   validateCoachGeneratedTurn,
-} from '../src/coach/coachSimulation';
-import type { CoachTranscriptMessage } from '../src/coach/coachSimulation';
+} from '../src/coach/coachSimulation.js';
+import type { CoachTranscriptMessage } from '../src/coach/coachSimulation.js';
 
 function getEnv(name: string): string | undefined {
   const runtime = globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } };
