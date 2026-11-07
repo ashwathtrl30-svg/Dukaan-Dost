@@ -15,7 +15,7 @@ The SQL has **not** been applied to any Supabase project. The existing live Duka
 - A shop owner can read workspace membership records but cannot read another member's private profile, transcripts, feedback or learning state.
 - Transcript text is stored; microphone recordings/audio blobs are not.
 
-Authorization uses `auth.uid()`, explicit grants and RLS. It does not trust user-editable `user_metadata` claims. The two workspace authorization helpers live in the non-exposed `private` schema with a fixed empty `search_path`.
+Authorization uses `auth.uid()`, explicit grants and RLS. It does not trust user-editable `user_metadata` claims. The two workspace authorization helpers live in the non-exposed `coach_private` schema with a fixed empty `search_path`.
 
 ## Why the schema is not deployed yet
 
