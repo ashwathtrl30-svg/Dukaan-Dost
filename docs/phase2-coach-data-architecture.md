@@ -8,7 +8,7 @@ The SQL has **not** been applied to any Supabase project. The existing live Duka
 
 ## Data ownership model
 
-- `coach_workspaces` stores shared shop context (shop name, category and city) and is owned by one Supabase Auth user.
+- `coach_workspaces` stores shared shop context (shop name, category, city and an owner-managed, size-limited `business_context` object) and is owned by one Supabase Auth user. The context object is intended for curated product, price and stock facts that active members are allowed to use; it is not an automatic dump of the owner's sales/expense ledger.
 - `coach_workspace_memberships` allows a shop owner to attach an individual staff Auth identity to the workspace.
 - `coach_profiles` stores one private Coach profile per Auth user.
 - `coach_sessions`, `coach_messages`, `coach_assessments` and `coach_learning_profiles` are scoped to the individual Auth user.
@@ -39,6 +39,7 @@ Supabase changed public-schema Data API exposure defaults in 2026. A SQL `GRANT`
 - Run database-level positive and negative RLS tests with two real Auth identities.
 - Verify workspace invitation/acceptance and membership suspension end-to-end before inviting employees.
 - Verify cross-device read/write, concurrent writes, account switching and recovery.
+- Connect curated context from the existing Dukaan Dost shop profile/records without weakening the existing owner-scoped ledger boundary.
 - Only then enable Coach cloud persistence in the development preview.
 
 The repository functions are intentionally not wired into Learn screens in this phase. UI integration will happen when the assessment and simulation phases are built.
