@@ -37,6 +37,12 @@ test('every Coach data table enables row-level security and has an explicit poli
   }
 });
 
+test('staff membership cannot become active until an explicit acceptance flow exists', () => {
+  assert.match(schema, /coach_memberships_insert_owner[\s\S]*?with check[\s\S]*?status = 'invited'/i);
+  assert.match(schema, /private\.is_coach_workspace_member[\s\S]*?membership\.status = 'active'/i);
+  assert.doesNotMatch(schema, /create policy coach_memberships_insert_owner[\s\S]*?status = 'active'/i);
+});
+
 test('private workspace authorization helpers use auth.uid and a fixed search path', () => {
   assert.match(schema, /create or replace function private\.is_coach_workspace_owner[\s\S]*?security definer[\s\S]*?set search_path = ''[\s\S]*?auth\.uid\(\)/i);
   assert.match(schema, /create or replace function private\.is_coach_workspace_member[\s\S]*?security definer[\s\S]*?set search_path = ''[\s\S]*?auth\.uid\(\)/i);
