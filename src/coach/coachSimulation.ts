@@ -3,13 +3,13 @@ import {
   COACH_CUSTOMER_ARCHETYPES,
   normalizeCoachCategory,
   retrieveCoachKnowledge,
-} from './coachKnowledge';
+} from './coachKnowledge.js';
 import type { CoachArchetypeId, CoachKnowledgeCategory } from './coachKnowledge';
 import type {
   CoachLanguage,
   CoachMessageSpeaker,
   CoachSessionOutcome,
-} from './types';
+} from './types.js';
 
 export const COACH_SIMULATION_VERSION = '1.0.0';
 export const COACH_SIMULATION_TARGET_TURNS = 6;
