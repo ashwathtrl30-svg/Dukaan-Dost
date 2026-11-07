@@ -42,7 +42,7 @@ test('staff membership cannot become active until an explicit acceptance flow ex
   assert.match(schema, /coach_private\.is_coach_workspace_member[\s\S]*?membership\.status = 'active'/i);
   assert.doesNotMatch(schema, /create policy coach_memberships_insert_owner[\s\S]*?status = 'active'/i);
   assert.match(schema, /coach_workspace_memberships \([\s\S]*?status text not null default 'invited'/i);
-  assert.match(schema, /coach_memberships_update_owner[\s\S]*?status in \\('invited', 'suspended'\\)/i);
+  assert.match(schema, /coach_memberships_update_owner[\s\S]*?status in \('invited', 'suspended'\)/i);
   assert.doesNotMatch(schema, /coach_memberships_update_owner[\s\S]*?status = 'active'/i);
 });
 
