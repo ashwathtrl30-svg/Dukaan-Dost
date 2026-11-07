@@ -14,9 +14,9 @@
 -- Data API exposed-schema/table configuration after deployment; never expose private.
 -- All authorization is based on auth.uid(), never user-editable JWT user_metadata.
 
-create schema if not exists private;
-revoke all on schema private from public, anon;
-grant usage on schema private to authenticated;
+create schema if not exists coach_private;
+revoke all on schema coach_private from public, anon;
+grant usage on schema coach_private to authenticated;
 
 create table if not exists public.coach_workspaces (
   id uuid primary key default gen_random_uuid(),
@@ -147,7 +147,7 @@ create index if not exists coach_assessments_user_created_idx
 
 -- These SECURITY DEFINER helpers are kept in the non-exposed private schema.
 -- They use a fixed empty search_path and auth.uid(); no user-editable metadata is trusted.
-create or replace function private.is_coach_workspace_owner(target_workspace_id uuid)
+create or replace function coach_private.is_coach_workspace_owner(target_workspace_id uuid)
 returns boolean
 language sql
 stable
@@ -162,7 +162,7 @@ as $function$
   );
 $function$;
 
-create or replace function private.is_coach_workspace_member(target_workspace_id uuid)
+create or replace function coach_private.is_coach_workspace_member(target_workspace_id uuid)
 returns boolean
 language sql
 stable
@@ -170,7 +170,7 @@ security definer
 set search_path = ''
 as $function$
   select
-    private.is_coach_workspace_owner(target_workspace_id)
+    coach_private.is_coach_workspace_owner(target_workspace_id)
     or exists (
       select 1
       from public.coach_workspace_memberships as membership
@@ -180,10 +180,10 @@ as $function$
     );
 $function$;
 
-revoke all on function private.is_coach_workspace_owner(uuid) from public, anon;
-revoke all on function private.is_coach_workspace_member(uuid) from public, anon;
-grant execute on function private.is_coach_workspace_owner(uuid) to authenticated;
-grant execute on function private.is_coach_workspace_member(uuid) to authenticated;
+revoke all on function coach_private.is_coach_workspace_owner(uuid) from public, anon;
+revoke all on function coach_private.is_coach_workspace_member(uuid) from public, anon;
+grant execute on function coach_private.is_coach_workspace_owner(uuid) to authenticated;
+grant execute on function coach_private.is_coach_workspace_member(uuid) to authenticated;
 
 alter table public.coach_workspaces enable row level security;
 alter table public.coach_workspace_memberships enable row level security;
@@ -197,7 +197,7 @@ alter table public.coach_learning_profiles enable row level security;
 drop policy if exists coach_workspaces_select_member on public.coach_workspaces;
 create policy coach_workspaces_select_member
   on public.coach_workspaces for select to authenticated
-  using (private.is_coach_workspace_member(id));
+  using (coach_private.is_coach_workspace_member(id));
 
 drop policy if exists coach_workspaces_insert_owner on public.coach_workspaces;
 create policy coach_workspaces_insert_owner
@@ -207,13 +207,13 @@ create policy coach_workspaces_insert_owner
 drop policy if exists coach_workspaces_update_owner on public.coach_workspaces;
 create policy coach_workspaces_update_owner
   on public.coach_workspaces for update to authenticated
-  using (private.is_coach_workspace_owner(id))
+  using (coach_private.is_coach_workspace_owner(id))
   with check (owner_user_id = (select auth.uid()));
 
 drop policy if exists coach_workspaces_delete_owner on public.coach_workspaces;
 create policy coach_workspaces_delete_owner
   on public.coach_workspaces for delete to authenticated
-  using (private.is_coach_workspace_owner(id));
+  using (coach_private.is_coach_workspace_owner(id));
 
 -- Memberships: a staff member can see their own membership; only the owner manages others.
 drop policy if exists coach_memberships_select_self_or_owner on public.coach_workspace_memberships;
@@ -221,14 +221,14 @@ create policy coach_memberships_select_self_or_owner
   on public.coach_workspace_memberships for select to authenticated
   using (
     user_id = (select auth.uid())
-    or private.is_coach_workspace_owner(workspace_id)
+    or coach_private.is_coach_workspace_owner(workspace_id)
   );
 
 drop policy if exists coach_memberships_insert_owner on public.coach_workspace_memberships;
 create policy coach_memberships_insert_owner
   on public.coach_workspace_memberships for insert to authenticated
   with check (
-    private.is_coach_workspace_owner(workspace_id)
+    coach_private.is_coach_workspace_owner(workspace_id)
     and invited_by = (select auth.uid())
     and role = 'staff'
     and status = 'invited'
@@ -237,9 +237,9 @@ create policy coach_memberships_insert_owner
 drop policy if exists coach_memberships_update_owner on public.coach_workspace_memberships;
 create policy coach_memberships_update_owner
   on public.coach_workspace_memberships for update to authenticated
-  using (private.is_coach_workspace_owner(workspace_id))
+  using (coach_private.is_coach_workspace_owner(workspace_id))
   with check (
-    private.is_coach_workspace_owner(workspace_id)
+    coach_private.is_coach_workspace_owner(workspace_id)
     and role = 'staff'
   );
 
@@ -248,7 +248,7 @@ create policy coach_memberships_delete_self_or_owner
   on public.coach_workspace_memberships for delete to authenticated
   using (
     user_id = (select auth.uid())
-    or private.is_coach_workspace_owner(workspace_id)
+    or coach_private.is_coach_workspace_owner(workspace_id)
   );
 
 -- Individual Coach profiles: a shop owner cannot read a staff member's private learning profile.
@@ -262,7 +262,7 @@ create policy coach_profiles_insert_self
   on public.coach_profiles for insert to authenticated
   with check (
     user_id = (select auth.uid())
-    and private.is_coach_workspace_member(workspace_id)
+    and coach_private.is_coach_workspace_member(workspace_id)
   );
 
 drop policy if exists coach_profiles_update_self on public.coach_profiles;
@@ -271,7 +271,7 @@ create policy coach_profiles_update_self
   using (user_id = (select auth.uid()))
   with check (
     user_id = (select auth.uid())
-    and private.is_coach_workspace_member(workspace_id)
+    and coach_private.is_coach_workspace_member(workspace_id)
   );
 
 -- Sessions and transcripts are private to the individual Auth identity.
@@ -280,7 +280,7 @@ create policy coach_sessions_select_self
   on public.coach_sessions for select to authenticated
   using (
     user_id = (select auth.uid())
-    and private.is_coach_workspace_member(workspace_id)
+    and coach_private.is_coach_workspace_member(workspace_id)
   );
 
 drop policy if exists coach_sessions_insert_self on public.coach_sessions;
@@ -288,7 +288,7 @@ create policy coach_sessions_insert_self
   on public.coach_sessions for insert to authenticated
   with check (
     user_id = (select auth.uid())
-    and private.is_coach_workspace_member(workspace_id)
+    and coach_private.is_coach_workspace_member(workspace_id)
   );
 
 drop policy if exists coach_sessions_update_self on public.coach_sessions;
@@ -297,7 +297,7 @@ create policy coach_sessions_update_self
   using (user_id = (select auth.uid()))
   with check (
     user_id = (select auth.uid())
-    and private.is_coach_workspace_member(workspace_id)
+    and coach_private.is_coach_workspace_member(workspace_id)
   );
 
 drop policy if exists coach_messages_select_self on public.coach_messages;
@@ -336,7 +336,7 @@ create policy coach_assessments_insert_self
   on public.coach_assessments for insert to authenticated
   with check (
     user_id = (select auth.uid())
-    and private.is_coach_workspace_member(workspace_id)
+    and coach_private.is_coach_workspace_member(workspace_id)
   );
 
 drop policy if exists coach_learning_profiles_select_self on public.coach_learning_profiles;
@@ -349,7 +349,7 @@ create policy coach_learning_profiles_insert_self
   on public.coach_learning_profiles for insert to authenticated
   with check (
     user_id = (select auth.uid())
-    and private.is_coach_workspace_member(workspace_id)
+    and coach_private.is_coach_workspace_member(workspace_id)
   );
 
 drop policy if exists coach_learning_profiles_update_self on public.coach_learning_profiles;
@@ -358,7 +358,7 @@ create policy coach_learning_profiles_update_self
   using (user_id = (select auth.uid()))
   with check (
     user_id = (select auth.uid())
-    and private.is_coach_workspace_member(workspace_id)
+    and coach_private.is_coach_workspace_member(workspace_id)
   );
 
 -- Explicit least-privilege grants. Row access remains governed by the policies above.
@@ -379,7 +379,7 @@ grant select, insert on public.coach_assessments to authenticated;
 grant select, insert, update on public.coach_learning_profiles to authenticated;
 
 -- Keep modification timestamps database-owned.
-create or replace function private.touch_coach_updated_at()
+create or replace function coach_private.touch_coach_updated_at()
 returns trigger
 language plpgsql
 set search_path = ''
@@ -390,17 +390,17 @@ begin
 end;
 $function$;
 
-revoke all on function private.touch_coach_updated_at() from public, anon, authenticated;
+revoke all on function coach_private.touch_coach_updated_at() from public, anon, authenticated;
 
 drop trigger if exists coach_profiles_touch_updated_at on public.coach_profiles;
 create trigger coach_profiles_touch_updated_at
   before update on public.coach_profiles
-  for each row execute function private.touch_coach_updated_at();
+  for each row execute function coach_private.touch_coach_updated_at();
 
 drop trigger if exists coach_learning_profiles_touch_updated_at on public.coach_learning_profiles;
 create trigger coach_learning_profiles_touch_updated_at
   before update on public.coach_learning_profiles
-  for each row execute function private.touch_coach_updated_at();
+  for each row execute function coach_private.touch_coach_updated_at();
 
 comment on table public.coach_profiles is
   'Private individual Coach profile. A shop owner cannot read staff members personal learning data.';
