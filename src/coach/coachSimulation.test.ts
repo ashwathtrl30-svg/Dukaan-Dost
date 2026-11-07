@@ -270,6 +270,8 @@ test('prompt keeps archetypes hidden, reacts to the actual transcript and forbid
   assert.match(system, /Never provide sales coaching/i);
   assert.match(system, /Do not disclose internal customer archetype labels/i);
   assert.match(system, /fake scarcity/i);
+  assert.match(system, /personal or family matters/i);
+  assert.match(system, /phone numbers, home addresses, passwords, OTPs/i);
   assert.match(system, /eight shopkeeper replies/i);
   assert.match(system, /qualified professional|safety-sensitive/i);
   assert.match(opening, /Open as the customer/i);
