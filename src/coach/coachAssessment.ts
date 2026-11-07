@@ -90,72 +90,72 @@ const SIGNALS: readonly CoachBaselineSignal[] = [
     id: 'needs_discovery',
     questionId: 'price_objection',
     summary: {
-      en: 'checking what the customer actually needs',
-      hi: 'ग्राहक की असली ज़रूरत समझना',
+      en: 'checking customer needs',
+      hi: 'ग्राहक की ज़रूरत समझना',
     },
   },
   {
     id: 'value_explanation',
     questionId: 'price_objection',
     summary: {
-      en: 'explaining the product’s value or relevant difference',
-      hi: 'सामान की कीमत के पीछे की वजह समझाना',
+      en: 'explaining product value',
+      hi: 'सामान का फायदा बताना',
     },
   },
   {
     id: 'margin_awareness',
     questionId: 'price_objection',
     summary: {
-      en: 'thinking about the shop’s cost before offering a discount',
-      hi: 'छूट देने से पहले दुकान की लागत का ध्यान रखना',
+      en: 'protecting the shop’s margin',
+      hi: 'दुकान के मुनाफ़े का ध्यान रखना',
     },
   },
   {
     id: 'listening_first',
     questionId: 'customer_complaint',
     summary: {
-      en: 'hearing the customer before reacting',
-      hi: 'जवाब देने से पहले ग्राहक की बात सुनना',
+      en: 'listening first',
+      hi: 'पहले सुनना',
     },
   },
   {
     id: 'fact_checking',
     questionId: 'customer_complaint',
     summary: {
-      en: 'checking the item, bill or what actually happened',
-      hi: 'सामान, बिल या असली परेशानी की जाँच करना',
+      en: 'checking the facts',
+      hi: 'तथ्य जाँचना',
     },
   },
   {
     id: 'solution_follow_through',
     questionId: 'customer_complaint',
     summary: {
-      en: 'offering a practical next step to resolve the issue',
-      hi: 'परेशानी सुलझाने के लिए अगला सही कदम बताना',
+      en: 'finding a practical solution',
+      hi: 'हल निकालना',
     },
   },
   {
     id: 'reflective_learning',
     questionId: 'lost_sale',
     summary: {
-      en: 'reviewing what could be learned from the lost sale',
-      hi: 'न हुई बिक्री से सीखने की कोशिश करना',
+      en: 'learning from a lost sale',
+      hi: 'न हुई बिक्री से सीखना',
     },
   },
   {
     id: 'permission_based_follow_up',
     questionId: 'lost_sale',
     summary: {
-      en: 'following up only when the customer is comfortable with it',
-      hi: 'ग्राहक की सहमति से ही दोबारा संपर्क करना',
+      en: 'asking before following up',
+      hi: 'दोबारा बात करने से पहले पूछना',
     },
   },
   {
     id: 'respectful_exit',
     questionId: 'lost_sale',
     summary: {
-      en: 'respecting the customer’s decision without pressure',
-      hi: 'बिना दबाव डाले ग्राहक के फैसले का सम्मान करना',
+      en: 'respecting the customer’s decision',
+      hi: 'ग्राहक के फैसले का सम्मान करना',
     },
   },
 ];
