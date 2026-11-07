@@ -3,7 +3,7 @@
 -- development Supabase project is available and the SQL has been reviewed there.
 --
 -- Data model:
---   one Coach workspace per shop owner;
+--   one Coach workspace per shop owner, containing shared shop context;
 --   optional staff membership records for future employee identities;
 --   one private Coach profile and learning history per Auth user;
 --   shop members never gain access to one another's personal feedback/transcripts.
@@ -18,6 +18,14 @@ grant usage on schema private to authenticated;
 create table if not exists public.coach_workspaces (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null unique references auth.users(id) on delete cascade,
+  shop_name text check (shop_name is null or char_length(shop_name) <= 120),
+  shop_type text check (
+    shop_type is null or shop_type in (
+      'kirana', 'medical', 'bakery', 'sweet', 'tailor', 'salon',
+      'hardware', 'mobile', 'vegetable', 'tea', 'restaurant', 'other'
+    )
+  ),
+  city text check (city is null or char_length(city) <= 100),
   created_at timestamptz not null default now()
 );
 
@@ -35,13 +43,6 @@ create table if not exists public.coach_workspace_memberships (
 create table if not exists public.coach_profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
   workspace_id uuid not null references public.coach_workspaces(id) on delete cascade,
-  shop_type text check (
-    shop_type is null or shop_type in (
-      'kirana', 'medical', 'bakery', 'sweet', 'tailor', 'salon',
-      'hardware', 'mobile', 'vegetable', 'tea', 'restaurant', 'other'
-    )
-  ),
-  city text check (city is null or char_length(city) <= 100),
   preferred_language text not null default 'en' check (preferred_language in ('en', 'hi')),
   baseline_completed_at timestamptz,
   created_at timestamptz not null default now(),
