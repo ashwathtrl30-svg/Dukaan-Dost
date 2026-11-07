@@ -259,7 +259,16 @@ export async function saveCoachBaseline(
     .maybeSingle();
 
   if (existingError) throw existingError;
-  if (existing) return existing as CoachAssessmentRecord;
+  if (existing) {
+    if (!profile.baseline_completed_at) {
+      const { error: repairError } = await client
+        .from('coach_profiles')
+        .update({ baseline_completed_at: new Date().toISOString() })
+        .eq('user_id', profile.user_id);
+      if (repairError) throw repairError;
+    }
+    return existing as CoachAssessmentRecord;
+  }
 
   const assessmentData = { version: 1, answers: normalized.value as CoachBaselineAnswer[] };
   const { data, error } = await client
