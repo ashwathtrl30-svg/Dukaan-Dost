@@ -251,7 +251,7 @@ export async function updateCoachWorkspaceContext(
     .from('coach_workspaces')
     .update(updates)
     .eq('id', profile.workspace_id)
-    .select('id, owner_user_id, shop_name, shop_type, city, created_at')
+    .select('id, owner_user_id, shop_name, shop_type, city, business_context, created_at')
     .single();
 
   if (error) throw error;
