@@ -20,11 +20,18 @@ export interface CoachBaselineAnswer {
   answer: string;
 }
 
+export interface CoachWorkspaceRecord {
+  id: string;
+  owner_user_id: string;
+  shop_name: string | null;
+  shop_type: string | null;
+  city: string | null;
+  created_at: string;
+}
+
 export interface CoachProfileRecord {
   user_id: string;
   workspace_id: string;
-  shop_type: string | null;
-  city: string | null;
   preferred_language: CoachLanguage;
   baseline_completed_at: string | null;
   created_at: string;
@@ -83,14 +90,20 @@ export interface CoachLearningProfileRecord {
 }
 
 export interface CoachProfileDraft {
+  shopName?: string | null;
   shopType?: string | null;
   city?: string | null;
   preferredLanguage?: CoachLanguage;
 }
 
+export interface CoachWorkspaceDraft {
+  shopName?: string | null;
+  shopType?: string | null;
+  city?: string | null;
+}
+
 export interface CreateCoachSessionInput {
   scenarioCode: string;
-  shopType?: string | null;
   language: CoachLanguage;
 }
 
