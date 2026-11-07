@@ -4,7 +4,7 @@ import {
   normalizeCoachCategory,
   retrieveCoachKnowledge,
 } from './coachKnowledge.js';
-import type { CoachArchetypeId, CoachKnowledgeCategory } from './coachKnowledge';
+import type { CoachArchetypeId, CoachKnowledgeCategory } from './coachKnowledge.js';
 import type {
   CoachLanguage,
   CoachMessageSpeaker,
