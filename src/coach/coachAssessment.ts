@@ -280,12 +280,15 @@ export function analyseCoachBaseline(
     .filter((signal): signal is CoachBaselineSignal => Boolean(signal))
     .slice(0, 3)
     .map((signal) => signal.summary[language]);
+  const summaryText = summaries.length > 1
+    ? summaries.slice(0, -1).join(', ') + (language === 'hi' ? ' और ' : ' and ') + summaries[summaries.length - 1]
+    : summaries[0] ?? '';
   let text: string;
 
   if (summaries.length >= 2) {
     text = language === 'hi'
-      ? 'आपके जवाबों में ' + summaries.join(' और ') + ' जैसे शुरुआती संकेत दिखते हैं। अभ्यास के दौरान हम देखेंगे कि ये अलग-अलग ग्राहकों के साथ कितने काम आते हैं।'
-      : 'Your answers show early signs of ' + summaries.join(' and ') + '. We’ll see how these approaches work with different customers during practice.';
+      ? 'आपके जवाबों में ' + summaryText + ' जैसे शुरुआती संकेत दिखते हैं। अभ्यास के दौरान हम देखेंगे कि ये अलग-अलग ग्राहकों के साथ कितने काम आते हैं।'
+      : 'Your answers show early signs of ' + summaryText + '. We’ll see how these approaches work with different customers during practice.';
   } else if (summaries.length === 1) {
     text = language === 'hi'
       ? 'एक शुरुआती संकेत आपके जवाब में ' + summaries[0] + ' का है। आगे के अभ्यास से आपकी काम करने की शैली को बेहतर समझेंगे।'
