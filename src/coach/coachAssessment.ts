@@ -262,7 +262,7 @@ export function analyseCoachBaseline(
       const match = matcher.exec(answer);
       if (!match || match.index === undefined) return false;
       const precedingText = answer.slice(Math.max(0, match.index - 40), match.index);
-      const englishNegation = /\\b(?:not|never|don't|do not|doesn't|didn't|cannot|can't|won't|wouldn't|refuse to|avoid|fail to)\\b(?:\\s+\\w+){0,3}\\s*$/i;
+      const englishNegation = /\\b(?:not|never|don't|do not|doesn't|didn't|cannot|can't|won't|wouldn't|refuse to|avoid|fail to)\\b(?:\\s+\\w+){0,5}\\s*$/i;
       const hindiNegation = /(?:नहीं|नही|मत)(?:\\s+\\S+){0,3}\\s*$/u;
       return !englishNegation.test(precedingText) && !hindiNegation.test(precedingText);
     });
@@ -282,11 +282,11 @@ export function analyseCoachBaseline(
     .map((signal) => signal.summary[language]);
   let text: string;
 
-  if (matchedSignals.length >= 2) {
+  if (summaries.length >= 2) {
     text = language === 'hi'
       ? 'आपके जवाबों में ' + summaries.join(' और ') + ' जैसे शुरुआती संकेत दिखते हैं। अभ्यास के दौरान हम देखेंगे कि ये अलग-अलग ग्राहकों के साथ कितने काम आते हैं।'
       : 'Your answers show early signs of ' + summaries.join(' and ') + '. We’ll see how these approaches work with different customers during practice.';
-  } else if (matchedSignals.length === 1) {
+  } else if (summaries.length === 1) {
     text = language === 'hi'
       ? 'एक शुरुआती संकेत आपके जवाब में ' + summaries[0] + ' का है। आगे के अभ्यास से आपकी काम करने की शैली को बेहतर समझेंगे।'
       : 'One early signal in your answers is ' + summaries[0] + '. More practice will help us understand your approach better.';
