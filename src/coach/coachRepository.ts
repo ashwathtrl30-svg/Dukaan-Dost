@@ -111,7 +111,11 @@ async function getOrCreateWorkspace(
       city: optionalText(draft.city, 100) ?? null,
       business_context: draft.businessContext === undefined
         ? {}
-        : (() => {\n            const normalized = normalizeAssessmentData(draft.businessContext);\n            if (!normalized.ok) throw new Error(normalized.error);\n            return normalized.value;\n          })(),
+        : (() => {
+            const normalized = normalizeAssessmentData(draft.businessContext);
+            if (!normalized.ok) throw new Error(normalized.error);
+            return normalized.value;
+          })(),
     })
     .select('id')
     .single();
