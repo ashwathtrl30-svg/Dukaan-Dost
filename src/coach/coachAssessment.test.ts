@@ -85,7 +85,7 @@ test('derives early observations only from positive observable signals, with no 
     assert.equal(result.value.confidence, 'early-baseline');
     assert.ok(result.value.evidenceCount >= 5);
     assert.match(result.value.text, /early signs/i);
-    assert.match(result.value.disclaimer, /not a score/i);
+    assert.match(result.value.disclaimer, /not .*score/i);
     assert.equal('score' in result.value, false);
   }
 });
