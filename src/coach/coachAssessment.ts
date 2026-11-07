@@ -1,5 +1,5 @@
 import { COACH_BASELINE_QUESTION_IDS } from './types';
-import type { CoachBaselineAnswer, CoachBaselineQuestionId } from './types';
+import type { CoachBaselineAnswer } from './types';
 
 export type CoachAssessmentLanguage = 'en' | 'hi';
 export type CoachBaselineSignalId =
@@ -325,6 +325,67 @@ export function createCoachPersonalizationProfile(input: {
 }
 
 /** A compact, instruction-safe profile contract for future simulation prompts. */
+
+export interface RestoredCoachBaseline {
+  answers: CoachBaselineAnswer[];
+  observation: CoachBaselineObservation;
+}
+
+/** Validate database-loaded baseline JSON before using it in the UI or future prompts. */
+export function restoreCoachBaselineAssessment(
+  value: unknown,
+  language: CoachAssessmentLanguage = 'en',
+): CoachAssessmentValidation<RestoredCoachBaseline> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return { ok: false, error: 'The saved starting assessment is not valid.' };
+  }
+
+  const record = value as Record<string, unknown>;
+  const answers = validateCoachBaseline(record.answers);
+  if (!answers.ok) return answers;
+
+  const fallback = analyseCoachBaseline(answers.value, language);
+  if (!fallback.ok) return fallback;
+
+  const saved = record.initialObservation;
+  if (typeof saved !== 'object' || saved === null || Array.isArray(saved)) {
+    return { ok: true, value: { answers: answers.value, observation: fallback.value } };
+  }
+
+  const observation = saved as Record<string, unknown>;
+  const validSignalIds = new Set<CoachBaselineSignalId>(SIGNALS.map((signal) => signal.id));
+  const signalIds = Array.isArray(observation.signalIds)
+    ? observation.signalIds.filter((id): id is CoachBaselineSignalId =>
+        typeof id === 'string' && validSignalIds.has(id as CoachBaselineSignalId)
+      ).slice(0, 9)
+    : fallback.value.signalIds;
+  const text = typeof observation.text === 'string' ? observation.text.trim().slice(0, 500) : '';
+  const disclaimer = typeof observation.disclaimer === 'string'
+    ? observation.disclaimer.trim().slice(0, 300)
+    : '';
+  const evidenceCount = Number.isInteger(observation.evidenceCount)
+    ? Math.max(0, Math.min(9, observation.evidenceCount as number))
+    : signalIds.length;
+
+  if (!text || observation.confidence !== 'early-baseline') {
+    return { ok: true, value: { answers: answers.value, observation: fallback.value } };
+  }
+
+  return {
+    ok: true,
+    value: {
+      answers: answers.value,
+      observation: {
+        text,
+        disclaimer: disclaimer || fallback.value.disclaimer,
+        signalIds,
+        evidenceCount,
+        confidence: 'early-baseline',
+      },
+    },
+  };
+}
+
 export function buildCoachPersonalizationContext(
   profile: CoachPersonalizationProfile,
 ): string {
