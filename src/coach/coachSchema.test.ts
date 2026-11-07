@@ -52,6 +52,7 @@ test('shared shop context lives at workspace level while Coach profiles remain i
   assert.match(workspaceBlock, /shop_name text/i);
   assert.match(workspaceBlock, /shop_type text/i);
   assert.match(workspaceBlock, /city text/i);
+  assert.match(workspaceBlock, /business_context jsonb/i);
   assert.doesNotMatch(profileBlock, /shop_name text|shop_type text|city text/i);
 });
 
