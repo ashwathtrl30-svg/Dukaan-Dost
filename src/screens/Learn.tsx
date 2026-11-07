@@ -1,490 +1,672 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../store';
 import { t } from '../i18n';
-import { CheckCircle, ChevronRight, Store, ClipboardCheck } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  BookOpen,
+  Boxes,
+  CheckCircle2,
+  ChevronRight,
+  Clock3,
+  MessageCircle,
+  Mic,
+  ShieldCheck,
+  Sparkles,
+  Store,
+  Users,
+  Wallet,
+  Volume2,
+} from 'lucide-react';
 
-interface LessonData {
-  id: string;
-  titleEn: string;
-  titleHi: string;
-  descEn: string;
-  descHi: string;
-  category: string;
-  duration: number;
-  emoji: string;
-  contentEn: string;
-  contentHi: string;
-  scenarioTitleEn: string;
-  scenarioTitleHi: string;
-  scenarioEn: string;
-  scenarioHi: string;
-  actionTitleEn: string;
-  actionTitleHi: string;
-  actionEn: string;
-  actionHi: string;
+type CoachScreen =
+  | 'home'
+  | 'sales-intro'
+  | 'assessment-preview'
+  | 'simulation-preview'
+  | 'feedback-preview'
+  | 'milestone-preview';
+
+const questions = {
+  en: [
+    'A customer says, “This is too expensive.” What do you say?',
+    'A customer is angry about something they bought from you last week. What do you do?',
+    'You lose a sale you were sure you had won. What do you do next?',
+  ],
+  hi: [
+    'एक ग्राहक कहता है, “यह बहुत महँगा है।” आप क्या कहेंगे?',
+    'एक ग्राहक पिछले हफ़्ते आपसे खरीदी हुई चीज़ को लेकर नाराज़ है। आप क्या करेंगे?',
+    'आपकी एक ऐसी बिक्री नहीं हो पाती जिसके होने का आपको पूरा भरोसा था। अब आप क्या करेंगे?',
+  ],
+};
+
+const coachCopy = {
+  en: {
+    eyebrow: 'LEARN',
+    headline: 'Build the skills that move your shop forward.',
+    subhead: 'Choose an AI coach and practise the decisions you make every day.',
+    salesTitle: 'Sales & Customer Handling',
+    salesDescription: 'Understand customers, handle difficult conversations and build trust that brings people back.',
+    financeTitle: 'Financial Management',
+    financeDescription: 'Build confidence with cash flow, costs, pricing and everyday money decisions.',
+    inventoryTitle: 'Inventory Management',
+    inventoryDescription: 'Make smarter stock decisions, reduce money tied up on shelves and stay ready for demand.',
+    comingSoon: 'Coming soon',
+    recommended: 'START HERE',
+    personalCoach: 'Your practical, personal business coach',
+    introTitle: 'Turn everyday customer moments into better business decisions.',
+    introDescription: 'Practise with realistic AI customer simulations shaped around your shop, your language and the way you do business.',
+    shopContext: 'Your shop profile',
+    tailored: 'Scenarios tailored to your business',
+    natural: 'Natural customer conversations',
+    usefulFeedback: 'Honest, practical feedback after each practice',
+    ethical: 'Better selling without pressure or false promises',
+    transparency: 'You will always know when you are speaking with an AI simulation. Practice conversations never create real sales, expenses, stock changes or udhaar entries.',
+    previewButton: 'Preview the coaching experience',
+    startButton: 'Start your coaching journey',
+    previewHint: 'This is a screen walkthrough only. Assessment, AI replies and saved progress will be connected in later phases.',
+    assessment: 'Getting to know your approach',
+    assessmentHint: 'Three short situations help establish your starting point.',
+    question: 'QUESTION',
+    of: 'OF',
+    answerPlaceholder: 'Write what you would naturally say or do...',
+    voiceLater: 'Voice input will be connected in a later phase',
+    continue: 'Continue',
+    seeConversation: 'See the conversation screen',
+    temporary: 'Your text stays only in this temporary preview and is not saved or assessed.',
+    simulation: 'Customer conversation',
+    sampleLabel: 'ILLUSTRATIVE CUSTOMER MESSAGE',
+    sampleCustomer: 'I saw a similar product for less at another shop. What makes this one worth the price?',
+    customer: 'Customer',
+    aiSimulation: 'AI simulation',
+    replyPlaceholder: 'Your reply will appear here...',
+    composerHint: 'The live customer engine, voice conversation and read-aloud controls will be connected in later phases.',
+    seeFeedback: 'See the feedback screen',
+    feedbackTitle: 'Feedback that helps you improve',
+    feedbackIntro: 'After a completed conversation, your coach will review what you actually said and did.',
+    currentFeedback: 'Current feedback',
+    currentFeedbackDesc: 'An honest view of how you handled the situation, based on your actual conversation.',
+    improveAreas: 'Areas to improve',
+    improveAreasDesc: 'Specific moments where a different approach could help the customer and protect your business.',
+    howImprove: 'How to improve',
+    howImproveDesc: 'A practical action and a natural example sentence you can use in your shop.',
+    readAloud: 'Read aloud',
+    feedbackNote: 'This is the feedback layout. No score or judgement is being generated in this screen preview.',
+    seeMilestone: 'See the first-ten review',
+    milestoneTitle: 'Your first 10 conversations',
+    milestoneIntro: 'A meaningful review of your progress after your first ten completed customer simulations.',
+    milestoneReview: 'Overall performance review',
+    milestoneReviewDesc: 'A concise picture of how you handled different customer situations across all ten conversations.',
+    improvement: 'How have you improved?',
+    improvementDesc: 'A comparison of your earlier responses with your tenth conversation, highlighting only genuine progress.',
+    noProgress: 'Your progress will appear here after ten completed conversations.',
+    backToLearn: 'Back to Learn',
+    backToCoach: 'Back to Sales Coach',
+    designPreview: 'DESIGN PREVIEW',
+    category: 'Business type',
+    location: 'Location',
+    noProfile: 'Your saved shop details will be used here.',
+    simulationDisclosure: 'This is a sample screen, not a live customer conversation.',
+    next: 'Next question',
+    viewFeedback: 'View feedback layout',
+    practiceLength: 'A few minutes at a time',
+    trust: 'Trust first. Business results matter.',
+  },
+  hi: {
+    eyebrow: 'सीखें',
+    headline: 'अपनी दुकान को आगे बढ़ाने वाले हुनर सीखें।',
+    subhead: 'AI कोच चुनें और रोज़ के कारोबार से जुड़े फैसलों का अभ्यास करें।',
+    salesTitle: 'बिक्री और ग्राहक संभालना',
+    salesDescription: 'ग्राहकों को समझें, मुश्किल बातचीत संभालें और ऐसा भरोसा बनाएँ जिससे ग्राहक दोबारा आएँ।',
+    financeTitle: 'वित्तीय प्रबंधन',
+    financeDescription: 'रोज़ के पैसों, खर्चों, भाव और नकदी के फैसलों में भरोसा बढ़ाएँ।',
+    inventoryTitle: 'स्टॉक प्रबंधन',
+    inventoryDescription: 'सही स्टॉक रखें, शेल्फ़ पर फँसा पैसा घटाएँ और ग्राहक की माँग के लिए तैयार रहें।',
+    comingSoon: 'जल्द आ रहा है',
+    recommended: 'यहाँ से शुरू करें',
+    personalCoach: 'आपका काम का, निजी बिज़नेस कोच',
+    introTitle: 'रोज़ के ग्राहक अनुभव को बेहतर कारोबारी फैसलों में बदलें।',
+    introDescription: 'अपनी दुकान, भाषा और काम करने के तरीके के हिसाब से बने वास्तविक AI ग्राहक-सिमुलेशन के साथ अभ्यास करें।',
+    shopContext: 'आपकी दुकान की जानकारी',
+    tailored: 'आपके कारोबार के हिसाब से परिस्थितियाँ',
+    natural: 'स्वाभाविक ग्राहक बातचीत',
+    usefulFeedback: 'हर अभ्यास के बाद साफ़ और काम की सलाह',
+    ethical: 'बिना दबाव या झूठे वादों के बेहतर बिक्री',
+    transparency: 'आपको हमेशा पता रहेगा कि आप AI सिमुलेशन से बात कर रहे हैं। अभ्यास से असली बिक्री, खर्च, स्टॉक या उधार की एंट्री नहीं बनेगी।',
+    previewButton: 'कोच का अनुभव देखें',
+    startButton: 'अपना अभ्यास शुरू करें',
+    previewHint: 'यह अभी केवल स्क्रीन का डेमो है। शुरुआती सवाल, AI के जवाब और सेव की गई प्रगति अगले चरणों में जुड़ेंगे।',
+    assessment: 'आपका तरीका समझते हैं',
+    assessmentHint: 'तीन छोटी परिस्थितियाँ आपकी शुरुआती सोच समझने में मदद करेंगी।',
+    question: 'सवाल',
+    of: 'में से',
+    answerPlaceholder: 'आप स्वाभाविक रूप से क्या कहेंगे या करेंगे, लिखें...',
+    voiceLater: 'बोलकर जवाब देने की सुविधा अगले चरण में जुड़ेगी',
+    continue: 'आगे बढ़ें',
+    seeConversation: 'बातचीत की स्क्रीन देखें',
+    temporary: 'आपका लिखा जवाब केवल इस अस्थायी डेमो में रहेगा। इसे सेव या जाँचा नहीं जाएगा।',
+    simulation: 'ग्राहक से बातचीत',
+    sampleLabel: 'उदाहरण के लिए ग्राहक का संदेश',
+    sampleCustomer: 'मुझे यही चीज़ दूसरी दुकान पर कम भाव में मिली। मैं आपसे ही क्यों खरीदूँ?',
+    customer: 'ग्राहक',
+    aiSimulation: 'AI सिमुलेशन',
+    replyPlaceholder: 'आपका जवाब यहाँ दिखाई देगा...',
+    composerHint: 'असली ग्राहक इंजन, बोलकर बातचीत और जवाब सुनने की सुविधा अगले चरणों में जुड़ेगी।',
+    seeFeedback: 'फीडबैक की स्क्रीन देखें',
+    feedbackTitle: 'ऐसी सलाह जो आपको बेहतर बनाए',
+    feedbackIntro: 'बातचीत पूरी होने पर आपका कोच आपके असली जवाब और फैसलों को समझेगा।',
+    currentFeedback: 'अभी का फीडबैक',
+    currentFeedbackDesc: 'आपने बातचीत कैसे संभाली, उसका साफ़ और ईमानदार आकलन।',
+    improveAreas: 'सुधार की जगह',
+    improveAreasDesc: 'वे खास मौके जहाँ दूसरा तरीका ग्राहक और कारोबार—दोनों के लिए बेहतर हो सकता है।',
+    howImprove: 'कैसे सुधारें',
+    howImproveDesc: 'एक काम की रणनीति और ऐसा उदाहरण वाक्य जिसे आप दुकान में बोल सकें।',
+    readAloud: 'सुनकर पढ़ें',
+    feedbackNote: 'यह केवल फीडबैक स्क्रीन का डेमो है। यहाँ कोई स्कोर या फैसला नहीं बनाया जा रहा।',
+    seeMilestone: 'पहले दस अभ्यासों की समीक्षा देखें',
+    milestoneTitle: 'आपकी पहली 10 बातचीत',
+    milestoneIntro: 'पहले दस पूरे ग्राहक-सिमुलेशन के बाद आपकी प्रगति की सार्थक समीक्षा।',
+    milestoneReview: 'कुल प्रदर्शन की समीक्षा',
+    milestoneReviewDesc: 'दसों बातचीत में अलग-अलग ग्राहकों को आपने कैसे संभाला, उसकी छोटी-सी तस्वीर।',
+    improvement: 'आपमें क्या सुधार आया?',
+    improvementDesc: 'पहले के जवाबों की दसवीं बातचीत से तुलना—सिर्फ़ असली सुधार को दिखाते हुए।',
+    noProgress: 'दस पूरी बातचीत के बाद आपकी प्रगति यहाँ दिखाई देगी।',
+    backToLearn: 'सीखें पर वापस जाएँ',
+    backToCoach: 'सेल्स कोच पर वापस जाएँ',
+    designPreview: 'डिज़ाइन डेमो',
+    category: 'दुकान का प्रकार',
+    location: 'जगह',
+    noProfile: 'आपकी सेव की गई दुकान की जानकारी यहाँ इस्तेमाल होगी।',
+    simulationDisclosure: 'यह केवल उदाहरण की स्क्रीन है, असली ग्राहक से बातचीत नहीं।',
+    next: 'अगला सवाल',
+    viewFeedback: 'फीडबैक की स्क्रीन देखें',
+    practiceLength: 'एक बार में कुछ मिनट',
+    trust: 'पहले भरोसा। कारोबार का फायदा भी ज़रूरी है।',
+  },
+};
+
+function getShopTypeLabel(shopType: string | null, lang: 'en' | 'hi'): string {
+  if (!shopType) return '';
+  const labels: Record<string, { en: string; hi: string }> = {
+    kirana: { en: 'Kirana / grocery', hi: 'किराना / जनरल स्टोर' },
+    medical: { en: 'Medical store', hi: 'मेडिकल स्टोर' },
+    bakery: { en: 'Bakery', hi: 'बेकरी' },
+    sweet: { en: 'Sweet shop', hi: 'मिठाई की दुकान' },
+    tailor: { en: 'Tailor', hi: 'दर्जी' },
+    salon: { en: 'Salon / parlour', hi: 'सैलून / पार्लर' },
+    hardware: { en: 'Hardware', hi: 'हार्डवेयर' },
+    mobile: { en: 'Mobile shop', hi: 'मोबाइल की दुकान' },
+    vegetable: { en: 'Fruit / vegetable shop', hi: 'फल / सब्ज़ी की दुकान' },
+    tea: { en: 'Tea stall', hi: 'चाय की दुकान' },
+    restaurant: { en: 'Restaurant / dhaba', hi: 'रेस्टोरेंट / ढाबा' },
+    other: { en: 'Local business', hi: 'स्थानीय कारोबार' },
+  };
+  return labels[shopType]?.[lang] || labels.other[lang];
 }
 
-// Practical lessons for Indian shopkeepers aged 30-50+
-// Focused on daily shop operations, not business theory
-const allLessons: LessonData[] = [
-  {
-    "id": "daily-hisab",
-    "titleEn": "The 5-Minute Daily Money Check",
-    "titleHi": "5 मिनट में रोज़ का हिसाब",
-    "descEn": "Close the day knowing where the money went.",
-    "descHi": "दिन के अंत में पैसों का सही हिसाब जानें।",
-    "category": "basics",
-    "duration": 3,
-    "emoji": "📊",
-    "scenarioTitleEn": "A common shop situation",
-    "scenarioTitleHi": "दुकान की एक आम स्थिति",
-    "scenarioEn": "At closing, the drawer has ₹700 less than expected. The owner first thinks someone made a mistake, but then finds two small cash sales and one supplier payment were never written down.",
-    "scenarioHi": "दुकान बंद करते समय गल्ले में ₹700 कम दिखते हैं। मालिक पहले गलती समझते हैं, फिर पता चलता है कि दो छोटी नकद बिक्री और सप्लायर का एक भुगतान लिखना छूट गया था।",
-    "actionTitleEn": "Try this today",
-    "actionTitleHi": "आज यह करें",
-    "actionEn": "Before closing, add up cash received, UPI received, credit sales and expenses separately. Match each with the entries and bills. If there is a gap, note it and find the reason instead of guessing.",
-    "actionHi": "दुकान बंद करने से पहले नकद, UPI, उधार बिक्री और खर्च अलग-अलग जोड़ें। उन्हें एंट्री और बिल से मिलाएँ। अंतर हो तो अंदाज़ा लगाने के बजाय वजह लिखें और पता करें।",
-    "contentEn": "A good daily close takes about five minutes.\n\n1. Add every sale, including small ones.\n2. Keep cash, UPI and credit sales clear in your record.\n3. Record every payment made that day and keep the bill.\n4. Check the cash and UPI actually received separately from sales made on credit.\n\n**Why it matters**\nA shop can look busy and still lose money through missed entries, wrong change, small waste or unpaid credit. A short daily check helps you catch a small gap before it grows.",
-    "contentHi": "दिन का सही हिसाब रखने में लगभग पाँच मिनट लगते हैं।\n\n1. छोटी बिक्री सहित हर बिक्री दर्ज करें।\n2. नकद, UPI और उधार बिक्री का हिसाब अलग रखें।\n3. उस दिन किया गया हर भुगतान लिखें और बिल संभालें।\n4. नकद और UPI में मिले पैसे को उधार बिक्री से अलग जाँचें।\n\n**यह क्यों ज़रूरी है**\nदुकान पर भीड़ होने के बाद भी छूटी एंट्री, गलत बचे पैसे, बर्बादी या रुका हुआ उधार नुकसान कर सकता है। रोज़ की छोटी जाँच से समस्या जल्दी पकड़ में आती है।"
-  },
-  {
-    "id": "udhaar-control",
-    "titleEn": "Set Clear Rules for Udhaar",
-    "titleHi": "उधार के साफ़ नियम बनाएँ",
-    "descEn": "Protect cash without losing good customers.",
-    "descHi": "अच्छे ग्राहकों से रिश्ता रखते हुए नकद बचाएँ।",
-    "category": "money",
-    "duration": 3,
-    "emoji": "🤝",
-    "scenarioTitleEn": "A common shop situation",
-    "scenarioTitleHi": "दुकान की एक आम स्थिति",
-    "scenarioEn": "A regular customer owes ₹3,200 and asks for another ₹900 of goods. The owner wants to help, but two suppliers must be paid the next morning.",
-    "scenarioHi": "एक पुराने ग्राहक पर ₹3,200 बाकी हैं और वे ₹900 का और सामान माँगते हैं। मालिक मदद करना चाहते हैं, लेकिन अगली सुबह दो सप्लायरों को भुगतान करना है।",
-    "actionTitleEn": "Try this today",
-    "actionTitleHi": "आज यह करें",
-    "actionEn": "Set a clear credit limit and date with each customer. For an overdue balance, politely ask for a payment date or a small first payment. Do not promise new credit until you know how the old amount will be paid.",
-    "actionHi": "हर ग्राहक के लिए उधार की साफ़ सीमा और तारीख़ तय करें। बकाया हो तो विनम्रता से भुगतान की तारीख़ या पहली छोटी किस्त तय करें। पुराना पैसा कैसे आएगा, यह जाने बिना नया उधार देने का वादा न करें।",
-    "contentEn": "Udhaar can build trust, but it can also leave you short of money for stock, rent or wages.\n\n- Write the amount and date at the time of sale.\n- Agree when the customer will pay.\n- Review overdue balances every week.\n- Send a polite reminder with the exact amount.\n- Keep a limit that your shop can afford, even for people you know well.\n\n**Keep it fair**\nUse the same clear rules with everyone. This protects the business and avoids arguments later.",
-    "contentHi": "उधार से भरोसा बन सकता है, लेकिन स्टॉक, किराया या वेतन देने के लिए नकद कम भी पड़ सकता है।\n\n- बिक्री के समय रकम और तारीख़ लिखें।\n- ग्राहक से भुगतान की तारीख़ तय करें।\n- हर हफ़्ते पुराने बकाये देखें।\n- सही रकम लिखकर विनम्र याद दिलाएँ।\n- करीबी ग्राहक के लिए भी उतनी ही सीमा रखें जितनी दुकान सह सके।\n\n**नियम सबके लिए साफ़ रखें**\nएक जैसे नियम कारोबार को सुरक्षित रखते हैं और बाद की बहस से बचाते हैं।"
-  },
-  {
-    "id": "customer-loyalty",
-    "titleEn": "Turn Good Service into Repeat Business",
-    "titleHi": "अच्छी सेवा से ग्राहक दोबारा जोड़ें",
-    "descEn": "Build trust that brings customers back.",
-    "descHi": "ऐसा भरोसा बनाएँ कि ग्राहक लौटकर आएँ।",
-    "category": "growth",
-    "duration": 3,
-    "emoji": "🛍️",
-    "scenarioTitleEn": "A common shop situation",
-    "scenarioTitleHi": "दुकान की एक आम स्थिति",
-    "scenarioEn": "A customer finds that an item bought yesterday is damaged. The shopkeeper listens, checks the bill and replaces it fairly. The customer returns the next week—and brings a neighbour.",
-    "scenarioHi": "एक ग्राहक को कल खरीदा सामान खराब मिलता है। दुकानदार उनकी बात सुनते हैं, बिल जाँचते हैं और सही तरीके से सामान बदल देते हैं। ग्राहक अगले हफ़्ते लौटते हैं और एक पड़ोसी को भी साथ लाते हैं।",
-    "actionTitleEn": "Try this today",
-    "actionTitleHi": "आज यह करें",
-    "actionEn": "Choose one small service to do consistently: keep fast-moving items easy to find, tell customers honestly when something is unavailable, and fix a genuine billing or product issue quickly. Notice which customers return.",
-    "actionHi": "एक छोटी सेवा नियमित करें: तेज़ बिकने वाला सामान आसानी से मिलने दें, सामान न हो तो साफ़ बताएं, और बिल या सामान की सही शिकायत जल्दी सुलझाएँ। ध्यान दें कि कौन-से ग्राहक दोबारा आते हैं।",
-    "contentEn": "Repeat customers reduce the pressure to find new buyers every day. They return when the shop is reliable, prices are clear and problems are handled fairly.\n\n- Keep the items regular customers ask for most.\n- Give the correct weight and a clear bill.\n- Tell people early if an item is not available.\n- Fix genuine mistakes without making the customer argue.\n- Avoid discounts that erase your profit just to win one sale.\n\n**The business value**\nA customer who trusts you is more likely to return and recommend the shop.",
-    "contentHi": "पुराने ग्राहक बार-बार नए ग्राहक खोजने का दबाव कम करते हैं। वे तब लौटते हैं जब दुकान भरोसेमंद हो, भाव साफ़ हों और समस्या सही तरीके से सुलझे।\n\n- जिन चीज़ों की माँग सबसे ज़्यादा है, उन्हें उपलब्ध रखें।\n- सही वजन और साफ़ बिल दें।\n- सामान न हो तो पहले ही बता दें।\n- सही गलती को बहस किए बिना ठीक करें।\n- सिर्फ़ एक बिक्री पाने के लिए इतना डिस्काउंट न दें कि मुनाफ़ा ही खत्म हो जाए।\n\n**कारोबार में फ़ायदा**\nभरोसा करने वाला ग्राहक लौटने और दूसरों को दुकान बताने की अधिक संभावना रखता है।"
-  },
-  {
-    "id": "smart-stock",
-    "titleEn": "Buy Stock Based on What Sells",
-    "titleHi": "बिक्री देखकर सामान खरीदें",
-    "descEn": "Keep cash free and shelves useful.",
-    "descHi": "पैसा फँसने से बचाएँ और सही सामान रखें।",
-    "category": "inventory",
-    "duration": 3,
-    "emoji": "📦",
-    "scenarioTitleEn": "A common shop situation",
-    "scenarioTitleHi": "दुकान की एक आम स्थिति",
-    "scenarioEn": "A shop has ₹6,000 worth of a slow-selling item on the shelf, but customers keep asking for a faster-selling product that is out of stock. The money is tied up in the wrong place.",
-    "scenarioHi": "दुकान में धीमे बिकने वाले सामान के ₹6,000 शेल्फ़ पर पड़े हैं, जबकि ग्राहक तेज़ बिकने वाली दूसरी चीज़ माँगते हैं जो खत्म है। पैसा गलत जगह फँसा है।",
-    "actionTitleEn": "Try this today",
-    "actionTitleHi": "आज यह करें",
-    "actionEn": "Before reordering, list the five items that sold most often and count what remains. Order fast sellers first. For slow stock, stop adding more until you have a clear plan to sell, return or reduce it.",
-    "actionHi": "अगला ऑर्डर देने से पहले पाँच सबसे ज़्यादा बिकने वाली चीज़ें लिखें और बचा हुआ स्टॉक गिनें। पहले तेज़ बिकने वाला सामान मँगाएँ। धीमे स्टॉक में नया माल तब तक न जोड़ें जब तक उसे बेचने, लौटाने या कम करने की योजना न हो।",
-    "contentEn": "Stock is money sitting on a shelf. The aim is not to fill every shelf; it is to have the right goods available when customers ask.\n\n- Check what sold over the last 7–14 days.\n- Count remaining stock before ordering.\n- Set a minimum level for items that sell quickly.\n- Buy small amounts of uncertain items until demand is clear.\n- Check expiry dates and return terms before a large order.\n\n**Keep the balance**\nToo little stock can lose sales; too much can block cash. Use actual sales records to find a sensible middle.",
-    "contentHi": "शेल्फ़ पर रखा स्टॉक असल में आपका पैसा है। लक्ष्य हर जगह सामान भरना नहीं, बल्कि ग्राहक की ज़रूरत के समय सही सामान उपलब्ध रखना है।\n\n- पिछले 7–14 दिनों में क्या बिका, देखें।\n- ऑर्डर से पहले बचा हुआ स्टॉक गिनें।\n- तेज़ बिकने वाली चीज़ों के लिए न्यूनतम मात्रा तय करें।\n- जिन चीज़ों की माँग साफ़ नहीं है, उन्हें कम मात्रा में मँगाएँ।\n- बड़े ऑर्डर से पहले एक्सपायरी और वापसी की शर्तें जाँचें।\n\n**सही संतुलन रखें**\nबहुत कम स्टॉक से बिक्री छूट सकती है और बहुत ज़्यादा स्टॉक से नकद फँस सकता है। फैसला असली बिक्री के आधार पर करें।"
-  },
-  {
-    "id": "pricing-basics",
-    "titleEn": "Set a Price That Leaves Money",
-    "titleHi": "ऐसा भाव रखें जिससे मुनाफ़ा बचे",
-    "descEn": "Know the cost before changing the price.",
-    "descHi": "भाव बदलने से पहले असली लागत जानें।",
-    "category": "pricing",
-    "duration": 3,
-    "emoji": "🏷️",
-    "scenarioTitleEn": "A common shop situation",
-    "scenarioTitleHi": "दुकान की एक आम स्थिति",
-    "scenarioEn": "A supplier raises the cost of a popular item by ₹4. The shop keeps selling at the old price for weeks. Sales look steady, but less money is left from every unit sold.",
-    "scenarioHi": "सप्लायर लोकप्रिय सामान की लागत ₹4 बढ़ा देता है। दुकान कई हफ़्ते पुराने भाव पर बेचती रहती है। बिक्री ठीक दिखती है, लेकिन हर पीस पर कम पैसा बचता है।",
-    "actionTitleEn": "Try this today",
-    "actionTitleHi": "आज यह करें",
-    "actionEn": "Pick three fast-selling items. Compare the latest supplier bill with your selling price, delivery cost and any usual discount. If the amount left is too small, consider a fair price change or a different supplier—not a sudden price rise on everything.",
-    "actionHi": "तीन तेज़ बिकने वाली चीज़ें चुनें। नया सप्लायर बिल, बिक्री का भाव, ढुलाई और आम डिस्काउंट मिलाकर देखें। अगर बहुत कम पैसा बचता है, तो सही भाव या दूसरे सप्लायर पर विचार करें—हर चीज़ का भाव अचानक न बढ़ाएँ।",
-    "contentEn": "A price should cover the cost of the item and leave enough to help pay shop expenses. A busy counter does not guarantee good earnings.\n\n- Start with the latest purchase cost.\n- Include transport or packing costs when they apply.\n- Check the usual discount given to customers.\n- Compare nearby prices for common goods.\n- Review prices when a supplier changes the rate.\n\n**Before you cut a price**\nCalculate how much money will remain after the discount. Do not copy a competitor without checking your own cost.",
-    "contentHi": "भाव ऐसा होना चाहिए कि सामान की लागत निकलने के बाद दुकान के खर्च में मदद करने के लिए पैसा बचे। काउंटर पर भीड़ होना अच्छे मुनाफ़े की गारंटी नहीं है।\n\n- सबसे नया खरीद भाव देखें।\n- जहाँ लागू हो, ढुलाई या पैकिंग जोड़ें।\n- ग्राहक को दिए जाने वाले आम डिस्काउंट को गिनें।\n- आम सामान के लिए आसपास के भाव देखें।\n- सप्लायर की दर बदलने पर अपना भाव जाँचें।\n\n**भाव घटाने से पहले**\nडिस्काउंट के बाद कितना पैसा बचेगा, यह निकालें। अपनी लागत देखे बिना दूसरे दुकानदार की नकल न करें।"
-  },
-  {
-    "id": "discount-check",
-    "titleEn": "Check the Cost of Every Discount",
-    "titleHi": "हर डिस्काउंट का असर जाँचें",
-    "descEn": "A small offer can take away most of the profit.",
-    "descHi": "छोटा डिस्काउंट भी मुनाफ़ा घटा सकता है।",
-    "category": "pricing",
-    "duration": 3,
-    "emoji": "🧮",
-    "scenarioTitleEn": "A common shop situation",
-    "scenarioTitleHi": "दुकान की एक आम स्थिति",
-    "scenarioEn": "An item costs ₹85 and sells for ₹100. The shop gives ₹10 off to match a competitor. The customer saves ₹10, but the shop's amount left falls from ₹15 to just ₹5 before other costs.",
-    "scenarioHi": "एक सामान ₹85 में खरीदा और ₹100 में बेचा जाता है। दूसरे दुकानदार से भाव मिलाने के लिए ₹10 की छूट दी जाती है। ग्राहक ₹10 बचाता है, लेकिन दूसरे खर्च से पहले दुकान का बचा पैसा ₹15 से घटकर सिर्फ़ ₹5 रह जाता है।",
-    "actionTitleEn": "Try this today",
-    "actionTitleHi": "आज यह करें",
-    "actionEn": "Before offering a discount, write the buying cost, selling price and discount on paper. Check the amount left. Consider a bundle of related items or a minimum purchase instead of cutting the price on every unit.",
-    "actionHi": "डिस्काउंट देने से पहले खरीद भाव, बिक्री भाव और छूट लिखें। देखें कि कितना पैसा बचेगा। हर पीस का भाव घटाने के बजाय जुड़ी हुई चीज़ों का कॉम्बो या तय खरीद पर ऑफ़र सोचें।",
-    "contentEn": "Discounts can bring customers in, but they should have a reason and a limit.\n\nExample: buy for ₹85, sell for ₹100. The amount left is ₹15 before other shop costs. A ₹10 discount leaves only ₹5. That is a two-thirds drop in the amount left, even though the discount looks small.\n\n- Decide the lowest price before the customer asks.\n- Do not discount items already selling well unless there is a clear reason.\n- Test offers for a short time and check the result.\n- Stop an offer if it brings sales but leaves too little money.",
-    "contentHi": "डिस्काउंट ग्राहक ला सकता है, लेकिन उसके पीछे वजह और सीमा होनी चाहिए।\n\nउदाहरण: खरीद ₹85, बिक्री ₹100। दूसरे खर्च से पहले ₹15 बचते हैं। ₹10 की छूट देने पर सिर्फ़ ₹5 बचेंगे। छूट छोटी दिखती है, लेकिन बचा पैसा लगभग दो-तिहाई कम हो जाता है।\n\n- ग्राहक के पूछने से पहले न्यूनतम भाव तय करें।\n- जो सामान पहले ही अच्छी तरह बिक रहा है, उस पर बिना वजह छूट न दें।\n- ऑफ़र थोड़े समय के लिए आज़माएँ और नतीजा जाँचें।\n- बिक्री बढ़े लेकिन पैसा न बचे, तो ऑफ़र रोक दें।"
-  },
-  {
-    "id": "slow-day-plan",
-    "titleEn": "Make Slow Days Work for You",
-    "titleHi": "धीमे दिनों का सही इस्तेमाल करें",
-    "descEn": "Test small changes instead of guessing.",
-    "descHi": "अंदाज़े के बजाय छोटे बदलाव आज़माएँ।",
-    "category": "growth",
-    "duration": 3,
-    "emoji": "📅",
-    "scenarioTitleEn": "A common shop situation",
-    "scenarioTitleHi": "दुकान की एक आम स्थिति",
-    "scenarioEn": "Recorded sales are strong on Saturday but much lower on Tuesday. The owner starts discounting every day, which cuts earnings even when sales were already good.",
-    "scenarioHi": "दर्ज बिक्री शनिवार को अच्छी और मंगलवार को काफी कम है। मालिक हर दिन डिस्काउंट देना शुरू कर देते हैं, जिससे उन दिनों का मुनाफ़ा भी घटता है जब बिक्री पहले से अच्छी थी।",
-    "actionTitleEn": "Try this today",
-    "actionTitleHi": "आज यह करें",
-    "actionEn": "First check whether all sales were entered and whether opening hours were the same. On the slower day, test one low-cost change: display a fast-moving item, remind regular customers of its availability, or offer a sensible bundle. Compare the same weekday for two weeks.",
-    "actionHi": "पहले जाँचें कि सभी बिक्री दर्ज हुई और दुकान खुलने का समय समान था। धीमे दिन एक कम खर्च वाला बदलाव आज़माएँ: तेज़ बिकने वाला सामान सामने रखें, पुराने ग्राहकों को उपलब्धता बताएँ या सही दाम वाला कॉम्बो दें। दो हफ़्ते तक उसी दिन की बिक्री मिलाएँ।",
-    "contentEn": "Sales can differ by day because of customer routines, nearby market days, weather or opening hours. One slow day does not prove the shop has a problem.\n\n- Compare the same weekday across several weeks.\n- Check whether the shop had the usual stock and opening hours.\n- Try one small change at a time.\n- Avoid a blanket discount before you know the reason for the drop.\n- Keep a note of what changed and what happened to sales.",
-    "contentHi": "ग्राहकों की आदत, बाज़ार का दिन, मौसम या दुकान खुलने के समय से बिक्री में फर्क आ सकता है। एक धीमा दिन अपने आप में समस्या का सबूत नहीं है।\n\n- कई हफ़्तों में उसी दिन की बिक्री मिलाएँ।\n- देखें कि सामान उपलब्ध था और दुकान सामान्य समय पर खुली थी।\n- एक बार में एक छोटा बदलाव आज़माएँ।\n- गिरावट की वजह जाने बिना हर सामान पर छूट न दें।\n- क्या बदलाव किया और बिक्री पर क्या असर पड़ा, लिखें।"
-  },
-  {
-    "id": "supplier-negotiation",
-    "titleEn": "Negotiate with a Clear Number",
-    "titleHi": "साफ़ हिसाब लेकर सप्लायर से बात करें",
-    "descEn": "A lower rate is useful only if the deal fits your shop.",
-    "descHi": "कम भाव तभी अच्छा है जब सौदा दुकान के काम आए।",
-    "category": "money",
-    "duration": 3,
-    "emoji": "🤝",
-    "scenarioTitleEn": "A common shop situation",
-    "scenarioTitleHi": "दुकान की एक आम स्थिति",
-    "scenarioEn": "One supplier offers a lower price if the shop buys six weeks of stock at once. Another supplier charges slightly more but delivers smaller orders. The cheaper offer may tie up cash and fill the shelves with slow items.",
-    "scenarioHi": "एक सप्लायर छह हफ़्ते का स्टॉक एक साथ लेने पर कम भाव देता है। दूसरा थोड़ा महँगा है, लेकिन कम मात्रा में सामान देता है। सस्ता सौदा भी पैसा फँसा सकता है और धीमा स्टॉक बढ़ा सकता है।",
-    "actionTitleEn": "Try this today",
-    "actionTitleHi": "आज यह करें",
-    "actionEn": "Compare the final cost, minimum order, delivery fee, return terms and payment date. Negotiate the rate on the items you buy often, but do not accept extra stock you cannot sell soon.",
-    "actionHi": "कुल लागत, न्यूनतम ऑर्डर, ढुलाई, वापसी की शर्त और भुगतान तारीख़ मिलाएँ। जिन चीज़ों की नियमित खरीद है, उन पर भाव की बात करें; ऐसा अतिरिक्त स्टॉक न लें जो जल्दी बिकने वाला न हो।",
-    "contentEn": "The best supplier deal is not always the lowest price on the bill. A big order can strain cash, while delayed delivery can leave you out of stock.\n\n- Compare at least two quotes when possible.\n- Ask for the final rate including delivery and fees.\n- Check the payment date and return terms.\n- Use your recent sales to estimate how much you can sell before the next order.\n- Keep the relationship fair: pay as agreed and discuss problems early.",
-    "contentHi": "सबसे अच्छा सप्लायर सौदा हमेशा बिल पर सबसे कम भाव नहीं होता। बड़ा ऑर्डर नकद फँसा सकता है और देरी से सामान खत्म हो सकता है।\n\n- हो सके तो दो सप्लायरों के भाव मिलाएँ।\n- ढुलाई और बाकी शुल्क सहित अंतिम भाव पूछें।\n- भुगतान तारीख़ और वापसी की शर्त जाँचें।\n- हाल की बिक्री देखकर तय करें कि अगले ऑर्डर से पहले कितना सामान बिकेगा।\n- रिश्ता साफ़ रखें: तय समय पर भुगतान करें और समस्या जल्दी बताएँ।"
-  },
-  {
-    "id": "utility-costs",
-    "titleEn": "Catch Rising Shop Bills Early",
-    "titleHi": "दुकान के बढ़ते बिल समय पर पकड़ें",
-    "descEn": "Find the cause before trying random cuts.",
-    "descHi": "बिना वजह खर्च घटाने से पहले कारण जानें।",
-    "category": "money",
-    "duration": 3,
-    "emoji": "💡",
-    "scenarioTitleEn": "A common shop situation",
-    "scenarioTitleHi": "दुकान की एक आम स्थिति",
-    "scenarioEn": "The electricity bill rises for three months. The owner turns off every light, making the shop harder to browse, but the bill barely changes because an old cooler is using too much power.",
-    "scenarioHi": "बिजली का बिल लगातार तीन महीने बढ़ता है। मालिक सारी लाइट बंद करने लगते हैं, जिससे ग्राहक सामान नहीं देख पाते। बिल फिर भी कम नहीं होता, क्योंकि पुराना कूलर ज़्यादा बिजली ले रहा है।",
-    "actionTitleEn": "Try this today",
-    "actionTitleHi": "आज यह करें",
-    "actionEn": "Compare the last three bills and note the amount and units used. Check long-running equipment, leaks, lights and service charges. Fix one clear cause first; keep the shop safe and easy for customers to use.",
-    "actionHi": "पिछले तीन बिल मिलाकर रकम और यूनिट लिखें। लंबे समय तक चलने वाले उपकरण, रिसाव, लाइट और सेवा शुल्क जाँचें। पहले एक साफ़ वजह ठीक करें; दुकान को सुरक्षित और ग्राहक के लिए सुविधाजनक रखें।",
-    "contentEn": "A rising bill should be checked, not guessed at. Cutting useful light or turning off needed equipment can hurt service without saving much.\n\n- Keep the last three bills together.\n- Compare both the amount and the units used.\n- Check old equipment, leaks, unused lights and extra charges.\n- Ask for a repair estimate before replacing equipment.\n- Recheck the next bill to see if the change worked.",
-    "contentHi": "बढ़ते बिल की जाँच करनी चाहिए, अंदाज़ा नहीं लगाना चाहिए। ज़रूरी रोशनी या उपकरण बंद करने से सेवा खराब हो सकती है, जबकि बचत कम हो।\n\n- पिछले तीन बिल साथ रखें।\n- रकम और इस्तेमाल हुई यूनिट दोनों मिलाएँ।\n- पुराने उपकरण, रिसाव, बेकार जलती लाइट और अतिरिक्त शुल्क देखें।\n- उपकरण बदलने से पहले मरम्मत का खर्च पूछें।\n- अगले बिल में जाँचें कि बदलाव से फ़ायदा हुआ या नहीं।"
-  },
-  {
-    "id": "stock-cash-cycle",
-    "titleEn": "Do Not Let Cash Get Stuck in Stock",
-    "titleHi": "स्टॉक में पैसा बेवजह न फँसने दें",
-    "descEn": "Keep enough goods without tying up too much cash.",
-    "descHi": "ज़रूरी माल रखें, लेकिन बहुत पैसा न बाँधें।",
-    "category": "inventory",
-    "duration": 3,
-    "emoji": "💰",
-    "scenarioTitleEn": "A common shop situation",
-    "scenarioTitleHi": "दुकान की एक आम स्थिति",
-    "scenarioEn": "A shop buys 50 pieces because the rate is lower in bulk. After a month, only 12 pieces have sold, but the electricity bill and next supplier payment are due.",
-    "scenarioHi": "कम थोक भाव के कारण दुकान 50 पीस खरीद लेती है। महीने बाद सिर्फ़ 12 बिके हैं, लेकिन बिजली का बिल और अगला सप्लायर भुगतान देना है।",
-    "actionTitleEn": "Try this today",
-    "actionTitleHi": "आज यह करें",
-    "actionEn": "For each slow item, write the quantity on hand, units sold this month and the money tied up in the remaining stock. Reduce the next order until the old stock moves, unless there is clear upcoming demand.",
-    "actionHi": "हर धीमे सामान के लिए बची मात्रा, इस महीने बिकी मात्रा और बचे स्टॉक में फँसा पैसा लिखें। पुराना माल बिकने तक अगला ऑर्डर घटाएँ—जब तक आने वाली माँग साफ़ न हो।",
-    "contentEn": "Bulk buying can reduce the price per piece, but it is only useful if the goods sell in time. Money tied up in slow stock cannot pay the next bill.\n\n- Count the remaining units.\n- Check how many sold over the last month.\n- Estimate how long the remaining stock may take to sell.\n- Compare the saving from bulk buying with the cost of holding extra stock.\n- Keep bulk deals for goods with steady demand and clear return terms.",
-    "contentHi": "थोक में लेने से हर पीस का भाव घट सकता है, लेकिन फायदा तभी है जब सामान समय पर बिके। धीमे स्टॉक में फँसा पैसा अगला बिल नहीं भर सकता।\n\n- बची हुई मात्रा गिनें।\n- पिछले महीने कितनी इकाइयाँ बिकीं, देखें।\n- अंदाज़ा लगाएँ कि बचा सामान बिकने में कितना समय लगेगा।\n- थोक बचत को अतिरिक्त स्टॉक में फँसे पैसे से मिलाएँ।\n- थोक सौदा उन्हीं चीज़ों में करें जिनकी माँग नियमित हो और वापसी की शर्त साफ़ हो।"
-  },
-  {
-    "id": "festival-planning",
-    "titleEn": "Prepare for Festivals Without Overbuying",
-    "titleHi": "त्योहार के लिए सही मात्रा में तैयारी करें",
-    "descEn": "Use last season's records instead of guesses.",
-    "descHi": "अंदाज़े के बजाय पिछले सीज़न का हिसाब देखें।",
-    "category": "planning",
-    "duration": 3,
-    "emoji": "🪔",
-    "scenarioTitleEn": "A common shop situation",
-    "scenarioTitleHi": "दुकान की एक आम स्थिति",
-    "scenarioEn": "Before Diwali, a shop buys extra stock across every category. Lights and gift packs sell well, but several other items remain after the festival and need a discount.",
-    "scenarioHi": "दिवाली से पहले दुकान हर श्रेणी में अतिरिक्त स्टॉक खरीद लेती है। लाइट और गिफ्ट पैक अच्छे बिकते हैं, लेकिन कई दूसरे सामान त्योहार के बाद बच जाते हैं और छूट पर निकालने पड़ते हैं।",
-    "actionTitleEn": "Try this today",
-    "actionTitleHi": "आज यह करें",
-    "actionEn": "Make a short list of last season's best sellers, slow sellers and items that ran out. Order in stages: start with proven items, then top up only when sales show real demand. Check supplier return terms before buying.",
-    "actionHi": "पिछले सीज़न के तेज़ बिकने वाले, धीमे बिकने वाले और जल्दी खत्म हुए सामान की छोटी सूची बनाएँ। चरणों में ऑर्डर दें: पहले भरोसेमंद सामान, फिर असली माँग देखकर दोबारा खरीदें। पहले वापसी की शर्त जाँचें।",
-    "contentEn": "Festival sales can help a shop, but excess stock after the rush can block cash for weeks.\n\n- Review the previous festival's sales and leftover stock.\n- Start with items customers already asked for.\n- Ask suppliers about delivery time and return options.\n- Place a first order early enough to refill if needed.\n- Check sales every few days and top up only proven items.\n\n**Plan for a safe ending too**\nDecide in advance what you will do with stock left after the festival. Do not rely on a last-minute discount to solve every problem.",
-    "contentHi": "त्योहार की बिक्री दुकान को फ़ायदा दे सकती है, लेकिन बाद में बचा स्टॉक कई हफ़्तों तक पैसा बाँध सकता है।\n\n- पिछले त्योहार की बिक्री और बचा स्टॉक देखें।\n- उन चीज़ों से शुरू करें जिनकी माँग पहले से है।\n- सप्लायर से डिलीवरी और वापसी पूछें।\n- ज़रूरत पड़ने पर दोबारा माल मिल सके, इतनी जल्दी पहला ऑर्डर दें।\n- हर कुछ दिन में बिक्री देखकर सिर्फ़ साबित माँग वाले सामान की मात्रा बढ़ाएँ।\n\n**बचा हुआ स्टॉक भी सोचें**\nपहले से तय करें कि त्योहार के बाद बचा सामान कैसे बेचना है। हर समस्या को आख़िरी समय की छूट पर न छोड़ें।"
-  },
-  {
-    "id": "shop-home-money",
-    "titleEn": "Keep Shop Money Separate from Home Money",
-    "titleHi": "दुकान और घर के पैसे अलग रखें",
-    "descEn": "Know what the business truly earns.",
-    "descHi": "जानें कि कारोबार असल में कितना कमा रहा है।",
-    "category": "basics",
-    "duration": 3,
-    "emoji": "🧾",
-    "scenarioTitleEn": "A common shop situation",
-    "scenarioTitleHi": "दुकान की एक आम स्थिति",
-    "scenarioEn": "The owner takes cash from the drawer for a home purchase but does not write it down. At the end of the week, the shop appears to have a loss even though some of the money was used outside the business.",
-    "scenarioHi": "मालिक घर का सामान लेने के लिए गल्ले से पैसे निकालते हैं, लेकिन लिखते नहीं। हफ़्ते के अंत में दुकान में घाटा दिखता है, जबकि कुछ पैसा कारोबार से बाहर इस्तेमाल हुआ था।",
-    "actionTitleEn": "Try this today",
-    "actionTitleHi": "आज यह करें",
-    "actionEn": "Write every amount taken from the shop for home use as a separate owner withdrawal, not as stock or shop expense. Decide a regular amount for home use where possible, and check the drawer against the record at closing.",
-    "actionHi": "घर के लिए दुकान से निकली हर रकम अलग लिखें; उसे स्टॉक या दुकान का खर्च न मानें। हो सके तो घर के लिए नियमित रकम तय करें और दिन के अंत में गल्ले को रिकॉर्ड से मिलाएँ।",
-    "contentEn": "When shop money and home money mix, it becomes hard to see whether the business is earning enough. It also makes cash shortages harder to explain.\n\n- Write down every withdrawal for home use.\n- Keep shop bills separate from household bills.\n- Decide what the shop can safely pay the owner after costs and supplier dues.\n- Review the business numbers weekly before taking extra money out.\n\n**The benefit**\nClear records make it easier to plan family spending without guessing how much the shop can afford.",
-    "contentHi": "दुकान और घर के पैसे मिल जाएँ, तो यह समझना मुश्किल होता है कि कारोबार पर्याप्त कमा रहा है या नहीं। नकद की कमी की वजह ढूँढना भी कठिन हो जाता है।\n\n- घर के लिए निकली हर रकम लिखें।\n- दुकान और घर के बिल अलग रखें।\n- खर्च और सप्लायर का भुगतान देखकर तय करें कि मालिक कितना पैसा निकाल सकता है।\n- अतिरिक्त पैसा निकालने से पहले हर हफ़्ते कारोबार का हिसाब देखें।\n\n**फ़ायदा**\nसाफ़ रिकॉर्ड से परिवार का खर्च तय करना आसान होता है और दुकान की क्षमता का अंदाज़ा नहीं लगाना पड़ता।"
-  },
-  {
-    "id": "prevent-waste",
-    "titleEn": "Stop Small Waste from Becoming a Big Loss",
-    "titleHi": "छोटी बर्बादी को बड़ा नुकसान न बनने दें",
-    "descEn": "Check damage, expiry and missing items early.",
-    "descHi": "खराबी, एक्सपायरी और कमी समय पर जाँचें।",
-    "category": "inventory",
-    "duration": 3,
-    "emoji": "🔎",
-    "scenarioTitleEn": "A common shop situation",
-    "scenarioTitleHi": "दुकान की एक आम स्थिति",
-    "scenarioEn": "A month-end check finds several expired packets behind newer stock. Each packet was cheap, but together the loss is noticeable—and customers could have been given poor-quality goods.",
-    "scenarioHi": "महीने के अंत में नए स्टॉक के पीछे कई एक्सपायरी पैकेट मिलते हैं। हर पैकेट सस्ता था, लेकिन कुल नुकसान दिखने लगता है—और ग्राहक को खराब सामान मिलने का खतरा भी था।",
-    "actionTitleEn": "Try this today",
-    "actionTitleHi": "आज यह करें",
-    "actionEn": "Check date-sensitive goods from oldest to newest. Put older stock at the front, keep damaged items separate and record what was lost. For items that often expire, order smaller amounts more often.",
-    "actionHi": "तारीख़ वाले सामान को पुराने से नए क्रम में जाँचें। पुराना स्टॉक आगे रखें, खराब सामान अलग करें और नुकसान लिखें। जिन चीज़ों की एक्सपायरी अक्सर होती है, उन्हें कम मात्रा में लेकिन ज़्यादा बार मँगाएँ।",
-    "contentEn": "A few damaged or expired items can quietly reduce profit. They can also harm customer trust.\n\n- Check the oldest stock first.\n- Keep damaged goods away from saleable stock.\n- Note repeat causes: expiry, leaks, breakage or heat.\n- Change storage or order size when the same loss repeats.\n- Check high-risk items briefly every week instead of waiting for month-end.",
-    "contentHi": "कुछ खराब या एक्सपायरी सामान चुपचाप मुनाफ़ा घटा सकते हैं और ग्राहक का भरोसा भी कम कर सकते हैं।\n\n- सबसे पुराना स्टॉक पहले जाँचें।\n- खराब माल को बेचने योग्य स्टॉक से अलग रखें।\n- बार-बार होने वाली वजह लिखें: एक्सपायरी, रिसाव, टूटना या गर्मी।\n- वही नुकसान दोहराए तो रखने का तरीका या ऑर्डर की मात्रा बदलें।\n- महीने के अंत तक रुकने के बजाय जोखिम वाले सामान को हर हफ़्ते जाँचें।"
-  }
-];
-
-function getLocalDateKey(date = new Date()): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-// Rotate the five-lesson set by local calendar day. Adjacent days show different sets.
-function getDailyLessons(dateKey: string): LessonData[] {
-  const [year, month, day] = dateKey.split('-').map(Number);
-  const dayNumber = Math.floor(Date.UTC(year, month - 1, day) / 86400000);
-  const start = ((dayNumber * 5) % allLessons.length + allLessons.length) % allLessons.length;
-  return Array.from({ length: Math.min(5, allLessons.length) }, (_, index) =>
-    allLessons[(start + index) % allLessons.length],
-  );
-}
-
-function LessonCopy({ content }: { content: string }) {
+function BackHeader({ title, onBack }: { title: string; onBack: () => void }) {
   return (
-    <div className="space-y-2">
-      {content.split('\n').map((rawLine, index) => {
-        const line = rawLine.trim();
-        if (!line) return <div key={index} className="h-1" />;
-        const heading = line.match(/^\*\*(.+)\*\*$/);
-        if (heading) {
-          return <h4 key={index} className="text-body font-semibold text-text pt-1">{heading[1]}</h4>;
-        }
-        const bullet = line.match(/^(?:[-•])\s+(.+)$/);
-        if (bullet) {
-          return (
-            <div key={index} className="flex items-start gap-2 pl-1">
-              <span className="text-primary leading-relaxed">•</span>
-              <p className="text-text leading-relaxed text-body flex-1">{bullet[1]}</p>
-            </div>
-          );
-        }
-        const numbered = line.match(/^(\d+\.)\s+(.+)$/);
-        if (numbered) {
-          return (
-            <div key={index} className="flex items-start gap-2 pl-1">
-              <span className="text-primary font-semibold text-small leading-relaxed">{numbered[1]}</span>
-              <p className="text-text leading-relaxed text-body flex-1">{numbered[2]}</p>
-            </div>
-          );
-        }
-        return <p key={index} className="text-text leading-relaxed text-body">{line}</p>;
-      })}
+    <div className="px-4 pt-3 pb-2 flex items-center gap-3 border-b border-border/70 bg-bg">
+      <button
+        type="button"
+        onClick={onBack}
+        className="dd-mobile-back-button w-11 h-11 rounded-xl flex items-center justify-center text-text hover:bg-primary/5 transition-colors"
+        aria-label="Go back"
+      >
+        <ArrowLeft className="dd-mobile-back-icon" size={22} />
+      </button>
+      <h1 className="text-body-lg font-semibold text-text flex-1 min-w-0 truncate">{title}</h1>
     </div>
   );
 }
 
-// ============ LEARN SCREEN ============
+function PreviewNotice({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2.5 flex items-start gap-2.5 text-amber-900" role="status">
+      <ShieldCheck size={17} className="shrink-0 mt-0.5" />
+      <p className="text-xs leading-relaxed">{children}</p>
+    </div>
+  );
+}
+
+function PrimaryAction({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="btn-primary w-full">
+      {children}
+    </button>
+  );
+}
+
 export function LearnScreen() {
   const { state } = useStore();
-  const lang = state.language!;
-  const [selectedLesson, setSelectedLesson] = useState<string | null>(null);
-  const [completedLessons, setCompletedLessons] = useState<string[]>([]);
-  const [todayKey, setTodayKey] = useState(() => getLocalDateKey());
-  const dailyLessons = useMemo(() => getDailyLessons(todayKey), [todayKey]);
+  const lang: 'en' | 'hi' = state.language === 'hi' ? 'hi' : 'en';
+  const copy = coachCopy[lang];
+  const shopType = getShopTypeLabel(state.shopProfile.shopType, lang);
+  const city = state.shopProfile.city.trim();
+  const [screen, setScreen] = useState<CoachScreen>('home');
+  const [assessmentIndex, setAssessmentIndex] = useState(0);
+  const [answers, setAnswers] = useState(['', '', '']);
+  const isDesignPreview = import.meta.env.VITE_SALES_COACH_UI_PREVIEW === 'true';
 
-  useEffect(() => {
-    const refreshDate = () => {
-      const currentDate = getLocalDateKey();
-      setTodayKey(previous => previous === currentDate ? previous : currentDate);
-    };
-    const now = new Date();
-    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-    const timer = window.setTimeout(refreshDate, Math.max(1000, nextMidnight.getTime() - now.getTime() + 250));
-    window.addEventListener('focus', refreshDate);
-    document.addEventListener('visibilitychange', refreshDate);
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener('focus', refreshDate);
-      document.removeEventListener('visibilitychange', refreshDate);
-    };
-  }, [todayKey]);
-  
-  if (selectedLesson) {
-    const lesson = allLessons.find((l: LessonData) => l.id === selectedLesson);
-    if (!lesson) return null;
-    
-    return (
-      <div className="h-full min-h-0 flex flex-col bg-bg">
-        <div className="px-5 pt-4 pb-2 flex items-center gap-3">
-          <button onClick={() => setSelectedLesson(null)} className="w-12 h-12 rounded-full flex items-center justify-center">
-            <span className="text-body">←</span>
-          </button>
-          <h2 className="text-body-lg font-bold text-text flex-1 truncate">
-            {lang === 'hi' ? lesson.titleHi : lesson.titleEn}
-          </h2>
-        </div>
-        
-        <div className="flex-1 min-h-0 scroll-area px-5 py-3">
-          <div className="text-5xl text-center mb-4">{lesson.emoji}</div>
-          
-          <div className="card p-4 mb-3">
-            <div className="flex items-center gap-2 mb-2">
-              <Store size={17} className="text-primary" />
-              <h3 className="text-body font-semibold text-text">
-                {lang === 'hi' ? lesson.scenarioTitleHi : lesson.scenarioTitleEn}
-              </h3>
-            </div>
-            <p className="text-text leading-relaxed text-body">
-              {lang === 'hi' ? lesson.scenarioHi : lesson.scenarioEn}
-            </p>
-          </div>
+  const openAssessmentPreview = () => {
+    setAssessmentIndex(0);
+    setScreen('assessment-preview');
+  };
 
-          <div className="card p-4 mb-3 border border-primary/20">
-            <div className="flex items-center gap-2 mb-2">
-              <ClipboardCheck size={17} className="text-primary" />
-              <h3 className="text-body font-semibold text-text">
-                {lang === 'hi' ? lesson.actionTitleHi : lesson.actionTitleEn}
-              </h3>
-            </div>
-            <p className="text-text leading-relaxed text-body">
-              {lang === 'hi' ? lesson.actionHi : lesson.actionEn}
-            </p>
-          </div>
+  const goBackFromAssessment = () => {
+    if (assessmentIndex > 0) {
+      setAssessmentIndex((current) => current - 1);
+      return;
+    }
+    setScreen('sales-intro');
+  };
 
-          <div className="card p-4 mb-4">
-            <h3 className="text-body font-semibold text-text mb-2">
-              {lang === 'hi' ? 'काम की सीख' : 'The lesson'}
-            </h3>
-            <LessonCopy content={lang === 'hi' ? lesson.contentHi : lesson.contentEn} />
-          </div>
-          
-          <button
-            onClick={() => {
-              if (!completedLessons.includes(lesson.id)) {
-                setCompletedLessons([...completedLessons, lesson.id]);
-              }
-              setSelectedLesson(null);
-            }}
-            className="btn-primary"
-          >
-            <CheckCircle size={20} /> {t('done', lang)}
-          </button>
-        </div>
-      </div>
-    );
-  }
-  
-  const completedCount = dailyLessons.filter(lesson => completedLessons.includes(lesson.id)).length;
-  const progressPercent = Math.round((completedCount / dailyLessons.length) * 100);
-  
+  const headerTitle =
+    screen === 'assessment-preview' ? copy.assessment :
+    screen === 'simulation-preview' ? copy.simulation :
+    screen === 'feedback-preview' ? copy.feedbackTitle :
+    screen === 'milestone-preview' ? copy.milestoneTitle :
+    copy.salesTitle;
+
   return (
     <div className="h-full min-h-0 flex flex-col bg-bg">
-      <div className="px-5 pt-4 pb-2">
-        <h1 className="text-section-title text-text">{t('learnTitle', lang)}</h1>
-      </div>
-      
-      <div className="flex-1 min-h-0 scroll-area px-5 pb-6">
-        {/* Progress */}
-        <div className="card mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-small font-medium text-text-secondary">
-              {completedCount}/{dailyLessons.length} {lang === 'hi' ? 'पाठ पूरे' : 'lessons done'}
-            </span>
-            <span className="text-small font-bold text-primary">{progressPercent}%</span>
+      {screen === 'home' && (
+        <>
+          <div className="px-5 pt-5 pb-3">
+            <div className="flex items-center gap-2 text-primary text-xs font-bold tracking-[0.16em]">
+              <BookOpen size={15} />
+              <span>{copy.eyebrow}</span>
+            </div>
+            <h1 className="text-screen-title text-text mt-2">{copy.headline}</h1>
+            <p className="text-small text-text-secondary mt-2 leading-relaxed">{copy.subhead}</p>
           </div>
-          <div className="progress-bar">
-            <div className="progress-bar-fill" style={{ width: `${progressPercent}%` }} />
-          </div>
-        </div>
-        
-        {/* Daily rotating lessons */}
-        <p className="text-small font-semibold text-text-secondary mb-3 uppercase tracking-wide">
-          {lang === 'hi' ? 'आज की सीख' : "Today's Lessons"}
-        </p>
-        <div className="space-y-3">
-          {dailyLessons.map((lesson: LessonData) => {
-            const isCompleted = completedLessons.includes(lesson.id);
-            return (
-              <button
-                key={lesson.id}
-                onClick={() => setSelectedLesson(lesson.id)}
-                className="card w-full text-left flex items-center gap-3 min-h-[96px] h-auto px-4 py-3"
-              >
-                <span className="text-3xl flex-shrink-0 leading-none">{lesson.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-body font-semibold text-text leading-snug break-words">{lang === 'hi' ? lesson.titleHi : lesson.titleEn}</p>
-                  <p className="text-small text-text-secondary leading-snug break-words mt-1">{lang === 'hi' ? lesson.descHi : lesson.descEn}</p>
-                  <p className="text-small text-text-secondary mt-1">
-                    {`${lesson.duration} ${t('minutes', lang)}`}
-                  </p>
+
+          <div className="flex-1 min-h-0 scroll-area px-5 pb-6">
+            <div className="rounded-2xl p-4 mb-5 border border-primary/10 bg-primary/5">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 shrink-0 rounded-xl bg-card flex items-center justify-center text-primary shadow-sm">
+                  <Sparkles size={22} />
                 </div>
-                {isCompleted ? (
-                  <CheckCircle size={24} className="text-positive flex-shrink-0" />
-                ) : (
-                  <ChevronRight size={20} className="text-text-secondary flex-shrink-0" />
-                )}
+                <div className="min-w-0">
+                  <p className="font-semibold text-text text-body">{copy.personalCoach}</p>
+                  <p className="text-small text-text-secondary mt-1 leading-relaxed">{copy.trust}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold text-text-secondary tracking-[0.12em]">
+                {lang === 'hi' ? 'अपना कोच चुनें' : 'CHOOSE YOUR COACH'}
+              </p>
+              {isDesignPreview && (
+                <span className="text-[10px] font-bold tracking-wide text-amber-800 bg-amber-100 rounded-full px-2.5 py-1">
+                  {copy.designPreview}
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => setScreen('sales-intro')}
+                className="w-full text-left rounded-2xl border border-primary/25 bg-card p-4 shadow-sm transition-all active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label={copy.salesTitle}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <Users size={25} strokeWidth={1.9} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-body font-semibold text-text">{copy.salesTitle}</span>
+                      <span className="text-[10px] font-bold tracking-wide text-primary bg-primary/10 rounded-full px-2 py-1">
+                        {copy.recommended}
+                      </span>
+                    </div>
+                    <p className="text-small text-text-secondary leading-relaxed mt-1.5">{copy.salesDescription}</p>
+                  </div>
+                  <ChevronRight size={21} className="text-primary shrink-0 mt-1" />
+                </div>
+                <div className="mt-3 pt-3 border-t border-border/70 flex items-center gap-2 text-xs text-text-secondary">
+                  <MessageCircle size={14} />
+                  <span>{copy.practiceLength}</span>
+                  <span className="text-border">•</span>
+                  <span>{lang === 'hi' ? 'व्यावहारिक बातचीत' : 'Practical conversations'}</span>
+                </div>
               </button>
-            );
-          })}
-        </div>
-      </div>
+
+              <div className="rounded-2xl border border-border bg-card/70 p-4 opacity-80">
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 shrink-0 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center">
+                    <Wallet size={24} strokeWidth={1.9} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-body font-semibold text-text">{copy.financeTitle}</span>
+                      <span className="text-[10px] font-semibold text-text-secondary bg-bg rounded-full px-2 py-1">{copy.comingSoon}</span>
+                    </div>
+                    <p className="text-small text-text-secondary leading-relaxed mt-1.5">{copy.financeDescription}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card/70 p-4 opacity-80">
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 shrink-0 rounded-xl bg-violet-100 text-violet-800 flex items-center justify-center">
+                    <Boxes size={24} strokeWidth={1.9} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-body font-semibold text-text">{copy.inventoryTitle}</span>
+                      <span className="text-[10px] font-semibold text-text-secondary bg-bg rounded-full px-2 py-1">{copy.comingSoon}</span>
+                    </div>
+                    <p className="text-small text-text-secondary leading-relaxed mt-1.5">{copy.inventoryDescription}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-start gap-2 text-xs text-text-secondary leading-relaxed">
+              <ShieldCheck size={16} className="text-primary shrink-0 mt-0.5" />
+              <p>{copy.transparency}</p>
+            </div>
+          </div>
+        </>
+      )}
+
+      {screen === 'sales-intro' && (
+        <>
+          <BackHeader title={copy.salesTitle} onBack={() => setScreen('home')} />
+          <div className="flex-1 min-h-0 scroll-area px-5 py-4">
+            <div className="rounded-2xl p-5 bg-primary text-white overflow-hidden relative">
+              <div className="absolute -right-7 -top-8 w-36 h-36 rounded-full border border-white/15" />
+              <div className="absolute -right-1 -top-2 w-24 h-24 rounded-full border border-white/10" />
+              <div className="relative">
+                <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center mb-4">
+                  <Users size={25} />
+                </div>
+                <p className="text-xs font-bold tracking-[0.14em] text-white/80">{copy.personalCoach}</p>
+                <h2 className="text-xl font-bold leading-snug mt-2">{copy.introTitle}</h2>
+                <p className="text-sm text-white/85 leading-relaxed mt-3">{copy.introDescription}</p>
+              </div>
+            </div>
+
+            <div className="card mt-4 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Store size={17} className="text-primary" />
+                <h3 className="text-body font-semibold text-text">{copy.shopContext}</h3>
+              </div>
+              {shopType || city ? (
+                <div className="flex flex-wrap gap-2">
+                  {shopType && <span className="rounded-full bg-primary/10 text-primary px-3 py-1.5 text-xs font-semibold">{shopType}</span>}
+                  {city && <span className="rounded-full bg-bg text-text-secondary px-3 py-1.5 text-xs font-medium">{city}</span>}
+                </div>
+              ) : (
+                <p className="text-small text-text-secondary">{copy.noProfile}</p>
+              )}
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {[
+                { icon: Store, title: copy.tailored },
+                { icon: MessageCircle, title: copy.natural },
+                { icon: CheckCircle2, title: copy.usefulFeedback },
+                { icon: ShieldCheck, title: copy.ethical },
+              ].map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-primary/8 text-primary flex items-center justify-center shrink-0">
+                      <Icon size={18} />
+                    </div>
+                    <p className="text-small text-text font-medium">{item.title}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-5">
+              <PreviewNotice>{copy.transparency}</PreviewNotice>
+            </div>
+          </div>
+          <div className="px-5 pt-3 pb-4 border-t border-border bg-bg">
+            {isDesignPreview ? (
+              <>
+                <PrimaryAction onClick={openAssessmentPreview}>
+                  {copy.previewButton}
+                  <ArrowRight size={18} />
+                </PrimaryAction>
+                <p className="text-[11px] text-text-secondary text-center leading-relaxed mt-2">{copy.previewHint}</p>
+              </>
+            ) : (
+              <PrimaryAction onClick={openAssessmentPreview}>
+                {copy.startButton}
+                <ArrowRight size={18} />
+              </PrimaryAction>
+            )}
+          </div>
+        </>
+      )}
+
+      {screen === 'assessment-preview' && (
+        <>
+          <BackHeader title={headerTitle} onBack={goBackFromAssessment} />
+          <div className="flex-1 min-h-0 scroll-area px-5 py-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold text-text-secondary tracking-wide">{copy.assessmentHint}</p>
+              <span className="text-xs font-bold text-primary tabular-nums">{assessmentIndex + 1} {copy.of} 3</span>
+            </div>
+            <div className="h-1.5 bg-border rounded-full overflow-hidden mb-5">
+              <div
+                className="h-full bg-primary rounded-full transition-all"
+                style={{ width: ((assessmentIndex + 1) / 3) * 100 + '%' }}
+              />
+            </div>
+
+            <div className="card p-4 border border-primary/15">
+              <p className="text-[11px] font-bold tracking-[0.12em] text-primary mb-3">
+                {copy.question} {assessmentIndex + 1}
+              </p>
+              <h2 className="text-lg font-semibold text-text leading-relaxed">
+                {questions[lang][assessmentIndex]}
+              </h2>
+              <textarea
+                value={answers[assessmentIndex]}
+                onChange={(event) => setAnswers((current) =>
+                  current.map((answer, index) => index === assessmentIndex ? event.target.value : answer)
+                )}
+                rows={5}
+                className="input-field h-auto min-h-[132px] resize-y mt-5 leading-relaxed"
+                placeholder={copy.answerPlaceholder}
+                aria-label={copy.answerPlaceholder}
+              />
+              <div className="flex items-center justify-between gap-3 mt-3">
+                <span className="text-[11px] text-text-secondary">{copy.temporary}</span>
+                <button
+                  type="button"
+                  disabled
+                  title={copy.voiceLater}
+                  aria-label={copy.voiceLater}
+                  className="w-11 h-11 rounded-xl border border-border text-text-secondary/60 flex items-center justify-center shrink-0 disabled:opacity-60"
+                >
+                  <Mic size={19} />
+                </button>
+              </div>
+            </div>
+
+            {isDesignPreview && (
+              <div className="mt-4">
+                <PreviewNotice>{copy.previewHint}</PreviewNotice>
+              </div>
+            )}
+          </div>
+          <div className="px-5 pt-3 pb-4 border-t border-border bg-bg">
+            <PrimaryAction onClick={() => {
+              if (assessmentIndex < 2) {
+                setAssessmentIndex((current) => current + 1);
+              } else {
+                setScreen('simulation-preview');
+              }
+            }}>
+              {assessmentIndex < 2 ? copy.next : copy.seeConversation}
+              <ArrowRight size={18} />
+            </PrimaryAction>
+          </div>
+        </>
+      )}
+
+      {screen === 'simulation-preview' && (
+        <>
+          <BackHeader title={headerTitle} onBack={() => setScreen('assessment-preview')} />
+          <div className="flex items-center justify-between px-5 py-3 border-b border-border/70">
+            <div className="flex items-center gap-2">
+              <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                <Users size={18} />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-text">{copy.customer}</p>
+                <p className="text-[11px] text-text-secondary">{copy.aiSimulation}</p>
+              </div>
+            </div>
+            <span className="rounded-full bg-amber-100 text-amber-800 px-2.5 py-1 text-[10px] font-bold tracking-wide">
+              {copy.designPreview}
+            </span>
+          </div>
+
+          <div className="flex-1 min-h-0 scroll-area px-5 py-5">
+            <div className="max-w-[88%]">
+              <div className="rounded-2xl rounded-tl-sm bg-card border border-border p-4 shadow-sm">
+                <p className="text-sm text-text leading-relaxed">{copy.sampleCustomer}</p>
+              </div>
+              <p className="text-[11px] text-text-secondary mt-2 ml-1">{copy.sampleLabel}</p>
+            </div>
+
+            <div className="mt-7 rounded-2xl border border-dashed border-border bg-card/50 p-4">
+              <div className="flex items-center gap-2 text-text-secondary mb-2">
+                <MessageCircle size={16} />
+                <p className="text-xs font-semibold">{copy.replyPlaceholder}</p>
+              </div>
+              <div className="h-20 rounded-xl bg-bg border border-border/70 px-3 py-3 text-xs text-text-secondary/80">
+                {lang === 'hi' ? 'यहाँ आपकी बातचीत होगी…' : 'Your conversation will appear here…'}
+              </div>
+              <div className="flex items-center justify-between mt-3">
+                <div className="flex items-center gap-2 text-text-secondary/70">
+                  <Mic size={16} />
+                  <Volume2 size={16} />
+                </div>
+                <span className="text-[10px] text-text-secondary">{copy.simulationDisclosure}</span>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <PreviewNotice>{copy.composerHint}</PreviewNotice>
+            </div>
+          </div>
+          <div className="px-5 pt-3 pb-4 border-t border-border bg-bg">
+            <PrimaryAction onClick={() => setScreen('feedback-preview')}>
+              {copy.seeFeedback}
+              <ArrowRight size={18} />
+            </PrimaryAction>
+          </div>
+        </>
+      )}
+
+      {screen === 'feedback-preview' && (
+        <>
+          <BackHeader title={headerTitle} onBack={() => setScreen('simulation-preview')} />
+          <div className="flex-1 min-h-0 scroll-area px-5 py-4">
+            <div className="mb-4">
+              <p className="text-sm text-text-secondary leading-relaxed">{copy.feedbackIntro}</p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="card p-4 border-l-4 border-l-primary">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle2 size={18} className="text-primary" />
+                  <h2 className="text-body font-semibold text-text">{copy.currentFeedback}</h2>
+                </div>
+                <p className="text-sm text-text-secondary leading-relaxed">{copy.currentFeedbackDesc}</p>
+              </div>
+              <div className="card p-4 border-l-4 border-l-amber-500">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles size={18} className="text-amber-600" />
+                  <h2 className="text-body font-semibold text-text">{copy.improveAreas}</h2>
+                </div>
+                <p className="text-sm text-text-secondary leading-relaxed">{copy.improveAreasDesc}</p>
+              </div>
+              <div className="card p-4 border-l-4 border-l-blue-500">
+                <div className="flex items-center gap-2 mb-2">
+                  <BookOpen size={18} className="text-blue-600" />
+                  <h2 className="text-body font-semibold text-text">{copy.howImprove}</h2>
+                </div>
+                <p className="text-sm text-text-secondary leading-relaxed">{copy.howImproveDesc}</p>
+                <div className="mt-3 pt-3 border-t border-border/70 flex items-center gap-2 text-xs text-text-secondary">
+                  <Volume2 size={15} />
+                  <span>{copy.readAloud}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <PreviewNotice>{copy.feedbackNote}</PreviewNotice>
+            </div>
+          </div>
+          <div className="px-5 pt-3 pb-4 border-t border-border bg-bg">
+            <PrimaryAction onClick={() => setScreen('milestone-preview')}>
+              {copy.seeMilestone}
+              <ArrowRight size={18} />
+            </PrimaryAction>
+          </div>
+        </>
+      )}
+
+      {screen === 'milestone-preview' && (
+        <>
+          <BackHeader title={headerTitle} onBack={() => setScreen('feedback-preview')} />
+          <div className="flex-1 min-h-0 scroll-area px-5 py-4">
+            <div className="rounded-2xl bg-primary/5 border border-primary/10 p-4 mb-4">
+              <div className="flex items-center gap-2 text-primary mb-2">
+                <Clock3 size={18} />
+                <p className="text-xs font-bold tracking-wide">{lang === 'hi' ? 'पहला बड़ा पड़ाव' : 'FIRST MILESTONE'}</p>
+              </div>
+              <h2 className="text-lg font-bold text-text">{copy.milestoneTitle}</h2>
+              <p className="text-sm text-text-secondary leading-relaxed mt-2">{copy.milestoneIntro}</p>
+            </div>
+
+            <div className="card p-4 mb-3">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageCircle size={18} className="text-primary" />
+                <h3 className="text-body font-semibold text-text">{copy.milestoneReview}</h3>
+              </div>
+              <p className="text-sm text-text-secondary leading-relaxed">{copy.milestoneReviewDesc}</p>
+            </div>
+
+            <div className="card p-4 mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles size={18} className="text-primary" />
+                <h3 className="text-body font-semibold text-text">{copy.improvement}</h3>
+              </div>
+              <p className="text-sm text-text-secondary leading-relaxed">{copy.improvementDesc}</p>
+            </div>
+
+            <div className="rounded-xl bg-bg border border-dashed border-border p-4 text-center">
+              <div className="w-10 h-10 rounded-full bg-card mx-auto flex items-center justify-center text-text-secondary mb-2">
+                <CheckCircle2 size={20} />
+              </div>
+              <p className="text-small text-text-secondary">{copy.noProgress}</p>
+            </div>
+          </div>
+          <div className="px-5 pt-3 pb-4 border-t border-border bg-bg space-y-2">
+            <PrimaryAction onClick={() => setScreen('home')}>
+              {copy.backToLearn}
+              <ArrowRight size={18} />
+            </PrimaryAction>
+            <button type="button" onClick={() => setScreen('sales-intro')} className="btn-text w-full">
+              {copy.backToCoach}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
