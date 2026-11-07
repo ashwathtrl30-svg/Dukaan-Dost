@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
-import { t } from '../i18n';
 import {
   ArrowLeft,
   ArrowRight,
