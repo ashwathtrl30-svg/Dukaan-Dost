@@ -9,6 +9,9 @@
 --   shop members never gain access to one another's personal feedback/transcripts.
 --
 -- Only text transcripts are stored. There is deliberately no audio/blob column.
+-- After 2026-10-30, newly created public tables may not be exposed by the Data API
+-- automatically. Explicitly add only these public.coach_* tables to the project's
+-- Data API exposed-schema/table configuration after deployment; never expose private.
 -- All authorization is based on auth.uid(), never user-editable JWT user_metadata.
 
 create schema if not exists private;
