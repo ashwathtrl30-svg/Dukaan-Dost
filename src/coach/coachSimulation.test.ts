@@ -81,6 +81,7 @@ test('adaptive selection rotates among the three weakest evidence-backed areas',
     negotiation: 20,
     margin_awareness: 28,
     value_explanation: 35,
+    expectation_setting: 50,
     listening: 80,
     trust: 88,
   };
