@@ -11,6 +11,7 @@ on:
     branches:
       - main
       - feat/voice-ledger-review-and-hindi-numbers
+      - feature/sales-customer-handling-coach
 
 jobs:
   build-and-parser-tests:
@@ -39,8 +40,11 @@ jobs:
           src/types.ts src/supabaseClient.ts
           src/auth/AuthGate.tsx src/auth/AccountRecoveryPanel.tsx
           src/auth/authValidation.ts src/screens/Profile.tsx src/screens/Onboarding.tsx src/screens/Learn.tsx
+          src/coach/types.ts src/coach/coachData.ts src/coach/coachRepository.ts
           src/backup/encryptedBackup.ts src/backup/BackupRestorePanel.tsx src/snapshotSync.ts
           src/backup/encryptedBackup.ts src/backup/BackupRestorePanel.tsx
+      - name: Test Coach identity and persistence input validation
+        run: npx --yes tsx --test src/coach/coachData.test.ts src/coach/coachSchema.test.ts
       - name: Test cloud shop-data snapshot reconciliation
         run: npx --yes tsx --test src/shopDataSnapshot.test.ts
       - name: Test encrypted backup and guarded restore
