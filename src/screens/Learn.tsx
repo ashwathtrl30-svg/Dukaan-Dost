@@ -3,10 +3,11 @@ import { useStore } from '../store';
 import {
   analyseCoachBaseline,
   COACH_BASELINE_QUESTIONS,
+  restoreCoachBaselineAssessment,
   validateCoachBaseline,
 } from '../coach/coachAssessment';
 import type { CoachBaselineObservation } from '../coach/coachAssessment';
-import { isCoachCloudAvailable, saveCoachBaseline } from '../coach/coachRepository';
+import { isCoachCloudAvailable, loadCoachBaseline, saveCoachBaseline } from '../coach/coachRepository';
 import {
   ArrowLeft,
   ArrowRight,
@@ -266,13 +267,41 @@ export function LearnScreen() {
   const [baselineStorageMessage, setBaselineStorageMessage] = useState('');
   const isDesignPreview = import.meta.env.VITE_SALES_COACH_UI_PREVIEW === 'true';
 
-  const openAssessmentPreview = () => {
-    setAssessmentIndex(0);
-    setAnswers(['', '', '']);
-    setBaselineObservation(null);
+  const openAssessmentPreview = async () => {
     setBaselineError('');
-    setBaselineStorageMessage('');
-    setScreen('assessment-preview');
+    if (baselineObservation) {
+      setScreen('assessment-observation');
+      return;
+    }
+
+    setBaselineSaving(true);
+    try {
+      if (isCoachCloudAvailable()) {
+        const existing = await loadCoachBaseline();
+        if (existing) {
+          const restored = restoreCoachBaselineAssessment(existing.assessment_data, lang);
+          if (!restored.ok) throw new Error(restored.error);
+          setAnswers(COACH_BASELINE_QUESTIONS.map((question) =>
+            restored.value.answers.find((answer) => answer.questionId === question.id)?.answer ?? ''
+          ));
+          setBaselineObservation(restored.value.observation);
+          setBaselineStorageMessage(copy.baselineSaved);
+          setScreen('assessment-observation');
+          return;
+        }
+      }
+
+      setAssessmentIndex(0);
+      setAnswers(['', '', '']);
+      setBaselineObservation(null);
+      setBaselineStorageMessage('');
+      setScreen('assessment-preview');
+    } catch (error) {
+      console.error('Existing Coach baseline could not be loaded.', error);
+      setBaselineError(copy.saveFailed);
+    } finally {
+      setBaselineSaving(false);
+    }
   };
 
   const handleAssessmentContinue = async () => {
@@ -307,8 +336,10 @@ export function LearnScreen() {
     setBaselineSaving(true);
     try {
       const cloudAvailable = isCoachCloudAvailable();
+      let finalObservation = observation.value;
+      let finalAnswers = validated.value;
       if (cloudAvailable) {
-        await saveCoachBaseline(
+        const saved = await saveCoachBaseline(
           validated.value,
           {
             shopName: state.shopProfile.shopName,
@@ -318,8 +349,15 @@ export function LearnScreen() {
           },
           observation.value,
         );
+        const restored = restoreCoachBaselineAssessment(saved.assessment_data, lang);
+        if (!restored.ok) throw new Error(restored.error);
+        finalObservation = restored.value.observation;
+        finalAnswers = restored.value.answers;
       }
-      setBaselineObservation(observation.value);
+      setAnswers(COACH_BASELINE_QUESTIONS.map((question) =>
+        finalAnswers.find((answer) => answer.questionId === question.id)?.answer ?? ''
+      ));
+      setBaselineObservation(finalObservation);
       setBaselineStorageMessage(cloudAvailable ? copy.baselineSaved : copy.previewNotSaved);
       setScreen('assessment-observation');
     } catch (error) {
@@ -508,6 +546,7 @@ export function LearnScreen() {
             </div>
           </div>
           <div className="px-5 pt-3 pb-4 border-t border-border bg-bg">
+            {baselineError && <p className="text-xs text-red-600 mb-2" role="alert">{baselineError}</p>}
             {isDesignPreview ? (
               <>
                 <PrimaryAction onClick={openAssessmentPreview}>
@@ -595,10 +634,7 @@ export function LearnScreen() {
         <>
           <BackHeader
             title={copy.observationTitle}
-            onBack={() => {
-              setAssessmentIndex(2);
-              setScreen('assessment-preview');
-            }}
+            onBack={() => setScreen('sales-intro')}
           />
           <div className="flex-1 min-h-0 scroll-area px-5 py-4">
             <div className="rounded-2xl border border-primary/15 bg-primary/5 p-5">
