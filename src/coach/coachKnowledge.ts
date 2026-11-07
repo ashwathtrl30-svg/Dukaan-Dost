@@ -665,7 +665,6 @@ const CATEGORY_ALIASES: Readonly<Record<string, CoachKnowledgeCategory>> = {
   sweets: 'sweet',
   mithai: 'sweet',
   sweetshop: 'sweet',
-  mithai: 'sweet',
   mithaiShop: 'sweet',
   mithaishop: 'sweet',
   tailor: 'tailor',
