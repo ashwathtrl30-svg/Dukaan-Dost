@@ -75,7 +75,8 @@ create table if not exists public.coach_sessions (
     (status = 'in_progress' and completed_at is null) or
     (status in ('completed', 'abandoned') and completed_at is not null)
   ),
-  constraint coach_session_id_user_unique unique (id, user_id)
+  constraint coach_session_id_user_unique unique (id, user_id),
+  constraint coach_session_id_user_workspace_unique unique (id, user_id, workspace_id)
 );
 
 create table if not exists public.coach_messages (
@@ -110,8 +111,8 @@ create table if not exists public.coach_assessments (
   created_at timestamptz not null default now(),
   constraint coach_assessment_owner_key_unique unique (user_id, assessment_key),
   constraint coach_assessment_session_owner_fk
-    foreign key (session_id, user_id)
-    references public.coach_sessions(id, user_id)
+    foreign key (session_id, user_id, workspace_id)
+    references public.coach_sessions(id, user_id, workspace_id)
     on delete cascade,
   constraint coach_assessment_shape check (
     (assessment_type = 'baseline' and session_id is null and milestone_number is null) or
