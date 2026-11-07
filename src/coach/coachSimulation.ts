@@ -7,7 +7,6 @@ import {
 import type { CoachArchetypeId, CoachKnowledgeCategory } from './coachKnowledge';
 import type {
   CoachLanguage,
-  CoachLearningState,
   CoachMessageSpeaker,
   CoachSessionOutcome,
 } from './types';
@@ -30,6 +29,7 @@ export interface CoachSimulationSelectionInput {
   focusAreas?: readonly string[];
   dimensionSignals?: Readonly<Record<string, number>>;
   recentPatternIds?: readonly string[];
+  baselineSignalIds?: readonly string[];
   /** Server-only reconstruction from the archetype stored in coach_sessions.scenario_code. */
   archetypeOverride?: CoachArchetypeId;
 }
@@ -43,6 +43,7 @@ export interface CoachSimulationPlan {
   difficulty: CoachScenarioDifficulty;
   selectedDimensions: string[];
   recentPatternIds: string[];
+  baselineSignalIds: string[];
   preferredLanguage: CoachLanguage;
   city: string | null;
   state: string | null;
@@ -102,6 +103,22 @@ const ARCHETYPE_DIMENSIONS: Readonly<Record<CoachArchetypeId, readonly string[]>
   impulse: ['needs_discovery', 'transparency', 'customer_autonomy'],
   dissatisfied: ['complaint_resolution', 'listening', 'problem_solving'],
 };
+
+const ALLOWED_BASELINE_SIGNAL_IDS = new Set([
+  'needs_discovery',
+  'value_explanation',
+  'margin_awareness',
+  'listening_first',
+  'fact_checking',
+  'solution_follow_through',
+  'reflective_learning',
+  'permission_based_follow_up',
+  'respectful_exit',
+]);
+
+function safeBaselineSignals(values: readonly string[] = []): string[] {
+  return [...new Set(values.filter((value) => ALLOWED_BASELINE_SIGNAL_IDS.has(value)))].slice(0, 9);
+}
 
 const DIFFICULTY_BY_FIRST_TEN: readonly CoachScenarioDifficulty[] = [
   'approachable',
@@ -295,6 +312,7 @@ export function selectCoachSimulationPlan(
     difficulty: resolveDifficulty(sessionNumber, input.dimensionSignals),
     selectedDimensions: adaptive.dimensions,
     recentPatternIds,
+    baselineSignalIds: safeBaselineSignals(input.baselineSignalIds),
     preferredLanguage: language,
     city,
     state,
@@ -422,6 +440,11 @@ export function buildCoachSimulationSystemPrompt(plan: CoachSimulationPlan): str
     'Difficulty guidance: ' + difficultyText[plan.difficulty],
     'The normal practice length is about six shopkeeper replies. A natural earlier ending is allowed when the matter is genuinely resolved. Never pad a finished conversation. The hard maximum is eight shopkeeper replies, including clarifying questions.',
     'At the hard maximum, end naturally and return outcome "unclear" if the customer decision is still unresolved.',
+    '',
+    'EARLY STARTING ASSESSMENT SIGNALS — PROVISIONAL ONLY',
+    plan.baselineSignalIds.length
+      ? 'The shopkeeper’s three short starting answers contained these early text signals: ' + plan.baselineSignalIds.join(', ') + '. These are incomplete hints, not proven abilities or stable traits. Use them only to create varied, fair opportunities to observe the approach; do not assume strength or weakness.'
+      : 'There is not enough reliable starting-assessment evidence to personalise from it. Do not invent strengths or weaknesses.',
     '',
     'PRIVATE CUSTOMER DESIGN NOTES — DO NOT DISCLOSE',
     'Customer signals: ' + plan.customerBehaviourNotes.join(' '),
