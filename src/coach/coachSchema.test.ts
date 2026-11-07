@@ -44,7 +44,7 @@ test('private workspace authorization helpers use auth.uid and a fixed search pa
   assert.doesNotMatch(schema, /grant execute on function private\.[^;]+ to anon/i);
 });
 
-test('individual profiles, sessions, messages, assessments and progress are tied to Auth users', () => {
+test('shared shop context lives at workspace level while Coach profiles remain individual', () => {\n  const workspaceStart = schema.indexOf('create table if not exists public.coach_workspaces');\n  const profileStart = schema.indexOf('create table if not exists public.coach_profiles');\n  const workspaceBlock = schema.slice(workspaceStart, schema.indexOf(');', workspaceStart) + 2);\n  const profileBlock = schema.slice(profileStart, schema.indexOf(');', profileStart) + 2);\n  assert.match(workspaceBlock, /shop_name text/i);\n  assert.match(workspaceBlock, /shop_type text/i);\n  assert.match(workspaceBlock, /city text/i);\n  assert.doesNotMatch(profileBlock, /shop_name text|shop_type text|city text/i);\n});\n\ntest('individual profiles, sessions, messages, assessments and progress are tied to Auth users', () => {
   for (const table of ['coach_profiles', 'coach_sessions', 'coach_messages', 'coach_assessments', 'coach_learning_profiles']) {
     const start = schema.indexOf('create table if not exists public.' + table);
     assert.notEqual(start, -1, table + ' table exists');
