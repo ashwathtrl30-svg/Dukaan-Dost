@@ -45,6 +45,8 @@ jobs:
           src/backup/encryptedBackup.ts src/backup/BackupRestorePanel.tsx
       - name: Test Coach identity and persistence input validation
         run: npx --yes tsx --test src/coach/coachData.test.ts src/coach/coachSchema.test.ts
+      - name: Test Coach customer simulation API authentication and preview isolation
+        run: npx --yes tsx --test api/coach-customer.test.ts
       - name: Test Indian retail Coach knowledge engine and safety boundaries
         run: npx --yes tsx --test src/coach/coachKnowledge.test.ts src/coach/coachAssessment.test.ts src/coach/coachSimulation.test.ts
       - name: Test cloud shop-data snapshot reconciliation
