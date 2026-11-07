@@ -756,7 +756,7 @@ export function retrieveCoachKnowledge(
 
   const ranked = COACH_KNOWLEDGE_DOCUMENTS
     .filter((document) => document.categoryIds.length === 0 || document.categoryIds.includes(category))
-    .filter((document) => !archetypeId || document.archetypeIds.length === 0 || document.archetypeIds.includes(archetypeId))
+    .filter((document) => !archetypeId || document.categoryIds.length > 0 || document.archetypeIds.length === 0 || document.archetypeIds.includes(archetypeId))
     .map((document) => {
       let score = document.categoryIds.includes(category) ? 8 : 1;
       if (archetypeId && document.archetypeIds.includes(archetypeId)) score += 7;
