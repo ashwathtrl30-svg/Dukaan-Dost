@@ -416,6 +416,7 @@ export function LearnScreen() {
   const startCoachSimulation = async () => {
     setScreen('simulation-preview');
     setSimulationError('');
+    setSimulationSessionId(null);
     setSimulationBusy(true);
     setSimulationMessages([]);
     setSimulationReply('');
