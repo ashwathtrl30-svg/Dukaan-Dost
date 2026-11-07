@@ -86,7 +86,7 @@ async function getOrCreateWorkspace(
     const businessContext = draft.businessContext === undefined
       ? undefined
       : normalizeAssessmentData(draft.businessContext);
-    if (businessContext && !businessContext.ok) throw new Error(businessContext.error);
+    if (businessContext && businessContext.ok === false) throw new Error(businessContext.error);
     if (shopName !== undefined) updates.shop_name = shopName;
     if (shopType !== undefined) updates.shop_type = shopType;
     if (city !== undefined) updates.city = city;
@@ -113,7 +113,7 @@ async function getOrCreateWorkspace(
         ? {}
         : (() => {
             const normalized = normalizeAssessmentData(draft.businessContext);
-            if (!normalized.ok) throw new Error(normalized.error);
+            if (normalized.ok === false) throw new Error(normalized.error);
             return normalized.value;
           })(),
     })
@@ -240,7 +240,7 @@ export async function updateCoachWorkspaceContext(
   const businessContext = draft.businessContext === undefined
     ? undefined
     : normalizeAssessmentData(draft.businessContext);
-  if (businessContext && !businessContext.ok) throw new Error(businessContext.error);
+  if (businessContext && businessContext.ok === false) throw new Error(businessContext.error);
   if (shopName !== undefined) updates.shop_name = shopName;
   if (shopType !== undefined) updates.shop_type = shopType;
   if (city !== undefined) updates.city = city;
@@ -262,7 +262,7 @@ export async function saveCoachBaseline(
   input: unknown,
 ): Promise<CoachAssessmentRecord> {
   const normalized = normalizeBaselineAnswers(input);
-  if (!normalized.ok) throw new Error(normalized.error);
+  if (normalized.ok === false) throw new Error(normalized.error);
 
   const client = requireCoachClient();
   const profile = await loadOrCreateCoachProfile();
@@ -359,7 +359,7 @@ export async function appendCoachMessage(
   }
 
   const normalized = normalizeCoachText(input.content);
-  if (!normalized.ok) throw new Error(normalized.error);
+  if (normalized.ok === false) throw new Error(normalized.error);
 
   const client = requireCoachClient();
   const userId = await requireCurrentUserId();
@@ -411,7 +411,7 @@ async function saveAssessment(
   options: { sessionId?: string; milestoneNumber?: number } = {},
 ): Promise<CoachAssessmentRecord> {
   const normalized = normalizeAssessmentData(assessmentData);
-  if (!normalized.ok) throw new Error(normalized.error);
+  if (normalized.ok === false) throw new Error(normalized.error);
 
   const client = requireCoachClient();
   const profile = await loadOrCreateCoachProfile();
@@ -508,7 +508,7 @@ function normalizeLearningState(value: unknown): CoachLearningState {
   }
 
   const normalized = normalizeAssessmentData(value);
-  if (!normalized.ok) throw new Error(normalized.error);
+  if (normalized.ok === false) throw new Error(normalized.error);
   return normalized.value as unknown as CoachLearningState;
 }
 
