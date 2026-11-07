@@ -1,6 +1,13 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
 import {
+  analyseCoachBaseline,
+  COACH_BASELINE_QUESTIONS,
+  validateCoachBaseline,
+} from '../coach/coachAssessment';
+import type { CoachBaselineObservation } from '../coach/coachAssessment';
+import { isCoachCloudAvailable, saveCoachBaseline } from '../coach/coachRepository';
+import {
   ArrowLeft,
   ArrowRight,
   BookOpen,
@@ -22,22 +29,10 @@ type CoachScreen =
   | 'home'
   | 'sales-intro'
   | 'assessment-preview'
+  | 'assessment-observation'
   | 'simulation-preview'
   | 'feedback-preview'
   | 'milestone-preview';
-
-const questions = {
-  en: [
-    'A customer says, “This is too expensive.” What do you say?',
-    'A customer is angry about something they bought from you last week. What do you do?',
-    'You lose a sale you were sure you had won. What do you do next?',
-  ],
-  hi: [
-    'एक ग्राहक कहता है, “यह बहुत महँगा है।” आप क्या कहेंगे?',
-    'एक ग्राहक पिछले हफ़्ते आपसे खरीदी हुई चीज़ को लेकर नाराज़ है। आप क्या करेंगे?',
-    'आपकी एक ऐसी बिक्री नहीं हो पाती जिसके होने का आपको पूरा भरोसा था। अब आप क्या करेंगे?',
-  ],
-};
 
 const coachCopy = {
   en: {
@@ -63,7 +58,7 @@ const coachCopy = {
     transparency: 'You will always know when you are speaking with an AI simulation. Practice conversations never create real sales, expenses, stock changes or udhaar entries.',
     previewButton: 'Preview the coaching experience',
     startButton: 'Start your coaching journey',
-    previewHint: 'This is a screen walkthrough only. Assessment, AI replies and saved progress will be connected in later phases.',
+    previewHint: 'The three-question starting assessment is active in this preview. Live AI customer conversations and account-level progress will be connected in later phases.',
     assessment: 'Getting to know your approach',
     assessmentHint: 'Three short situations help establish your starting point.',
     question: 'QUESTION',
@@ -72,7 +67,17 @@ const coachCopy = {
     voiceLater: 'Voice input will be connected in a later phase',
     continue: 'Continue',
     seeConversation: 'See the conversation screen',
-    temporary: 'Your text stays only in this temporary preview and is not saved or assessed.',
+    temporary: 'Answers in this preview are held only while this screen is open; they are not uploaded to an account.',
+    observationTitle: 'Your starting observation',
+    baselineComplete: 'STARTING POINT',
+    observationIntro: 'This is an early reading of the three answers you gave—not a score or a fixed judgement.',
+    observationDisclaimer: 'These are only early signals, not a score or a fixed judgement. Your profile will develop as you practise.',
+    previewNotSaved: 'This development preview has no Coach database connected. Your answers have not been saved to an account.',
+    baselineSaved: 'Your three answers and starting observation have been saved to your individual Coach profile.',
+    tryConversation: 'Continue to the conversation preview',
+    answerRequired: 'Please write an answer before continuing.',
+    saveFailed: 'Your answers could not be saved. Please try again.',
+    saving: 'Saving your starting point…',
     simulation: 'Customer conversation',
     sampleLabel: 'ILLUSTRATIVE CUSTOMER MESSAGE',
     sampleCustomer: 'I saw a similar product for less at another shop. What makes this one worth the price?',
@@ -134,7 +139,7 @@ const coachCopy = {
     transparency: 'आपको हमेशा पता रहेगा कि आप AI सिमुलेशन से बात कर रहे हैं। अभ्यास से असली बिक्री, खर्च, स्टॉक या उधार की एंट्री नहीं बनेगी।',
     previewButton: 'कोच का अनुभव देखें',
     startButton: 'अपना अभ्यास शुरू करें',
-    previewHint: 'यह अभी केवल स्क्रीन का डेमो है। शुरुआती सवाल, AI के जवाब और सेव की गई प्रगति अगले चरणों में जुड़ेंगे।',
+    previewHint: 'तीन शुरुआती सवालों वाला आकलन इस डेमो में काम करता है। असली AI ग्राहक बातचीत और अकाउंट में सेव प्रगति अगले चरणों में जुड़ेगी।',
     assessment: 'आपका तरीका समझते हैं',
     assessmentHint: 'तीन छोटी परिस्थितियाँ आपकी शुरुआती सोच समझने में मदद करेंगी।',
     question: 'सवाल',
@@ -143,7 +148,17 @@ const coachCopy = {
     voiceLater: 'बोलकर जवाब देने की सुविधा अगले चरण में जुड़ेगी',
     continue: 'आगे बढ़ें',
     seeConversation: 'बातचीत की स्क्रीन देखें',
-    temporary: 'आपका लिखा जवाब केवल इस अस्थायी डेमो में रहेगा। इसे सेव या जाँचा नहीं जाएगा।',
+    temporary: 'इस डेमो में जवाब केवल स्क्रीन खुले रहने तक रहेंगे; वे किसी अकाउंट पर अपलोड नहीं होंगे।',
+    observationTitle: 'आपकी शुरुआती समझ',
+    baselineComplete: 'शुरुआती स्थिति',
+    observationIntro: 'यह आपके तीन जवाबों की शुरुआती समझ है—कोई स्कोर या पक्का फैसला नहीं।',
+    observationDisclaimer: 'ये केवल शुरुआती संकेत हैं, कोई स्कोर या पक्का फैसला नहीं। अभ्यास के साथ आपकी समझ बेहतर होगी।',
+    previewNotSaved: 'इस डेवलपमेंट डेमो में Coach डेटाबेस जुड़ा नहीं है। आपके जवाब किसी अकाउंट में सेव नहीं हुए हैं।',
+    baselineSaved: 'आपके तीनों जवाब और शुरुआती समझ आपके निजी Coach प्रोफ़ाइल में सेव हो गए हैं।',
+    tryConversation: 'बातचीत का डेमो देखें',
+    answerRequired: 'आगे बढ़ने से पहले अपना जवाब लिखें।',
+    saveFailed: 'आपके जवाब सेव नहीं हो पाए। कृपया फिर कोशिश करें।',
+    saving: 'आपकी शुरुआती जानकारी सेव हो रही है…',
     simulation: 'ग्राहक से बातचीत',
     sampleLabel: 'उदाहरण के लिए ग्राहक का संदेश',
     sampleCustomer: 'मुझे यही चीज़ दूसरी दुकान पर कम भाव में मिली। मैं आपसे ही क्यों खरीदूँ?',
@@ -228,9 +243,9 @@ function PreviewNotice({ children }: { children: React.ReactNode }) {
   );
 }
 
-function PrimaryAction({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+function PrimaryAction({ children, onClick, disabled = false }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
   return (
-    <button type="button" onClick={onClick} className="btn-primary w-full">
+    <button type="button" onClick={onClick} disabled={disabled} className="btn-primary w-full">
       {children}
     </button>
   );
@@ -245,11 +260,74 @@ export function LearnScreen() {
   const [screen, setScreen] = useState<CoachScreen>('home');
   const [assessmentIndex, setAssessmentIndex] = useState(0);
   const [answers, setAnswers] = useState(['', '', '']);
+  const [baselineObservation, setBaselineObservation] = useState<CoachBaselineObservation | null>(null);
+  const [baselineError, setBaselineError] = useState('');
+  const [baselineSaving, setBaselineSaving] = useState(false);
+  const [baselineStorageMessage, setBaselineStorageMessage] = useState('');
   const isDesignPreview = import.meta.env.VITE_SALES_COACH_UI_PREVIEW === 'true';
 
   const openAssessmentPreview = () => {
     setAssessmentIndex(0);
+    setAnswers(['', '', '']);
+    setBaselineObservation(null);
+    setBaselineError('');
+    setBaselineStorageMessage('');
     setScreen('assessment-preview');
+  };
+
+  const handleAssessmentContinue = async () => {
+    if (!answers[assessmentIndex]?.trim()) {
+      setBaselineError(copy.answerRequired);
+      return;
+    }
+    setBaselineError('');
+
+    if (assessmentIndex < 2) {
+      setAssessmentIndex((current) => current + 1);
+      return;
+    }
+
+    const baselineAnswers = COACH_BASELINE_QUESTIONS.map((question, index) => ({
+      questionId: question.id,
+      answer: answers[index],
+    }));
+    const validated = validateCoachBaseline(baselineAnswers);
+    if (!validated.ok) {
+      setBaselineError(validated.error);
+      if (typeof validated.questionIndex === 'number') setAssessmentIndex(validated.questionIndex);
+      return;
+    }
+
+    const observation = analyseCoachBaseline(validated.value, lang);
+    if (!observation.ok) {
+      setBaselineError(observation.error);
+      return;
+    }
+
+    setBaselineSaving(true);
+    try {
+      const cloudAvailable = isCoachCloudAvailable();
+      if (cloudAvailable) {
+        await saveCoachBaseline(
+          validated.value,
+          {
+            shopName: state.shopProfile.shopName,
+            shopType: state.shopProfile.shopType,
+            city: state.shopProfile.city,
+            preferredLanguage: lang,
+          },
+          observation.value,
+        );
+      }
+      setBaselineObservation(observation.value);
+      setBaselineStorageMessage(cloudAvailable ? copy.baselineSaved : copy.previewNotSaved);
+      setScreen('assessment-observation');
+    } catch (error) {
+      console.error('Coach baseline could not be saved.', error);
+      setBaselineError(copy.saveFailed);
+    } finally {
+      setBaselineSaving(false);
+    }
   };
 
   const goBackFromAssessment = () => {
@@ -262,6 +340,7 @@ export function LearnScreen() {
 
   const headerTitle =
     screen === 'assessment-preview' ? copy.assessment :
+    screen === 'assessment-observation' ? copy.observationTitle :
     screen === 'simulation-preview' ? copy.simulation :
     screen === 'feedback-preview' ? copy.feedbackTitle :
     screen === 'milestone-preview' ? copy.milestoneTitle :
@@ -467,18 +546,22 @@ export function LearnScreen() {
                 {copy.question} {assessmentIndex + 1}
               </p>
               <h2 className="text-lg font-semibold text-text leading-relaxed">
-                {questions[lang][assessmentIndex]}
+                {COACH_BASELINE_QUESTIONS[assessmentIndex].prompt[lang]}
               </h2>
+              <p className="text-xs text-text-secondary mt-2 leading-relaxed">{COACH_BASELINE_QUESTIONS[assessmentIndex].helper[lang]}</p>
               <textarea
                 value={answers[assessmentIndex]}
                 onChange={(event) => setAnswers((current) =>
                   current.map((answer, index) => index === assessmentIndex ? event.target.value : answer)
                 )}
                 rows={5}
+                maxLength={4000}
+                aria-invalid={Boolean(baselineError)}
                 className="input-field h-auto min-h-[132px] resize-y mt-5 leading-relaxed"
                 placeholder={copy.answerPlaceholder}
                 aria-label={copy.answerPlaceholder}
               />
+              {baselineError && <p className="text-xs text-red-600 mt-3" role="alert">{baselineError}</p>}
               <div className="flex items-center justify-between gap-3 mt-3">
                 <span className="text-[11px] text-text-secondary">{copy.temporary}</span>
                 <button
@@ -500,14 +583,45 @@ export function LearnScreen() {
             )}
           </div>
           <div className="px-5 pt-3 pb-4 border-t border-border bg-bg">
-            <PrimaryAction onClick={() => {
-              if (assessmentIndex < 2) {
-                setAssessmentIndex((current) => current + 1);
-              } else {
-                setScreen('simulation-preview');
-              }
-            }}>
-              {assessmentIndex < 2 ? copy.next : copy.seeConversation}
+            <PrimaryAction onClick={() => void handleAssessmentContinue()} disabled={baselineSaving}>
+              {baselineSaving ? copy.saving : assessmentIndex < 2 ? copy.next : copy.continue}
+              <ArrowRight size={18} />
+            </PrimaryAction>
+          </div>
+        </>
+      )}
+
+      {screen === 'assessment-observation' && (
+        <>
+          <BackHeader
+            title={copy.observationTitle}
+            onBack={() => {
+              setAssessmentIndex(2);
+              setScreen('assessment-preview');
+            }}
+          />
+          <div className="flex-1 min-h-0 scroll-area px-5 py-4">
+            <div className="rounded-2xl border border-primary/15 bg-primary/5 p-5">
+              <div className="flex items-center gap-2 text-primary mb-3">
+                <Sparkles size={18} />
+                <p className="text-xs font-bold tracking-wide">{copy.baselineComplete}</p>
+              </div>
+              <h2 className="text-lg font-semibold text-text leading-relaxed">{copy.observationTitle}</h2>
+              <p className="text-sm text-text-secondary leading-relaxed mt-2">{copy.observationIntro}</p>
+              <p className="text-sm text-text leading-relaxed mt-4">
+                {baselineObservation?.text ?? copy.observationIntro}
+              </p>
+              <p className="text-xs text-text-secondary leading-relaxed mt-3">
+                {baselineObservation?.disclaimer ?? copy.observationDisclaimer}
+              </p>
+            </div>
+            <div className="mt-4">
+              <PreviewNotice>{baselineStorageMessage || copy.previewNotSaved}</PreviewNotice>
+            </div>
+          </div>
+          <div className="px-5 pt-3 pb-4 border-t border-border bg-bg">
+            <PrimaryAction onClick={() => setScreen('simulation-preview')}>
+              {copy.tryConversation}
               <ArrowRight size={18} />
             </PrimaryAction>
           </div>
@@ -516,7 +630,7 @@ export function LearnScreen() {
 
       {screen === 'simulation-preview' && (
         <>
-          <BackHeader title={headerTitle} onBack={() => setScreen('assessment-preview')} />
+          <BackHeader title={headerTitle} onBack={() => setScreen('assessment-observation')} />
           <div className="flex items-center justify-between px-5 py-3 border-b border-border/70">
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center">
