@@ -39,7 +39,7 @@ create table if not exists public.coach_workspace_memberships (
   workspace_id uuid not null references public.coach_workspaces(id) on delete cascade,
   user_id uuid not null unique references auth.users(id) on delete cascade,
   role text not null default 'staff' check (role = 'staff'),
-  status text not null default 'active' check (status in ('active', 'invited', 'suspended')),
+  status text not null default 'invited' check (status in ('active', 'invited', 'suspended')),
   invited_by uuid not null references auth.users(id) on delete cascade,
   created_at timestamptz not null default now(),
   primary key (workspace_id, user_id),
