@@ -30,6 +30,8 @@ export interface CoachSimulationSelectionInput {
   focusAreas?: readonly string[];
   dimensionSignals?: Readonly<Record<string, number>>;
   recentPatternIds?: readonly string[];
+  /** Server-only reconstruction from the archetype stored in coach_sessions.scenario_code. */
+  archetypeOverride?: CoachArchetypeId;
 }
 
 export interface CoachSimulationPlan {
@@ -251,7 +253,9 @@ export function selectCoachSimulationPlan(
   const language: CoachLanguage = input.language === 'hi' ? 'hi' : 'en';
   const recentPatternIds = safePatternIds(input.recentPatternIds);
   const firstTen = sessionNumber <= FIRST_TEN_ARCHETYPE_ORDER.length;
-  const adaptive = firstTen
+  const adaptive = input.archetypeOverride
+    ? { archetypeId: input.archetypeOverride, dimensions: [...ARCHETYPE_DIMENSIONS[input.archetypeOverride]] }
+    : firstTen
     ? {
         archetypeId: FIRST_TEN_ARCHETYPE_ORDER[sessionNumber - 1],
         dimensions: [...ARCHETYPE_DIMENSIONS[FIRST_TEN_ARCHETYPE_ORDER[sessionNumber - 1]]],
