@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useStore } from '../store';
+import { supabase } from '../supabaseClient';
 import {
   analyseCoachBaseline,
   COACH_BASELINE_QUESTIONS,
@@ -80,12 +81,21 @@ const coachCopy = {
     saveFailed: 'Your answers could not be saved. Please try again.',
     saving: 'Saving your starting point…',
     simulation: 'Customer conversation',
-    sampleLabel: 'ILLUSTRATIVE CUSTOMER MESSAGE',
-    sampleCustomer: 'I saw a similar product for less at another shop. What makes this one worth the price?',
     customer: 'Customer',
     aiSimulation: 'AI simulation',
-    replyPlaceholder: 'Your reply will appear here...',
-    composerHint: 'The live customer engine, voice conversation and read-aloud controls will be connected in later phases.',
+    replyPlaceholder: 'Write your reply to the customer…',
+    livePreviewUnavailable: 'Live AI practice is intentionally disabled in this isolated preview. No Coach database or AI secret is connected, and no session was created.',
+    startPractice: 'Start customer practice',
+    sendReply: 'Send reply',
+    finishPractice: 'End this practice',
+    sessionStarting: 'Preparing your customer…',
+    customerThinking: 'Customer is replying…',
+    practiceCompleted: 'This customer conversation is complete. Detailed feedback will be added in the feedback phase.',
+    practiceAbandoned: 'This practice was ended before completion. It will not produce completed-session feedback.',
+    replyRequired: 'Write a reply before sending.',
+    startFailed: 'The customer practice could not be started. Please try again.',
+    replyFailed: 'Your reply could not be sent. It has not been added twice. Please retry.',
+    simulationDisclosure: 'You are speaking with an AI customer in a practice simulation. No real sales, expenses, stock or udhaar entries are created.',
     seeFeedback: 'See the feedback screen',
     feedbackTitle: 'Feedback that helps you improve',
     feedbackIntro: 'After a completed conversation, your coach will review what you actually said and did.',
@@ -161,12 +171,21 @@ const coachCopy = {
     saveFailed: 'आपके जवाब सेव नहीं हो पाए। कृपया फिर कोशिश करें।',
     saving: 'आपकी शुरुआती जानकारी सेव हो रही है…',
     simulation: 'ग्राहक से बातचीत',
-    sampleLabel: 'उदाहरण के लिए ग्राहक का संदेश',
-    sampleCustomer: 'मुझे यही चीज़ दूसरी दुकान पर कम भाव में मिली। मैं आपसे ही क्यों खरीदूँ?',
     customer: 'ग्राहक',
     aiSimulation: 'AI सिमुलेशन',
-    replyPlaceholder: 'आपका जवाब यहाँ दिखाई देगा...',
-    composerHint: 'असली ग्राहक इंजन, बोलकर बातचीत और जवाब सुनने की सुविधा अगले चरणों में जुड़ेगी।',
+    replyPlaceholder: 'ग्राहक को अपना जवाब लिखें…',
+    livePreviewUnavailable: 'इस अलग डेवलपमेंट डेमो में AI अभ्यास बंद है। Coach डेटाबेस या AI सीक्रेट जुड़ा नहीं है, इसलिए कोई सेशन नहीं बनाया गया।',
+    startPractice: 'ग्राहक से अभ्यास शुरू करें',
+    sendReply: 'जवाब भेजें',
+    finishPractice: 'अभ्यास समाप्त करें',
+    sessionStarting: 'ग्राहक तैयार हो रहा है…',
+    customerThinking: 'ग्राहक जवाब दे रहा है…',
+    practiceCompleted: 'यह ग्राहक बातचीत पूरी हो गई। विस्तृत फीडबैक अगले फीडबैक चरण में जुड़ेगा।',
+    practiceAbandoned: 'यह अभ्यास पूरा होने से पहले समाप्त किया गया। इससे पूरा सेशन वाला फीडबैक नहीं बनेगा।',
+    replyRequired: 'भेजने से पहले अपना जवाब लिखें।',
+    startFailed: 'ग्राहक अभ्यास शुरू नहीं हो पाया। फिर कोशिश करें।',
+    replyFailed: 'आपका जवाब नहीं भेजा जा सका। इसे दोबारा सेव नहीं किया गया है। फिर कोशिश करें।',
+    simulationDisclosure: 'आप एक AI ग्राहक से अभ्यास कर रहे हैं। इससे असली बिक्री, खर्च, स्टॉक या उधार की एंट्री नहीं बनेगी।',
     seeFeedback: 'फीडबैक की स्क्रीन देखें',
     feedbackTitle: 'ऐसी सलाह जो आपको बेहतर बनाए',
     feedbackIntro: 'बातचीत पूरी होने पर आपका कोच आपके असली जवाब और फैसलों को समझेगा।',
@@ -265,6 +284,13 @@ export function LearnScreen() {
   const [baselineError, setBaselineError] = useState('');
   const [baselineSaving, setBaselineSaving] = useState(false);
   const [baselineStorageMessage, setBaselineStorageMessage] = useState('');
+  const [simulationSessionId, setSimulationSessionId] = useState<string | null>(null);
+  const [simulationMessages, setSimulationMessages] = useState<Array<{ speaker: 'customer' | 'shopkeeper'; content: string }>>([]);
+  const [simulationReply, setSimulationReply] = useState('');
+  const [simulationBusy, setSimulationBusy] = useState(false);
+  const [simulationError, setSimulationError] = useState('');
+  const [simulationStatus, setSimulationStatus] = useState<'idle' | 'continue' | 'completed' | 'abandoned'>('idle');
+  const [simulationOutcome, setSimulationOutcome] = useState<string | null>(null);
   const isDesignPreview = import.meta.env.VITE_SALES_COACH_UI_PREVIEW === 'true';
 
   const openAssessmentPreview = async () => {
@@ -365,6 +391,110 @@ export function LearnScreen() {
       setBaselineError(copy.saveFailed);
     } finally {
       setBaselineSaving(false);
+    }
+  };
+
+  const callCoachSimulation = async (payload: Record<string, unknown>) => {
+    if (!supabase) throw new Error(copy.livePreviewUnavailable);
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session?.access_token) throw new Error(copy.livePreviewUnavailable);
+    const response = await fetch('/api/coach-customer', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + data.session.access_token,
+      },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const failure = new Error(typeof result?.error === 'string' ? result.error : copy.startFailed) as Error & { code?: string };
+      failure.code = typeof result?.code === 'string' ? result.code : undefined;
+      throw failure;
+    }
+    return result as Record<string, any>;
+  };
+
+  const startCoachSimulation = async () => {
+    setScreen('simulation-preview');
+    setSimulationError('');
+    setSimulationBusy(true);
+    setSimulationMessages([]);
+    setSimulationReply('');
+    setSimulationStatus('idle');
+    setSimulationOutcome(null);
+    try {
+      let result: Record<string, any>;
+      try {
+        result = await callCoachSimulation({ action: 'start' });
+      } catch (error) {
+        if ((error as Error & { code?: string }).code !== 'COACH_SESSION_EXISTS') throw error;
+        result = await callCoachSimulation({ action: 'resume' });
+      }
+      setSimulationSessionId(result.sessionId);
+      const messages = Array.isArray(result.conversation)
+        ? result.conversation
+        : [{ speaker: 'customer', content: result.customerMessage }];
+      setSimulationMessages(messages.filter((message: any) =>
+        (message?.speaker === 'customer' || message?.speaker === 'shopkeeper') &&
+        typeof message?.content === 'string'
+      ));
+      setSimulationStatus(result.status === 'completed' ? 'completed' : 'continue');
+      setSimulationOutcome(typeof result.outcome === 'string' ? result.outcome : null);
+    } catch (error) {
+      setSimulationError(error instanceof Error ? error.message : copy.startFailed);
+    } finally {
+      setSimulationBusy(false);
+    }
+  };
+
+  const sendCoachReply = async () => {
+    const message = simulationReply.trim();
+    if (!message) {
+      setSimulationError(copy.replyRequired);
+      return;
+    }
+    if (!simulationSessionId) {
+      setSimulationError(copy.startFailed);
+      return;
+    }
+    setSimulationError('');
+    setSimulationBusy(true);
+    try {
+      const result = await callCoachSimulation({
+        action: 'reply',
+        sessionId: simulationSessionId,
+        message,
+      });
+      setSimulationMessages((current) => [
+        ...current,
+        { speaker: 'shopkeeper', content: message },
+        { speaker: 'customer', content: result.customerMessage },
+      ]);
+      setSimulationReply('');
+      setSimulationStatus(result.status === 'completed' ? 'completed' : 'continue');
+      setSimulationOutcome(typeof result.outcome === 'string' ? result.outcome : null);
+    } catch (error) {
+      setSimulationError(error instanceof Error ? error.message : copy.replyFailed);
+    } finally {
+      setSimulationBusy(false);
+    }
+  };
+
+  const abandonCoachSimulation = async () => {
+    if (!simulationSessionId) {
+      setScreen('assessment-observation');
+      return;
+    }
+    setSimulationBusy(true);
+    setSimulationError('');
+    try {
+      await callCoachSimulation({ action: 'abandon', sessionId: simulationSessionId });
+      setSimulationStatus('abandoned');
+    } catch (error) {
+      setSimulationError(error instanceof Error ? error.message : copy.replyFailed);
+    } finally {
+      setSimulationBusy(false);
     }
   };
 
@@ -656,7 +786,7 @@ export function LearnScreen() {
             </div>
           </div>
           <div className="px-5 pt-3 pb-4 border-t border-border bg-bg">
-            <PrimaryAction onClick={() => setScreen('simulation-preview')}>
+            <PrimaryAction onClick={() => void startCoachSimulation()} disabled={baselineSaving}>
               {copy.tryConversation}
               <ArrowRight size={18} />
             </PrimaryAction>
