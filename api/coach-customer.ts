@@ -53,7 +53,7 @@ function getArchetype(code: string): string | null {
 }
 
 function getSessionNumber(code: string): number {
-  const match = /^ddsc1_(\d{2})_/.exec(code);
+  const match = /^ddsc1_(\d{2,})_/.exec(code);
   return match ? Number(match[1]) : 0;
 }
 
