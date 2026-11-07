@@ -197,3 +197,26 @@ test('falls back safely when a saved observation is malformed and rejects invali
   });
   assert.equal(invalid.ok, false);
 });
+
+test('brief observation samples evidence across multiple baseline questions', () => {
+  const result = analyseCoachBaseline(completeAnswers, 'en');
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.match(result.value.text, /customer actually needs/i);
+    assert.match(result.value.text, /hearing the customer/i);
+    assert.match(result.value.text, /learned from the lost sale/i);
+  }
+});
+
+test('negated behaviour is not misreported as a positive starting signal', () => {
+  const result = analyseCoachBaseline([
+    { questionId: 'price_objection', answer: 'I would never explain the quality or ask what the customer needs.' },
+    { questionId: 'customer_complaint', answer: 'I will not listen first, I will not check the bill, and I will not resolve it.' },
+    { questionId: 'lost_sale', answer: 'I will not review what happened and I will pressure the customer to buy.' },
+  ]);
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.value.evidenceCount, 0);
+    assert.match(result.value.text, /not enough for a reliable conclusion/i);
+  }
+});
