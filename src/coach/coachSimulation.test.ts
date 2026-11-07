@@ -289,3 +289,16 @@ test('plan difficulty and archetype labels remain internal to the customer promp
   assert.ok(plan.customerBehaviourNotes.length > 0);
   assert.ok(plan.characterBoundaries.length > 0);
 });
+
+test('baseline signals can inform the private prompt without becoming fixed skill labels', () => {
+  const plan = selectCoachSimulationPlan({
+    completedSessions: 0,
+    shopType: 'kirana',
+    baselineSignalIds: ['needs_discovery', 'fake-signal', 'listening_first'],
+  });
+  assert.deepEqual(plan.baselineSignalIds, ['needs_discovery', 'listening_first']);
+  const prompt = buildCoachSimulationSystemPrompt(plan);
+  assert.match(prompt, /early text signals/i);
+  assert.match(prompt, /incomplete hints/i);
+  assert.match(prompt, /needs_discovery, listening_first/);
+});
