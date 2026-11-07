@@ -29,6 +29,9 @@ create table if not exists public.coach_workspaces (
     )
   ),
   city text check (city is null or char_length(city) <= 100),
+  business_context jsonb not null default '{}'::jsonb check (
+    jsonb_typeof(business_context) = 'object' and pg_column_size(business_context) <= 32768
+  ),
   created_at timestamptz not null default now()
 );
 
