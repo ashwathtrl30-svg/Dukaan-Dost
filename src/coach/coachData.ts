@@ -41,7 +41,7 @@ export function normalizeBaselineAnswers(value: unknown): ValidationResult<Coach
     }
 
     const normalized = normalizeCoachText(answer.answer);
-    if (!normalized.ok) {
+    if (normalized.ok === false) {
       return { ok: false, error: `Baseline answer ${index + 1}: ${normalized.error}` };
     }
 
