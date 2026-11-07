@@ -656,6 +656,7 @@ const CATEGORY_ALIASES: Readonly<Record<string, CoachKnowledgeCategory>> = {
   generalstore: 'kirana',
   general: 'kirana',
   medical: 'medical',
+  medicalstore: 'medical',
   pharmacy: 'medical',
   chemist: 'medical',
   medicine: 'medical',
