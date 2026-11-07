@@ -163,7 +163,8 @@ async function startSession(client: any, userId: string, apiKey: string, res: an
   const learning = results[3].data ? results[3].data.learning_state : null;
   const recentPatternIds = recentRows
     .map((row: { scenario_code: string }) => getArchetype(row.scenario_code))
-    .filter((value: string | null): value is string => value !== null);
+    .filter((value: string | null): value is string => value !== null)
+    .reverse(); // Query is newest-first; selection rotates against the two most recent patterns.
 
   const plan = selectCoachSimulationPlan({
     completedSessions: completedCount,
@@ -432,7 +433,7 @@ export default async function handler(req: any, res: any) {
     if (action === 'resume') return await resumeSession(client, userId, res);
 
     const id = typeof body.sessionId === 'string' ? body.sessionId : '';
-    if (!/^[0-9a-f-]{36}$/i.test(id)) return send(res, 400, { error: 'A valid practice session is required.' });
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)) return send(res, 400, { error: 'A valid practice session is required.' });
     if (action === 'abandon') return await abandonSession(client, userId, id, res);
     const text = safeMessage(body.message);
     if (!text) return send(res, 400, { error: 'Write a message of up to 4,000 characters.' });
