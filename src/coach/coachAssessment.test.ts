@@ -5,6 +5,7 @@ import {
   buildCoachPersonalizationContext,
   COACH_BASELINE_QUESTIONS,
   createCoachPersonalizationProfile,
+  restoreCoachBaselineAssessment,
   validateCoachBaseline,
 } from './coachAssessment';
 
@@ -150,4 +151,49 @@ test('personalisation context keeps baseline signals provisional and excludes ra
   assert.match(context, /kirana/);
   assert.match(context, /Mumbai/);
   assert.ok(!context.includes(completeAnswers[0].answer));
+});
+
+test('restores a saved baseline and preserves its original starting observation', () => {
+  const saved = {
+    version: 1,
+    answers: completeAnswers,
+    initialObservation: {
+      text: 'Your saved starting observation.',
+      signalIds: ['needs_discovery', 'listening_first'],
+      evidenceCount: 2,
+      confidence: 'early-baseline',
+      disclaimer: 'This is provisional.',
+    },
+  };
+  const restored = restoreCoachBaselineAssessment(saved);
+  assert.equal(restored.ok, true);
+  if (restored.ok) {
+    assert.equal(restored.value.answers.length, 3);
+    assert.equal(restored.value.observation.text, 'Your saved starting observation.');
+    assert.deepEqual(restored.value.observation.signalIds, ['needs_discovery', 'listening_first']);
+    assert.equal(restored.value.observation.confidence, 'early-baseline');
+  }
+});
+
+test('falls back safely when a saved observation is malformed and rejects invalid saved answers', () => {
+  const fallback = restoreCoachBaselineAssessment({
+    version: 1,
+    answers: completeAnswers,
+    initialObservation: { text: '', signalIds: ['fake-signal'], confidence: 'permanent-label' },
+  });
+  assert.equal(fallback.ok, true);
+  if (fallback.ok) {
+    assert.notEqual(fallback.value.observation.text, '');
+    assert.equal(fallback.value.observation.confidence, 'early-baseline');
+    assert.ok(fallback.value.observation.signalIds.every((id) => !String(id).includes('fake')));
+  }
+
+  const invalid = restoreCoachBaselineAssessment({
+    answers: [
+      completeAnswers[0],
+      completeAnswers[0],
+      completeAnswers[2],
+    ],
+  });
+  assert.equal(invalid.ok, false);
 });
