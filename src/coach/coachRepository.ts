@@ -7,7 +7,6 @@ import {
 import type {
   CoachAssessmentRecord,
   CoachBaselineAnswer,
-  CoachLanguage,
   CoachLearningProfileRecord,
   CoachLearningState,
   CoachMessageRecord,
@@ -15,6 +14,8 @@ import type {
   CoachProfileRecord,
   CoachSessionOutcome,
   CoachSessionRecord,
+  CoachWorkspaceDraft,
+  CoachWorkspaceRecord,
   CreateCoachSessionInput,
   NewCoachMessage,
 } from './types';
@@ -41,38 +42,76 @@ function isUniqueViolation(error: unknown): boolean {
     (error as { code?: string }).code === '23505';
 }
 
-async function getOrCreateWorkspace(userId: string): Promise<string> {
+function optionalText(value: string | null | undefined, maxLength: number): string | null | undefined {
+  if (value === undefined) return undefined;
+  const normalized = value?.trim() ?? '';
+  return normalized ? normalized.slice(0, maxLength) : null;
+}
+
+async function getOrCreateWorkspace(
+  userId: string,
+  draft: CoachWorkspaceDraft = {},
+): Promise<string> {
   const client = requireCoachClient();
 
-  // A staff account uses its active workspace membership. Owners use the
-  // workspace whose owner_user_id is their own verified Auth identity.
+  // An invited or suspended staff identity must not silently create a second shop.
   const { data: membership, error: membershipError } = await client
     .from('coach_workspace_memberships')
-    .select('workspace_id')
+    .select('workspace_id, status')
     .eq('user_id', userId)
-    .eq('status', 'active')
     .maybeSingle();
 
   if (membershipError) throw membershipError;
-  if (membership?.workspace_id) return membership.workspace_id as string;
+  if (membership?.status === 'active') return membership.workspace_id as string;
+  if (membership?.status === 'invited') {
+    throw new Error('A shop invitation is waiting for this account to be activated.');
+  }
+  if (membership?.status === 'suspended') {
+    throw new Error('This account’s Coach access is paused. Ask the shop owner to review the membership.');
+  }
 
   const { data: ownedWorkspace, error: ownedError } = await client
     .from('coach_workspaces')
-    .select('id')
+    .select('id, shop_name, shop_type, city')
     .eq('owner_user_id', userId)
     .maybeSingle();
 
   if (ownedError) throw ownedError;
-  if (ownedWorkspace?.id) return ownedWorkspace.id as string;
+
+  if (ownedWorkspace?.id) {
+    const updates: Record<string, unknown> = {};
+    const shopName = optionalText(draft.shopName, 120);
+    const shopType = optionalText(draft.shopType, 32);
+    const city = optionalText(draft.city, 100);
+    if (shopName !== undefined) updates.shop_name = shopName;
+    if (shopType !== undefined) updates.shop_type = shopType;
+    if (city !== undefined) updates.city = city;
+
+    if (Object.keys(updates).length > 0) {
+      const { error: updateError } = await client
+        .from('coach_workspaces')
+        .update(updates)
+        .eq('id', ownedWorkspace.id);
+      if (updateError) throw updateError;
+    }
+    return ownedWorkspace.id as string;
+  }
 
   const { data: createdWorkspace, error: createError } = await client
     .from('coach_workspaces')
-    .insert({ owner_user_id: userId })
+    .insert({
+      owner_user_id: userId,
+      shop_name: optionalText(draft.shopName, 120) ?? null,
+      shop_type: optionalText(draft.shopType, 32) ?? null,
+      city: optionalText(draft.city, 100) ?? null,
+    })
     .select('id')
     .single();
 
   if (!createError && createdWorkspace?.id) return createdWorkspace.id as string;
-  if (!isUniqueViolation(createError)) throw createError ?? new Error('Could not create the Coach workspace.');
+  if (!isUniqueViolation(createError)) {
+    throw createError ?? new Error('Could not create the Coach workspace.');
+  }
 
   // A second device may have created this owner workspace at the same time.
   const { data: racedWorkspace, error: racedReadError } = await client
@@ -90,7 +129,7 @@ async function readCoachProfile(userId: string): Promise<CoachProfileRecord | nu
   const client = requireCoachClient();
   const { data, error } = await client
     .from('coach_profiles')
-    .select('user_id, workspace_id, shop_type, city, preferred_language, baseline_completed_at, created_at, updated_at')
+    .select('user_id, workspace_id, preferred_language, baseline_completed_at, created_at, updated_at')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -103,51 +142,103 @@ export async function loadOrCreateCoachProfile(
 ): Promise<CoachProfileRecord> {
   const client = requireCoachClient();
   const userId = await requireCurrentUserId();
+  const workspaceId = await getOrCreateWorkspace(userId, draft);
   const existing = await readCoachProfile(userId);
-  if (existing) return existing;
 
-  const workspaceId = await getOrCreateWorkspace(userId);
+  if (existing) {
+    if (existing.workspace_id !== workspaceId) {
+      throw new Error('This Coach profile is linked to a different shop workspace. It was not moved automatically.');
+    }
+    if (draft.preferredLanguage && draft.preferredLanguage !== existing.preferred_language) {
+      const { data, error } = await client
+        .from('coach_profiles')
+        .update({ preferred_language: draft.preferredLanguage })
+        .eq('user_id', userId)
+        .select('user_id, workspace_id, preferred_language, baseline_completed_at, created_at, updated_at')
+        .single();
+      if (error) throw error;
+      return data as CoachProfileRecord;
+    }
+    return existing;
+  }
+
   const { data, error } = await client
     .from('coach_profiles')
     .insert({
       user_id: userId,
       workspace_id: workspaceId,
-      shop_type: draft.shopType ?? null,
-      city: draft.city?.trim().slice(0, 100) || null,
       preferred_language: draft.preferredLanguage ?? 'en',
     })
-    .select('user_id, workspace_id, shop_type, city, preferred_language, baseline_completed_at, created_at, updated_at')
+    .select('user_id, workspace_id, preferred_language, baseline_completed_at, created_at, updated_at')
     .single();
 
   if (!error && data) return data as CoachProfileRecord;
-  if (!isUniqueViolation(error)) throw error ?? new Error('Could not create the individual Coach profile.');
+  if (!isUniqueViolation(error)) {
+    throw error ?? new Error('Could not create the individual Coach profile.');
+  }
 
   // Another tab/device may have created the profile between the read and insert.
   const racedProfile = await readCoachProfile(userId);
   if (!racedProfile) throw new Error('The Coach profile was created elsewhere but could not be loaded.');
+  if (racedProfile.workspace_id !== workspaceId) {
+    throw new Error('The existing Coach profile belongs to a different shop workspace.');
+  }
   return racedProfile;
 }
 
-export async function updateCoachProfile(draft: CoachProfileDraft): Promise<CoachProfileRecord> {
+export async function updateCoachProfile(
+  preferredLanguage: 'en' | 'hi',
+): Promise<CoachProfileRecord> {
   const client = requireCoachClient();
-  const profile = await loadOrCreateCoachProfile(draft);
-  const updates: Record<string, unknown> = {};
-
-  if (draft.shopType !== undefined) updates.shop_type = draft.shopType;
-  if (draft.city !== undefined) updates.city = draft.city.trim().slice(0, 100) || null;
-  if (draft.preferredLanguage !== undefined) updates.preferred_language = draft.preferredLanguage;
-
-  if (Object.keys(updates).length === 0) return profile;
-
+  const profile = await loadOrCreateCoachProfile();
   const { data, error } = await client
     .from('coach_profiles')
-    .update(updates)
+    .update({ preferred_language: preferredLanguage })
     .eq('user_id', profile.user_id)
-    .select('user_id, workspace_id, shop_type, city, preferred_language, baseline_completed_at, created_at, updated_at')
+    .select('user_id, workspace_id, preferred_language, baseline_completed_at, created_at, updated_at')
     .single();
 
   if (error) throw error;
   return data as CoachProfileRecord;
+}
+
+export async function loadCoachWorkspace(): Promise<CoachWorkspaceRecord> {
+  const client = requireCoachClient();
+  const profile = await loadOrCreateCoachProfile();
+  const { data, error } = await client
+    .from('coach_workspaces')
+    .select('id, owner_user_id, shop_name, shop_type, city, created_at')
+    .eq('id', profile.workspace_id)
+    .single();
+
+  if (error) throw error;
+  return data as CoachWorkspaceRecord;
+}
+
+/** Only the workspace owner can change shared shop context; RLS rejects staff edits. */
+export async function updateCoachWorkspaceContext(
+  draft: CoachWorkspaceDraft,
+): Promise<CoachWorkspaceRecord> {
+  const client = requireCoachClient();
+  const profile = await loadOrCreateCoachProfile();
+  const updates: Record<string, unknown> = {};
+  const shopName = optionalText(draft.shopName, 120);
+  const shopType = optionalText(draft.shopType, 32);
+  const city = optionalText(draft.city, 100);
+  if (shopName !== undefined) updates.shop_name = shopName;
+  if (shopType !== undefined) updates.shop_type = shopType;
+  if (city !== undefined) updates.city = city;
+  if (Object.keys(updates).length === 0) return loadCoachWorkspace();
+
+  const { data, error } = await client
+    .from('coach_workspaces')
+    .update(updates)
+    .eq('id', profile.workspace_id)
+    .select('id, owner_user_id, shop_name, shop_type, city, created_at')
+    .single();
+
+  if (error) throw error;
+  return data as CoachWorkspaceRecord;
 }
 
 export async function saveCoachBaseline(
@@ -215,13 +306,14 @@ export async function createCoachSession(
 
   const client = requireCoachClient();
   const profile = await loadOrCreateCoachProfile();
+  const workspace = await loadCoachWorkspace();
   const { data, error } = await client
     .from('coach_sessions')
     .insert({
       user_id: profile.user_id,
       workspace_id: profile.workspace_id,
       scenario_code: input.scenarioCode,
-      shop_type: input.shopType ?? profile.shop_type,
+      shop_type: workspace.shop_type,
       language: input.language,
       status: 'in_progress',
       outcome: null,
@@ -343,13 +435,27 @@ export function saveCoachSessionFeedback(
   return saveAssessment('session_feedback', `session-feedback:${sessionId}`, assessmentData, { sessionId });
 }
 
-export function saveCoachMilestoneReview(
+export async function saveCoachMilestoneReview(
   milestoneNumber: number,
   assessmentData: Record<string, unknown>,
 ): Promise<CoachAssessmentRecord> {
   if (!Number.isInteger(milestoneNumber) || milestoneNumber < 10 || milestoneNumber % 10 !== 0) {
     throw new Error('Coach milestone reviews are saved at completed-session milestones of 10 or more.');
   }
+
+  const client = requireCoachClient();
+  const userId = await requireCurrentUserId();
+  const { count, error } = await client
+    .from('coach_sessions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('status', 'completed');
+
+  if (error) throw error;
+  if ((count ?? 0) < milestoneNumber) {
+    throw new Error('This Coach milestone is not available yet.');
+  }
+
   return saveAssessment(
     'milestone_review',
     `milestone:${milestoneNumber}`,
@@ -358,16 +464,19 @@ export function saveCoachMilestoneReview(
   );
 }
 
-function normalizeLearningState(value: CoachLearningState): CoachLearningState {
+function normalizeLearningState(value: unknown): CoachLearningState {
   if (
+    typeof value !== 'object' || value === null || Array.isArray(value) ||
+    !('completedSessions' in value) ||
     !Number.isInteger(value.completedSessions) ||
-    value.completedSessions < 0 ||
+    (value.completedSessions as number) < 0 ||
+    !('dimensionSignals' in value) ||
     !value.dimensionSignals ||
     typeof value.dimensionSignals !== 'object' ||
     Array.isArray(value.dimensionSignals) ||
-    !Array.isArray(value.focusAreas) ||
-    !Array.isArray(value.strengths) ||
-    !Array.isArray(value.recentPatternIds)
+    !('focusAreas' in value) || !Array.isArray(value.focusAreas) ||
+    !('strengths' in value) || !Array.isArray(value.strengths) ||
+    !('recentPatternIds' in value) || !Array.isArray(value.recentPatternIds)
   ) {
     throw new Error('The Coach learning state is invalid.');
   }
@@ -395,7 +504,7 @@ export async function saveCoachLearningProfile(
 ): Promise<CoachLearningProfileRecord> {
   const client = requireCoachClient();
   const profile = await loadOrCreateCoachProfile();
-  const learning_state = normalizeLearningState(learningState);
+  const normalizedState = normalizeLearningState(learningState);
 
   const { data, error } = await client
     .from('coach_learning_profiles')
@@ -403,7 +512,7 @@ export async function saveCoachLearningProfile(
       {
         user_id: profile.user_id,
         workspace_id: profile.workspace_id,
-        learning_state,
+        learning_state: normalizedState,
       },
       { onConflict: 'user_id' },
     )
@@ -417,5 +526,3 @@ export async function saveCoachLearningProfile(
 export function isCoachCloudAvailable(): boolean {
   return coachCloudEnabled && supabase !== null;
 }
-
-export type { CoachLanguage };
