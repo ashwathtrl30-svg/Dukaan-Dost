@@ -6,6 +6,7 @@ on:
       - main
       - feat/voice-ledger-review-and-hindi-numbers
       - feat/shop-notebook-stage-2
+      - feature/sales-customer-handling-coach
   pull_request:
     branches:
       - main
@@ -37,7 +38,7 @@ jobs:
           src/store.tsx src/cloudPersistence.ts src/shopDataSnapshot.ts
           src/types.ts src/supabaseClient.ts
           src/auth/AuthGate.tsx src/auth/AccountRecoveryPanel.tsx
-          src/auth/authValidation.ts src/screens/Profile.tsx src/screens/Onboarding.tsx
+          src/auth/authValidation.ts src/screens/Profile.tsx src/screens/Onboarding.tsx src/screens/Learn.tsx
           src/backup/encryptedBackup.ts src/backup/BackupRestorePanel.tsx src/snapshotSync.ts
           src/backup/encryptedBackup.ts src/backup/BackupRestorePanel.tsx
       - name: Test cloud shop-data snapshot reconciliation
