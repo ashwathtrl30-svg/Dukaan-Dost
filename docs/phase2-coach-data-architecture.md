@@ -25,7 +25,7 @@ Do not set `VITE_COACH_CLOUD_ENABLED=true` until:
 1. An isolated development Supabase project is available.
 2. The SQL has been generated as a timestamped migration using `supabase migration new coach_identity_phase2`.
 3. The migration has been applied to that development project, and SQL/RLS tests and advisors pass.
-4. The Coach tables are explicitly exposed through the project's Data API configuration if the browser client will access them. Do not expose the `private` schema.
+4. The Coach tables are explicitly exposed through the project's Data API configuration if the browser client will access them. Do not expose the `coach_private` schema.
 5. Two separate Auth identities have been tested: each can read only their own Coach profile and learning history, while both can read permitted shared shop context.
 
 Supabase changed public-schema Data API exposure defaults in 2026. A SQL `GRANT` alone is not proof that a table is exposed by the Data API. See:
