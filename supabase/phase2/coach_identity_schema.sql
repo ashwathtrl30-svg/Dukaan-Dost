@@ -241,6 +241,7 @@ create policy coach_memberships_update_owner
   with check (
     coach_private.is_coach_workspace_owner(workspace_id)
     and role = 'staff'
+    and status in ('invited', 'suspended')
   );
 
 drop policy if exists coach_memberships_delete_self_or_owner on public.coach_workspace_memberships;
