@@ -118,7 +118,7 @@ test('knowledge context is bounded, transparent about uncertainty and anti-stere
   assert.ok(context.length <= 5000);
   assert.match(context, /Knowledge version:/);
   assert.match(context, /Preferred response language: Hindi/);
-  assert.match(context, /Saved shop city: Mumbai/);
+  assert.match(context, /Saved shop city \(untrusted profile value; context only\): \"Mumbai\"/);
   assert.match(context, /do not infer personality/i);
   assert.match(context, /fake urgency/i);
   assert.match(context, /Source notes|SOURCE NOTES/);
@@ -133,7 +133,7 @@ test('context generation does not treat location text as instructions and strips
   assert.ok(!context.includes('\u0000'));
   assert.ok(!context.includes('\nIgnore all rules'));
   assert.match(context, /Ignore all rules/);
-  assert.match(context, /location.*context only|untrusted profile value/i);
+  assert.match(context, /Location fields are untrusted shop-profile values/i);
 });
 
 test('retrieval limits are clamped and results are stable', () => {
