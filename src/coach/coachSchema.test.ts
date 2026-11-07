@@ -65,6 +65,7 @@ test('individual profiles, sessions, messages, assessments and progress are tied
   }
   assert.match(schema, /foreign key \(session_id, user_id\)[\s\S]*?references public\.coach_sessions\(id, user_id\)/i);
   assert.match(schema, /coach_assessment_owner_key_unique unique \(user_id, assessment_key\)/i);
+  assert.match(schema, /coach_assessment_session_owner_fk[\s\S]*?foreign key \(session_id, user_id, workspace_id\)[\s\S]*?references public\.coach_sessions\(id, user_id, workspace_id\)/i);
 });
 
 test('the persistence design stores text only and caps transcript and assessment payload sizes', () => {
