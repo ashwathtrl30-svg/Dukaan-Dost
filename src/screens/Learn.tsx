@@ -807,45 +807,119 @@ export function LearnScreen() {
                 <p className="text-[11px] text-text-secondary">{copy.aiSimulation}</p>
               </div>
             </div>
-            <span className="rounded-full bg-amber-100 text-amber-800 px-2.5 py-1 text-[10px] font-bold tracking-wide">
-              {copy.designPreview}
+            <span className="rounded-full bg-primary/10 text-primary px-2.5 py-1 text-[10px] font-bold tracking-wide">
+              {simulationStatus === 'completed' ? (lang === 'hi' ? 'पूरा हुआ' : 'COMPLETED') : copy.aiSimulation}
             </span>
           </div>
 
           <div className="flex-1 min-h-0 scroll-area px-5 py-5">
-            <div className="max-w-[88%]">
-              <div className="rounded-2xl rounded-tl-sm bg-card border border-border p-4 shadow-sm">
-                <p className="text-sm text-text leading-relaxed">{copy.sampleCustomer}</p>
+            {simulationMessages.length > 0 ? (
+              <div className="space-y-4">
+                {simulationMessages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={message.speaker === 'customer' ? 'flex justify-start' : 'flex justify-end'}
+                  >
+                    <div className={message.speaker === 'customer' ? 'max-w-[88%]' : 'max-w-[88%]'}>
+                      <div className={message.speaker === 'customer'
+                        ? 'rounded-2xl rounded-tl-sm bg-card border border-border p-4 shadow-sm'
+                        : 'rounded-2xl rounded-tr-sm bg-primary text-white p-4 shadow-sm'}>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                      </div>
+                      <p className={message.speaker === 'customer'
+                        ? 'text-[11px] text-text-secondary mt-2 ml-1'
+                        : 'text-[11px] text-text-secondary mt-2 mr-1 text-right'}>
+                        {message.speaker === 'customer' ? copy.customer : (lang === 'hi' ? 'आप' : 'You')}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <p className="text-[11px] text-text-secondary mt-2 ml-1">{copy.sampleLabel}</p>
-            </div>
-
-            <div className="mt-7 rounded-2xl border border-dashed border-border bg-card/50 p-4">
-              <div className="flex items-center gap-2 text-text-secondary mb-2">
-                <MessageCircle size={16} />
-                <p className="text-xs font-semibold">{copy.replyPlaceholder}</p>
-              </div>
-              <div className="h-20 rounded-xl bg-bg border border-border/70 px-3 py-3 text-xs text-text-secondary/80">
-                {lang === 'hi' ? 'यहाँ आपकी बातचीत होगी…' : 'Your conversation will appear here…'}
-              </div>
-              <div className="flex items-center justify-between mt-3">
-                <div className="flex items-center gap-2 text-text-secondary/70">
-                  <Mic size={16} />
-                  <Volume2 size={16} />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-border bg-card/50 p-5 text-center">
+                <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary mx-auto flex items-center justify-center mb-3">
+                  <MessageCircle size={21} />
                 </div>
-                <span className="text-[10px] text-text-secondary">{copy.simulationDisclosure}</span>
+                <p className="text-sm font-semibold text-text">
+                  {simulationBusy ? copy.sessionStarting : copy.startPractice}
+                </p>
+                <p className="text-xs text-text-secondary leading-relaxed mt-2">{copy.simulationDisclosure}</p>
               </div>
-            </div>
+            )}
 
-            <div className="mt-4">
-              <PreviewNotice>{copy.composerHint}</PreviewNotice>
-            </div>
+            {simulationBusy && simulationMessages.length > 0 && (
+              <div className="mt-4 flex items-center gap-2 text-xs text-text-secondary" role="status">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                {copy.customerThinking}
+              </div>
+            )}
+
+            {simulationError && (
+              <div className="mt-4">
+                <PreviewNotice>{simulationError}</PreviewNotice>
+              </div>
+            )}
+
+            {simulationStatus === 'completed' && (
+              <div className="mt-4">
+                <PreviewNotice>
+                  {copy.practiceCompleted}
+                  {simulationOutcome ? ' ' + (lang === 'hi' ? 'ग्राहक का फैसला: ' : 'Customer outcome: ') + simulationOutcome.replace(/_/g, ' ') + '.' : ''}
+                </PreviewNotice>
+              </div>
+            )}
+
+            {simulationStatus === 'abandoned' && (
+              <div className="mt-4">
+                <PreviewNotice>{copy.practiceAbandoned}</PreviewNotice>
+              </div>
+            )}
           </div>
-          <div className="px-5 pt-3 pb-4 border-t border-border bg-bg">
-            <PrimaryAction onClick={() => setScreen('feedback-preview')}>
-              {copy.seeFeedback}
-              <ArrowRight size={18} />
-            </PrimaryAction>
+
+          <div className="px-5 pt-3 pb-4 border-t border-border bg-bg space-y-2">
+            {!simulationSessionId && simulationStatus === 'idle' && (
+              <PrimaryAction onClick={() => void startCoachSimulation()} disabled={simulationBusy}>
+                {simulationBusy ? copy.sessionStarting : copy.startPractice}
+                <ArrowRight size={18} />
+              </PrimaryAction>
+            )}
+
+            {simulationStatus === 'continue' && simulationSessionId && (
+              <>
+                <textarea
+                  value={simulationReply}
+                  onChange={(event) => setSimulationReply(event.target.value)}
+                  rows={3}
+                  maxLength={4000}
+                  className="input-field h-auto min-h-[88px] resize-y leading-relaxed"
+                  placeholder={copy.replyPlaceholder}
+                  aria-label={copy.replyPlaceholder}
+                  disabled={simulationBusy}
+                />
+                <PrimaryAction
+                  onClick={() => void sendCoachReply()}
+                  disabled={simulationBusy || !simulationReply.trim()}
+                >
+                  {simulationBusy ? copy.customerThinking : copy.sendReply}
+                  <ArrowRight size={18} />
+                </PrimaryAction>
+                <button
+                  type="button"
+                  onClick={() => void abandonCoachSimulation()}
+                  disabled={simulationBusy}
+                  className="btn-text w-full"
+                >
+                  {copy.finishPractice}
+                </button>
+              </>
+            )}
+
+            {(simulationStatus === 'completed' || simulationStatus === 'abandoned') && (
+              <PrimaryAction onClick={() => setScreen('home')}>
+                {copy.backToLearn}
+                <ArrowRight size={18} />
+              </PrimaryAction>
+            )}
           </div>
         </>
       )}
