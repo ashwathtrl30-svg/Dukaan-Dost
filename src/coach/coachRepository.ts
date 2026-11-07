@@ -259,6 +259,20 @@ export async function updateCoachWorkspaceContext(
   return data as CoachWorkspaceRecord;
 }
 
+export async function loadCoachBaseline(): Promise<CoachAssessmentRecord | null> {
+  const client = requireCoachClient();
+  const profile = await loadOrCreateCoachProfile();
+  const { data, error } = await client
+    .from('coach_assessments')
+    .select('*')
+    .eq('user_id', profile.user_id)
+    .eq('assessment_key', 'baseline-v1')
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as CoachAssessmentRecord | null;
+}
+
 export async function saveCoachBaseline(
   input: unknown,
   profileDraft: CoachProfileDraft = {},
