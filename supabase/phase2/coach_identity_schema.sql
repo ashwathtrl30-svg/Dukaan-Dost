@@ -231,6 +231,7 @@ create policy coach_memberships_insert_owner
     private.is_coach_workspace_owner(workspace_id)
     and invited_by = (select auth.uid())
     and role = 'staff'
+    and status = 'invited'
   );
 
 drop policy if exists coach_memberships_update_owner on public.coach_workspace_memberships;
