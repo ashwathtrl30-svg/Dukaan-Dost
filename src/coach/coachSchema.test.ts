@@ -86,5 +86,5 @@ test('the schema grants authenticated access only to named Coach tables', () => 
   assert.match(schema, /grant select, insert, update, delete on public\.coach_workspaces to authenticated/i);
   assert.match(schema, /grant select, insert on public\.coach_messages to authenticated/i);
   assert.doesNotMatch(schema, /grant .* on public\.coach_[a-z_]+ to anon/i);
-  assert.match(schema, /revoke all on schema private from public, anon/i);
+  assert.match(schema, /revoke all on schema coach_private from public, anon/i);
 });
