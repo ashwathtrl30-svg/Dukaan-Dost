@@ -11,7 +11,7 @@
 -- Only text transcripts are stored. There is deliberately no audio/blob column.
 -- After 2026-10-30, newly created public tables may not be exposed by the Data API
 -- automatically. Explicitly add only these public.coach_* tables to the project's
--- Data API exposed-schema/table configuration after deployment; never expose private.
+-- Data API exposed-schema/table configuration after deployment; never expose coach_private.
 -- All authorization is based on auth.uid(), never user-editable JWT user_metadata.
 
 create schema if not exists coach_private;
@@ -145,7 +145,7 @@ create index if not exists coach_messages_session_order_idx
 create index if not exists coach_assessments_user_created_idx
   on public.coach_assessments (user_id, created_at desc);
 
--- These SECURITY DEFINER helpers are kept in the non-exposed private schema.
+-- These SECURITY DEFINER helpers are kept in the dedicated, non-exposed coach_private schema.
 -- They use a fixed empty search_path and auth.uid(); no user-editable metadata is trusted.
 create or replace function coach_private.is_coach_workspace_owner(target_workspace_id uuid)
 returns boolean
