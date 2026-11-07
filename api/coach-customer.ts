@@ -122,11 +122,16 @@ async function startSession(client: any, userId: string, apiKey: string, res: an
   }
 
   const baseline = await client.from('coach_assessments')
-    .select('id').eq('user_id', userId)
+    .select('id, assessment_data').eq('user_id', userId)
     .eq('assessment_key', 'baseline-v1')
     .eq('assessment_type', 'baseline').maybeSingle();
   if (baseline.error) throw baseline.error;
   if (!baseline.data) return send(res, 409, { error: 'Your saved starting assessment could not be found.' });
+
+  const baselineData = baseline.data.assessment_data;
+  const baselineSignalIds = baselineData && baselineData.initialObservation && Array.isArray(baselineData.initialObservation.signalIds)
+    ? baselineData.initialObservation.signalIds.filter((value: unknown) => typeof value === 'string')
+    : [];
 
   const active = await client.from('coach_sessions')
     .select('id').eq('user_id', userId)
@@ -169,6 +174,7 @@ async function startSession(client: any, userId: string, apiKey: string, res: an
     dimensionSignals: learning && learning.dimensionSignals && typeof learning.dimensionSignals === 'object'
       ? learning.dimensionSignals : {},
     recentPatternIds,
+    baselineSignalIds,
   });
   const opening = await generateCustomer(apiKey, plan, buildCoachSimulationOpeningPrompt(plan));
   if (opening.status !== 'continue' || opening.outcome !== null) {
@@ -323,10 +329,18 @@ async function replyToCustomer(
   const archetype = getArchetype(session.scenario_code);
   const number = getSessionNumber(session.scenario_code);
   if (!archetype || !number) throw new Error('The stored customer scenario is invalid.');
-  const learningResult = await client.from('coach_learning_profiles')
-    .select('learning_state').eq('user_id', userId).maybeSingle();
-  if (learningResult.error) throw learningResult.error;
-  const learning = learningResult.data ? learningResult.data.learning_state : null;
+  const profileResults = await Promise.all([
+    client.from('coach_learning_profiles').select('learning_state').eq('user_id', userId).maybeSingle(),
+    client.from('coach_assessments').select('assessment_data').eq('user_id', userId)
+      .eq('assessment_key', 'baseline-v1').eq('assessment_type', 'baseline').maybeSingle(),
+  ]);
+  if (profileResults[0].error) throw profileResults[0].error;
+  if (profileResults[1].error) throw profileResults[1].error;
+  const learning = profileResults[0].data ? profileResults[0].data.learning_state : null;
+  const baselineData = profileResults[1].data ? profileResults[1].data.assessment_data : null;
+  const baselineSignalIds = baselineData && baselineData.initialObservation && Array.isArray(baselineData.initialObservation.signalIds)
+    ? baselineData.initialObservation.signalIds.filter((value: unknown) => typeof value === 'string')
+    : [];
 
   const plan = selectCoachSimulationPlan({
     completedSessions: number - 1,
@@ -336,6 +350,7 @@ async function replyToCustomer(
     dimensionSignals: learning && learning.dimensionSignals && typeof learning.dimensionSignals === 'object'
       ? learning.dimensionSignals : {},
     archetypeOverride: archetype as any,
+    baselineSignalIds,
   });
   const generated = await generateCustomer(
     apiKey,
