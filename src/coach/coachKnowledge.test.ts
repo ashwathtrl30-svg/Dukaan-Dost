@@ -150,3 +150,14 @@ test('no source or category guidance tells the AI to fabricate shop facts or man
   assert.match(context, /Do not use fake urgency/);
   assert.match(context, /purchase outcome separate from conversation quality/);
 });
+
+test('category safety guidance remains available even when the selected archetype differs', () => {
+  const medical = retrieveCoachKnowledge({
+    shopType: 'medical',
+    archetypeId: 'bargainer',
+    query: 'price negotiation',
+    limit: 12,
+  });
+  assert.ok(medical.some((item) => item.id === 'category-medical'));
+  assert.ok(medical.some((item) => item.avoid.some((rule) => /diagnosis|dose|substitution/i.test(rule))));
+});
