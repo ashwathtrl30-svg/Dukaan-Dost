@@ -4,6 +4,7 @@ import {
   normalizeBaselineAnswers,
   normalizeCoachText,
 } from './coachData';
+import type { CoachBaselineObservation } from './coachAssessment';
 import type {
   CoachAssessmentRecord,
   CoachBaselineAnswer,
@@ -260,12 +261,14 @@ export async function updateCoachWorkspaceContext(
 
 export async function saveCoachBaseline(
   input: unknown,
+  profileDraft: CoachProfileDraft = {},
+  observation?: CoachBaselineObservation,
 ): Promise<CoachAssessmentRecord> {
   const normalized = normalizeBaselineAnswers(input);
   if (normalized.ok === false) throw new Error(normalized.error);
 
   const client = requireCoachClient();
-  const profile = await loadOrCreateCoachProfile();
+  const profile = await loadOrCreateCoachProfile(profileDraft);
   const assessmentKey = 'baseline-v1';
 
   const { data: existing, error: existingError } = await client
@@ -287,7 +290,19 @@ export async function saveCoachBaseline(
     return existing as CoachAssessmentRecord;
   }
 
-  const assessmentData = { version: 1, answers: normalized.value as CoachBaselineAnswer[] };
+  const assessmentData = {
+    version: 1,
+    answers: normalized.value as CoachBaselineAnswer[],
+    ...(observation ? {
+      initialObservation: {
+        text: observation.text.slice(0, 500),
+        signalIds: observation.signalIds.slice(0, 9),
+        evidenceCount: Math.max(0, Math.min(9, observation.evidenceCount)),
+        confidence: 'early-baseline' as const,
+        disclaimer: observation.disclaimer.slice(0, 300),
+      },
+    } : {}),
+  };
   const { data, error } = await client
     .from('coach_assessments')
     .insert({
