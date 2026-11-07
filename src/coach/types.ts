@@ -26,6 +26,7 @@ export interface CoachWorkspaceRecord {
   shop_name: string | null;
   shop_type: string | null;
   city: string | null;
+  business_context: Record<string, unknown>;
   created_at: string;
 }
 
@@ -100,6 +101,7 @@ export interface CoachWorkspaceDraft {
   shopName?: string | null;
   shopType?: string | null;
   city?: string | null;
+  businessContext?: Record<string, unknown>;
 }
 
 export interface CreateCoachSessionInput {
