@@ -83,9 +83,14 @@ async function getOrCreateWorkspace(
     const shopName = optionalText(draft.shopName, 120);
     const shopType = optionalText(draft.shopType, 32);
     const city = optionalText(draft.city, 100);
+    const businessContext = draft.businessContext === undefined
+      ? undefined
+      : normalizeAssessmentData(draft.businessContext);
+    if (businessContext && !businessContext.ok) throw new Error(businessContext.error);
     if (shopName !== undefined) updates.shop_name = shopName;
     if (shopType !== undefined) updates.shop_type = shopType;
     if (city !== undefined) updates.city = city;
+    if (businessContext?.ok) updates.business_context = businessContext.value;
 
     if (Object.keys(updates).length > 0) {
       const { error: updateError } = await client
@@ -104,6 +109,9 @@ async function getOrCreateWorkspace(
       shop_name: optionalText(draft.shopName, 120) ?? null,
       shop_type: optionalText(draft.shopType, 32) ?? null,
       city: optionalText(draft.city, 100) ?? null,
+      business_context: draft.businessContext === undefined
+        ? {}
+        : (() => {\n            const normalized = normalizeAssessmentData(draft.businessContext);\n            if (!normalized.ok) throw new Error(normalized.error);\n            return normalized.value;\n          })(),
     })
     .select('id')
     .single();
@@ -207,7 +215,7 @@ export async function loadCoachWorkspace(): Promise<CoachWorkspaceRecord> {
   const profile = await loadOrCreateCoachProfile();
   const { data, error } = await client
     .from('coach_workspaces')
-    .select('id, owner_user_id, shop_name, shop_type, city, created_at')
+    .select('id, owner_user_id, shop_name, shop_type, city, business_context, created_at')
     .eq('id', profile.workspace_id)
     .single();
 
@@ -225,9 +233,14 @@ export async function updateCoachWorkspaceContext(
   const shopName = optionalText(draft.shopName, 120);
   const shopType = optionalText(draft.shopType, 32);
   const city = optionalText(draft.city, 100);
+  const businessContext = draft.businessContext === undefined
+    ? undefined
+    : normalizeAssessmentData(draft.businessContext);
+  if (businessContext && !businessContext.ok) throw new Error(businessContext.error);
   if (shopName !== undefined) updates.shop_name = shopName;
   if (shopType !== undefined) updates.shop_type = shopType;
   if (city !== undefined) updates.city = city;
+  if (businessContext?.ok) updates.business_context = businessContext.value;
   if (Object.keys(updates).length === 0) return loadCoachWorkspace();
 
   const { data, error } = await client
