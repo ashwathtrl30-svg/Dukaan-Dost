@@ -23,7 +23,7 @@ test('all 24 lesson feedback guides are present and structurally complete', () =
 });
 
 test('recognises a lesson-specific idea with punctuation and different capitalisation', () => {
-  const result = buildLessonFeedback('UC-01', 'I would first ask about their BUDGET, then check the usual brand.', guides);
+  const result = buildLessonFeedback('UC-01', 'I would first ask about their BUDGET before suggesting oil.', guides);
   assert.equal(result.status, 'matched');
   assert.match(result.recognition, /budget/);
   assert.ok(result.consideration);
