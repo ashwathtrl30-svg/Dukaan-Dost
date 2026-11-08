@@ -1,6 +1,6 @@
 # Sell Better — Phase 4 Quality Audit
 
-**Status:** The exact feedback-engine source passed 12 targeted code-mode checks. The repository's Node test command is committed and wired into the Vercel build, but the latest Node test/build run could not be confirmed because Vercel's deployment API reached its free daily deployment quota (HTTP 402).  
+**Status:** The exact feedback-engine source passed 14 targeted code-mode checks. The repository's Node test command is committed and wired into the Vercel build, but the latest Node test/build run could not be confirmed because Vercel's deployment API reached its free daily deployment quota (HTTP 402).  
 **Branch:** `feature/sales-customer-handling-coach`
 
 ## Implementation inventory
@@ -20,15 +20,15 @@
 | Lesson-specific phrase recognition | Pass |
 | Unrecognised wording is not labelled wrong | Pass |
 | Short-response guard | Pass |
-| Indian mobile number detection | Pass |
-| Formatted +91 number detection | Pass |
+| Standalone and in-sentence Indian mobile number detection | Pass |
+| Formatted +91 number detection (including spaces) | Pass |
 | Email and UPI ID detection | Pass |
 | Unknown-lesson fallback | Pass |
 | 24-lesson wraparound | Pass |
 | Invalid progression indexes | Pass |
 | No numeric assessment and no full-response echo | Pass |
 
-**Result: 12/12 targeted checks passed.** These checks executed the committed engine source in an isolated JavaScript runtime against the committed guide JSON. They are not a substitute for the repository's full Node test command or a Vite build.
+**Result: 14/14 targeted checks passed.** These checks executed the committed engine source in an isolated JavaScript runtime against the committed guide JSON. They are not a substitute for the repository's full Node test command or a Vite build.
 
 ## Deployment and automated test limitation
 
