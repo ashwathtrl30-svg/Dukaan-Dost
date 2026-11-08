@@ -206,7 +206,7 @@ export function SellBetterPreview() {
                       <>
                         <section className="mb-4 rounded-2xl border border-primary/25 bg-primary/5 p-4">
                           <p className="mb-2 text-[11px] font-bold tracking-[0.13em] text-primary">
-                            {feedback?.status === 'matched' ? 'WHAT YOU CONSIDERED' : 'A NOTE ABOUT YOUR RESPONSE'}
+                            {feedback?.status === 'matched' ? 'IN YOUR RESPONSE' : 'A NOTE ABOUT YOUR RESPONSE'}
                           </p>
                           <p className="text-sm leading-6">{feedback?.recognition}</p>
                         </section>
