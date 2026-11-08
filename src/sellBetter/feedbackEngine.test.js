@@ -44,6 +44,7 @@ test('short answers ask for more detail instead of pretending to assess', () => 
 });
 
 test('real customer phone numbers, emails and UPI IDs are rejected', () => {
+  assert.equal(buildLessonFeedback('UC-01', '9876543210', guides).status, 'privacy');
   assert.equal(buildLessonFeedback('UC-01', 'Call customer 9876543210 and ask about their needs.', guides).status, 'privacy');
   assert.equal(buildLessonFeedback('UC-01', 'Call customer +91 98765 43210 and ask about their needs.', guides).status, 'privacy');
   assert.equal(buildLessonFeedback('UC-01', 'Email customer person@example.com to ask what they need.', guides).status, 'privacy');
