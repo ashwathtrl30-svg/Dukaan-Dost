@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { consumeCoachRateLimit } from '../src/coach/coachRateLimit.js';
 import {
   applyCoachSimulationTransition,
   buildCoachSimulationOpeningPrompt,
@@ -64,18 +65,6 @@ function mapTranscript(rows: Array<{ speaker: string; content: string }>): Coach
     .map((row) => ({ speaker: row.speaker as 'customer' | 'shopkeeper', content: row.content }));
 }
 
-const rateWindows = new Map<string, { started: number; count: number }>();
-function isLimited(userId: string): boolean {
-  const now = Date.now();
-  const current = rateWindows.get(userId);
-  if (!current || now - current.started >= 60000) {
-    rateWindows.set(userId, { started: now, count: 1 });
-    return false;
-  }
-  current.count += 1;
-  return current.count > 18;
-}
-
 async function generateCustomer(
   apiKey: string,
   plan: ReturnType<typeof selectCoachSimulationPlan>,
@@ -91,6 +80,7 @@ async function generateCustomer(
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.88, maxOutputTokens: 450, responseMimeType: 'application/json' },
       }),
+      signal: AbortSignal.timeout(25000),
     },
   );
   const result = await response.json().catch(() => null);
@@ -429,7 +419,7 @@ export default async function handler(req: any, res: any) {
       return send(res, 401, { error: 'Your sign-in session has expired.' });
     }
     const userId = auth.data.user.id;
-    if (isLimited(userId)) {
+    if (!(await consumeCoachRateLimit(client, 'customer', 18))) {
       return send(res, 429, { error: 'Too many practice actions. Please wait a minute.' });
     }
     if (action === 'start') return await startSession(client, userId, geminiKey, res);
