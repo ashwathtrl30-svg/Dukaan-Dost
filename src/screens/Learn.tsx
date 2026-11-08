@@ -361,7 +361,7 @@ export function LearnScreen() {
         const existing = await loadCoachBaseline();
         if (existing) {
           const restored = restoreCoachBaselineAssessment(existing.assessment_data, lang);
-          if (!restored.ok) throw new Error(restored.error);
+          if (restored.ok === false) throw new Error(restored.error);
           setAnswers(COACH_BASELINE_QUESTIONS.map((question) =>
             restored.value.answers.find((answer) => answer.questionId === question.id)?.answer ?? ''
           ));
@@ -403,14 +403,14 @@ export function LearnScreen() {
       answer: answers[index],
     }));
     const validated = validateCoachBaseline(baselineAnswers);
-    if (!validated.ok) {
+    if (validated.ok === false) {
       setBaselineError(validated.error);
       if (typeof validated.questionIndex === 'number') setAssessmentIndex(validated.questionIndex);
       return;
     }
 
     const observation = analyseCoachBaseline(validated.value, lang);
-    if (!observation.ok) {
+    if (observation.ok === false) {
       setBaselineError(observation.error);
       return;
     }
@@ -432,7 +432,7 @@ export function LearnScreen() {
           observation.value,
         );
         const restored = restoreCoachBaselineAssessment(saved.assessment_data, lang);
-        if (!restored.ok) throw new Error(restored.error);
+        if (restored.ok === false) throw new Error(restored.error);
         finalObservation = restored.value.observation;
         finalAnswers = restored.value.answers;
       }
