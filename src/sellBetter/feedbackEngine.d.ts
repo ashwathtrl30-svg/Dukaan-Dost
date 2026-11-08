@@ -21,3 +21,5 @@ export interface LessonFeedback {
   message: string | null;
 }
 export function buildLessonFeedback(lessonId: string, response: string, catalog: FeedbackGuideCatalog): LessonFeedback;
+
+export function getNextLessonIndex(currentIndex: number, totalLessons: number): number | null;
