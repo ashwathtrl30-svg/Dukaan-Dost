@@ -33,7 +33,7 @@ test('prompt requests exactly three sections and excludes purchase outcome as a 
     { speaker: 'customer', content: 'This is expensive.' },
     { speaker: 'shopkeeper', content: 'I can explain the quality difference.' },
   ], ['margin_awareness', 'value_explanation']);
-  assert.match(prompt, /exactly three short feedback sections/i);
+  assert.match(prompt, /user-facing feedback must contain exactly three short sections/i);
   assert.match(prompt, /customer outcome is deliberately not supplied/i);
   assert.match(prompt, /Do not assign any score/i);
   assert.match(prompt, /untrusted conversation data/i);
