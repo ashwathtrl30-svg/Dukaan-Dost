@@ -263,9 +263,9 @@ export function analyseCoachBaseline(
       if (!match || match.index === undefined) return false;
       const precedingText = answer.slice(Math.max(0, match.index - 40), match.index);
       const englishNegation = /\b(?:not|never|don't|do not|doesn't|didn't|cannot|can't|won't|wouldn't|refuse to|avoid|fail to)\b(?:\s+\w+){0,5}\s*$/i;
-      const hindiNegationBefore = /(?:नहीं|नही|मत)(?:\\s+\\S+){0,3}\\s*$/u;
+      const hindiNegationBefore = /(?:नहीं|नही|मत)(?:\s+\S+){0,3}\s*$/u;
       const followingText = answer.slice(match.index + match[0].length, match.index + match[0].length + 48);
-      const hindiNegationAfter = /^\\s*(?:नहीं|नही|मत)(?:\\s+\\S+){0,3}/u;
+      const hindiNegationAfter = /^\s*(?:नहीं|नही|मत)(?:\s+\S+){0,3}/u;
       return !englishNegation.test(precedingText) &&
         !hindiNegationBefore.test(precedingText) &&
         !hindiNegationAfter.test(followingText);
