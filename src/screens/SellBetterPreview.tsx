@@ -60,6 +60,7 @@ function getCategoryLabels(ids: string[]) {
 }
 
 export function SellBetterPreview() {
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -80,6 +81,7 @@ export function SellBetterPreview() {
   }, [selectedAreaId, search]);
 
   const openLibrary = (areaId: string | null = null) => {
+    setLibraryOpen(true);
     setSelectedAreaId(areaId);
     setSelectedLessonId(null);
     setSearch('');
@@ -97,6 +99,7 @@ export function SellBetterPreview() {
   };
 
   const backToHome = () => {
+    setLibraryOpen(false);
     setSelectedAreaId(null);
     setSelectedLessonId(null);
     setSearch('');
@@ -114,7 +117,7 @@ export function SellBetterPreview() {
             onResponseChange={setResponse}
             onBack={backToLibrary}
           />
-        ) : selectedAreaId !== null || search.trim() ? (
+        ) : libraryOpen || selectedAreaId !== null || search.trim() ? (
           <LibraryView
             area={selectedArea}
             lessons={visibleLessons}
