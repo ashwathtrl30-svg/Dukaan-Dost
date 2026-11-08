@@ -81,3 +81,26 @@ Final implementation commit:
 5. Phase 3 core lesson engine remains unimplemented. Responses are not evaluated or saved.
 
 No curriculum item is marked shopkeeper-approved or field-validated. Do not use this preview as a production release.
+
+
+## 6. Founder UX feedback revision
+
+The first Phase 2 preview exposed a long situation library and six learning-area cards to the shopkeeper. Founder feedback identified this as too long and too much choice. The preview was revised to a two-state flow:
+
+- **Next practice:** one compact recommendation and one Start practice action.
+- **Respond:** one situation, one open-ended question and one response field.
+
+The shopkeeper-facing library, search, category filters, six-area catalogue, multi-step process explainer and long Discover/Apply explainer were removed. The catalogue stays in the repository for internal curriculum review.
+
+The selector makes an exact category match only for shop categories explicitly represented in the revised draft. Unrepresented categories receive a generic cross-category fallback, not a false claim of tailored content.
+
+## 7. Compact UX revision checks
+
+- [x] No user-facing situation library or search UI remains.
+- [x] No six-area card catalogue is shown to shopkeepers.
+- [x] Home screen presents only one next practice.
+- [x] Practice view contains one situation, one prompt and one response field.
+- [x] One back action returns to the next-practice screen.
+- [x] Response remains ephemeral and is cleared on exit.
+- [x] Unsupported category matches are not presented as category-specific recommendations.
+- [ ] Shopkeeper usability validation and real-device review remain open.
