@@ -94,6 +94,7 @@ export function SellBetterPreview() {
   };
 
   const backToLibrary = () => {
+    setLibraryOpen(true);
     setSelectedLessonId(null);
     setResponse('');
   };
