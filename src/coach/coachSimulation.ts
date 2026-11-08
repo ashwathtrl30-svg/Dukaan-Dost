@@ -146,6 +146,7 @@ function safeText(value: unknown, maxLength: number): string | null {
   const normalized = value
     .normalize('NFKC')
     .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\\[nrt]/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, maxLength);
@@ -352,7 +353,11 @@ export function validateCoachGeneratedTurn(value: unknown): CoachSimulationValid
   }
 
   const item = value as Record<string, unknown>;
-  const nextMessage = safeText(item.nextMessage, 1000);
+  const rawNextMessage = typeof item.nextMessage === 'string' ? item.nextMessage.normalize('NFKC').trim() : '';
+  if (!rawNextMessage || rawNextMessage.length > 1000) {
+    return { ok: false, error: 'The customer response was empty or too long.' };
+  }
+  const nextMessage = safeText(rawNextMessage, 1000);
   if (!nextMessage) {
     return { ok: false, error: 'The customer response was empty or too long.' };
   }
