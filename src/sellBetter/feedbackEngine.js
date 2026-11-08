@@ -49,16 +49,6 @@ function includesWholePhrase(haystack, needle) {
 export function buildLessonFeedback(lessonId, response, catalog) {
   const raw = typeof response === 'string' ? response.normalize('NFKC').replace(/[\u0000-\u001F\u007F]/g, ' ').trim() : '';
 
-  if (!raw || raw.length < 12 || raw.split(/\s+/).filter(Boolean).length < 3) {
-    return {
-      status: 'needs_detail',
-      recognition: '',
-      consideration: null,
-      matchedPhrase: null,
-      message: 'Add a little more detail about what you would ask, check or explain. Your answer does not need to be long.',
-    };
-  }
-
   if (containsPrivateIdentifier(raw)) {
     return {
       status: 'privacy',
@@ -66,6 +56,16 @@ export function buildLessonFeedback(lessonId, response, catalog) {
       consideration: null,
       matchedPhrase: null,
       message: 'Please remove any real customer phone number, email address or payment ID. Sell Better only needs an anonymised answer.',
+    };
+  }
+
+  if (!raw || raw.length < 12 || raw.split(/\s+/).filter(Boolean).length < 3) {
+    return {
+      status: 'needs_detail',
+      recognition: '',
+      consideration: null,
+      matchedPhrase: null,
+      message: 'Add a little more detail about what you would ask, check or explain. Your answer does not need to be long.',
     };
   }
 
