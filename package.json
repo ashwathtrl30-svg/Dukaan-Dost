@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm run test:sell-better && vite build",
     "preview": "vite preview",
     "test:sell-better": "node --test src/sellBetter/feedbackEngine.test.js"
   },
