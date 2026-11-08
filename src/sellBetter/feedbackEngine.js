@@ -133,3 +133,16 @@ export function buildLessonFeedback(lessonId, response, catalog) {
     message: null,
   };
 }
+
+/**
+ * Return the next catalogue index, wrapping to the beginning.
+ * The caller tracks the number of completed lessons to prevent a second lap.
+ * @param {number} currentIndex
+ * @param {number} totalLessons
+ * @returns {number|null}
+ */
+export function getNextLessonIndex(currentIndex, totalLessons) {
+  if (!Number.isInteger(currentIndex) || !Number.isInteger(totalLessons) || totalLessons <= 0) return null;
+  if (currentIndex < 0 || currentIndex >= totalLessons) return null;
+  return (currentIndex + 1) % totalLessons;
+}
