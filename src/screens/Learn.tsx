@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore } from '../store';
 import { supabase } from '../supabaseClient';
 import {
@@ -9,6 +9,8 @@ import {
 } from '../coach/coachAssessment';
 import type { CoachBaselineObservation } from '../coach/coachAssessment';
 import { isCoachCloudAvailable, loadCoachBaseline, saveCoachBaseline } from '../coach/coachRepository';
+import { appendCoachTranscript, cancelCoachSpeech, isCoachSpeechSynthesisSupported, speakCoachText, useCoachVoiceInput } from '../coach/useCoachVoice';
+import type { CoachVoiceError } from '../coach/useCoachVoice';
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,6 +21,7 @@ import {
   Clock3,
   MessageCircle,
   Mic,
+  MicOff,
   ShieldCheck,
   Sparkles,
   Store,
@@ -66,7 +69,18 @@ const coachCopy = {
     question: 'QUESTION',
     of: 'OF',
     answerPlaceholder: 'Write what you would naturally say or do...',
-    voiceLater: 'Voice input will be connected in a later phase',
+    voiceStart: 'Speak your answer',
+    voiceStop: 'Stop listening',
+    voiceListening: 'Listening… speak naturally.',
+    voicePrivacy: 'Your browser may process speech using its own service. Review the text before continuing or sending; Dukaan Dost does not store a separate audio recording.',
+    voiceUnsupported: 'Voice input is not supported in this browser. You can type your reply instead.',
+    voicePermissionDenied: 'Microphone permission is blocked. Allow microphone access in your browser settings, then try again.',
+    voiceNoSpeech: 'No speech was detected. Try again or type your reply.',
+    voiceNoMicrophone: 'No microphone was found. Connect or enable a microphone, or type your reply.',
+    voiceNetwork: 'Speech recognition could not connect. Check your internet connection or type your reply.',
+    voiceLanguage: 'This browser does not support the selected speech language. Try typing your reply.',
+    voiceUnknown: 'Voice input could not start. Please try again or type your reply.',
+    voicePlaybackUnavailable: 'Read-aloud is not supported in this browser.',
     continue: 'Continue',
     seeConversation: 'See the conversation screen',
     temporary: 'Answers stay only in this temporary preview session; they are not uploaded to an account.',
@@ -155,7 +169,18 @@ const coachCopy = {
     question: 'सवाल',
     of: 'में से',
     answerPlaceholder: 'आप स्वाभाविक रूप से क्या कहेंगे या करेंगे, लिखें...',
-    voiceLater: 'बोलकर जवाब देने की सुविधा अगले चरण में जुड़ेगी',
+    voiceStart: 'बोलकर जवाब दें',
+    voiceStop: 'सुनना बंद करें',
+    voiceListening: 'सुन रहे हैं… स्वाभाविक रूप से बोलें।',
+    voicePrivacy: 'आपका ब्राउज़र अपनी speech service से आवाज़ प्रोसेस कर सकता है। आगे बढ़ने या भेजने से पहले लिखे हुए शब्द जाँच लें; Dukaan Dost अलग audio recording सेव नहीं करता।',
+    voiceUnsupported: 'इस ब्राउज़र में आवाज़ से लिखने की सुविधा नहीं है। आप अपना जवाब टाइप कर सकते हैं।',
+    voicePermissionDenied: 'माइक्रोफ़ोन की अनुमति बंद है। ब्राउज़र की सेटिंग में माइक्रोफ़ोन की अनुमति दें और फिर कोशिश करें।',
+    voiceNoSpeech: 'आवाज़ सुनाई नहीं दी। फिर कोशिश करें या जवाब टाइप करें।',
+    voiceNoMicrophone: 'माइक्रोफ़ोन नहीं मिला। माइक्रोफ़ोन जोड़ें या चालू करें, या जवाब टाइप करें।',
+    voiceNetwork: 'आवाज़ पहचानने वाली सेवा से कनेक्शन नहीं हो पाया। इंटरनेट जाँचें या जवाब टाइप करें।',
+    voiceLanguage: 'यह ब्राउज़र चुनी हुई भाषा को सपोर्ट नहीं करता। जवाब टाइप करके देखें।',
+    voiceUnknown: 'आवाज़ से जवाब शुरू नहीं हो पाया। फिर कोशिश करें या टाइप करें।',
+    voicePlaybackUnavailable: 'इस ब्राउज़र में जवाब सुनने की सुविधा उपलब्ध नहीं है।',
     continue: 'आगे बढ़ें',
     seeConversation: 'बातचीत की स्क्रीन देखें',
     temporary: 'इस डेमो में जवाब केवल इसी अस्थायी सेशन में रहेंगे; वे किसी अकाउंट पर अपलोड नहीं होंगे।',
@@ -291,6 +316,38 @@ export function LearnScreen() {
   const [simulationOutcome, setSimulationOutcome] = useState<string | null>(null);
   const isDesignPreview = import.meta.env.VITE_SALES_COACH_UI_PREVIEW === 'true';
 
+  const baselineVoice = useCoachVoiceInput({
+    language: lang,
+    disabled: screen !== 'assessment-preview' || baselineSaving,
+    onTranscript: (transcript) => setAnswers((current) => current.map((answer, index) =>
+      index === assessmentIndex ? appendCoachTranscript(answer, transcript) : answer
+    )),
+  });
+  const simulationVoice = useCoachVoiceInput({
+    language: lang,
+    disabled: screen !== 'simulation-preview' || simulationBusy || simulationStatus !== 'continue',
+    onTranscript: (transcript) => setSimulationReply((current) => appendCoachTranscript(current, transcript)),
+  });
+
+  useEffect(() => {
+    if (screen !== 'simulation-preview') cancelCoachSpeech();
+  }, [screen]);
+
+  useEffect(() => () => cancelCoachSpeech(), []);
+
+  const voiceErrorText = (error: CoachVoiceError | null): string => {
+    switch (error) {
+      case 'unsupported': return copy.voiceUnsupported;
+      case 'permission-denied': return copy.voicePermissionDenied;
+      case 'no-speech': return copy.voiceNoSpeech;
+      case 'no-microphone': return copy.voiceNoMicrophone;
+      case 'network': return copy.voiceNetwork;
+      case 'language': return copy.voiceLanguage;
+      case 'unknown': return copy.voiceUnknown;
+      default: return '';
+    }
+  };
+
   const openAssessmentPreview = async () => {
     setBaselineError('');
     if (baselineObservation) {
@@ -329,6 +386,7 @@ export function LearnScreen() {
   };
 
   const handleAssessmentContinue = async () => {
+    baselineVoice.stop();
     if (!answers[assessmentIndex]?.trim()) {
       setBaselineError(copy.answerRequired);
       return;
@@ -414,6 +472,8 @@ export function LearnScreen() {
   };
 
   const startCoachSimulation = async () => {
+    simulationVoice.stop();
+    cancelCoachSpeech();
     setScreen('simulation-preview');
     setSimulationError('');
     setSimulationSessionId(null);
@@ -448,6 +508,8 @@ export function LearnScreen() {
   };
 
   const sendCoachReply = async () => {
+    simulationVoice.stop();
+    cancelCoachSpeech();
     const message = simulationReply.trim();
     if (!message) {
       setSimulationError(copy.replyRequired);
@@ -481,6 +543,8 @@ export function LearnScreen() {
   };
 
   const abandonCoachSimulation = async () => {
+    simulationVoice.stop();
+    cancelCoachSpeech();
     if (!simulationSessionId) {
       setScreen('assessment-observation');
       return;
@@ -713,9 +777,21 @@ export function LearnScreen() {
               <p className="text-[11px] font-bold tracking-[0.12em] text-primary mb-3">
                 {copy.question} {assessmentIndex + 1}
               </p>
-              <h2 className="text-lg font-semibold text-text leading-relaxed">
-                {COACH_BASELINE_QUESTIONS[assessmentIndex].prompt[lang]}
-              </h2>
+              <div className="flex items-start gap-2">
+                <h2 className="text-lg font-semibold text-text leading-relaxed flex-1">
+                  {COACH_BASELINE_QUESTIONS[assessmentIndex].prompt[lang]}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => speakCoachText(COACH_BASELINE_QUESTIONS[assessmentIndex].prompt[lang], lang)}
+                  disabled={!isCoachSpeechSynthesisSupported()}
+                  className="w-9 h-9 rounded-lg border border-border text-text-secondary flex items-center justify-center shrink-0 disabled:opacity-40"
+                  aria-label={copy.readAloud}
+                  title={copy.readAloud}
+                >
+                  <Volume2 size={17} />
+                </button>
+              </div>
               <p className="text-xs text-text-secondary mt-2 leading-relaxed">{COACH_BASELINE_QUESTIONS[assessmentIndex].helper[lang]}</p>
               <textarea
                 value={answers[assessmentIndex]}
@@ -730,17 +806,25 @@ export function LearnScreen() {
                 aria-label={copy.answerPlaceholder}
               />
               {baselineError && <p className="text-xs text-red-600 mt-3" role="alert">{baselineError}</p>}
-              <div className="flex items-center justify-between gap-3 mt-3">
-                <span className="text-[11px] text-text-secondary">{copy.temporary}</span>
-                <button
-                  type="button"
-                  disabled
-                  title={copy.voiceLater}
-                  aria-label={copy.voiceLater}
-                  className="w-11 h-11 rounded-xl border border-border text-text-secondary/60 flex items-center justify-center shrink-0 disabled:opacity-60"
-                >
-                  <Mic size={19} />
-                </button>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[11px] text-text-secondary">{copy.temporary}</span>
+                  <button
+                    type="button"
+                    onClick={baselineVoice.toggle}
+                    disabled={baselineSaving}
+                    title={baselineVoice.isListening ? copy.voiceStop : copy.voiceStart}
+                    aria-label={baselineVoice.isListening ? copy.voiceStop : copy.voiceStart}
+                    aria-pressed={baselineVoice.isListening}
+                    className={`w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 transition-colors disabled:opacity-50 ${baselineVoice.isListening ? 'border-primary bg-primary text-white' : 'border-border text-text-secondary hover:bg-primary/5'}`}
+                  >
+                    {baselineVoice.isListening ? <MicOff size={19} /> : <Mic size={19} />}
+                  </button>
+                </div>
+                {baselineVoice.isListening && <p className="text-xs text-primary" role="status">{copy.voiceListening}</p>}
+                {baselineVoice.interimTranscript && <p className="text-xs text-text-secondary" aria-live="polite">{baselineVoice.interimTranscript}</p>}
+                {baselineVoice.error && <p className="text-xs text-red-600" role="alert">{voiceErrorText(baselineVoice.error)}</p>}
+                <p className="text-[10px] leading-relaxed text-text-secondary">{copy.voicePrivacy}</p>
               </div>
             </div>
 
@@ -823,7 +907,21 @@ export function LearnScreen() {
                       <div className={message.speaker === 'customer'
                         ? 'rounded-2xl rounded-tl-sm bg-card border border-border p-4 shadow-sm'
                         : 'rounded-2xl rounded-tr-sm bg-primary text-white p-4 shadow-sm'}>
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                        <div className="flex items-start gap-2">
+                          <p className="text-sm leading-relaxed whitespace-pre-wrap flex-1">{message.content}</p>
+                          {message.speaker === 'customer' && (
+                            <button
+                              type="button"
+                              onClick={() => speakCoachText(message.content, lang)}
+                              disabled={!isCoachSpeechSynthesisSupported()}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:bg-primary/5 shrink-0 disabled:opacity-40"
+                              aria-label={copy.readAloud}
+                              title={copy.readAloud}
+                            >
+                              <Volume2 size={16} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <p className={message.speaker === 'customer'
                         ? 'text-[11px] text-text-secondary mt-2 ml-1'
@@ -895,9 +993,28 @@ export function LearnScreen() {
                   aria-label={copy.replyPlaceholder}
                   disabled={simulationBusy}
                 />
+                <div className="flex items-center justify-between gap-3 -mt-1">
+                  <div className="min-w-0 flex-1 space-y-1">
+                    {simulationVoice.isListening && <p className="text-xs text-primary" role="status">{copy.voiceListening}</p>}
+                    {simulationVoice.interimTranscript && <p className="text-xs text-text-secondary" aria-live="polite">{simulationVoice.interimTranscript}</p>}
+                    {simulationVoice.error && <p className="text-xs text-red-600" role="alert">{voiceErrorText(simulationVoice.error)}</p>}
+                    <p className="text-[10px] leading-relaxed text-text-secondary">{copy.voicePrivacy}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={simulationVoice.toggle}
+                    disabled={simulationBusy}
+                    title={simulationVoice.isListening ? copy.voiceStop : copy.voiceStart}
+                    aria-label={simulationVoice.isListening ? copy.voiceStop : copy.voiceStart}
+                    aria-pressed={simulationVoice.isListening}
+                    className={`w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 transition-colors disabled:opacity-50 ${simulationVoice.isListening ? 'border-primary bg-primary text-white' : 'border-border text-text-secondary hover:bg-primary/5'}`}
+                  >
+                    {simulationVoice.isListening ? <MicOff size={19} /> : <Mic size={19} />}
+                  </button>
+                </div>
                 <PrimaryAction
                   onClick={() => void sendCoachReply()}
-                  disabled={simulationBusy || !simulationReply.trim()}
+                  disabled={simulationBusy || simulationVoice.isListening || !simulationReply.trim()}
                 >
                   {simulationBusy ? copy.customerThinking : copy.sendReply}
                   <ArrowRight size={18} />
