@@ -2,6 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { ArrowLeft, BookOpen, Boxes, ChevronRight, PiggyBank, TrendingUp } from 'lucide-react';
 import { useStore } from '../store';
 import catalogJson from '../../docs/sell-better/phase-2/lesson-catalog.preview.v2.json';
+import feedbackGuideJson from '../../docs/sell-better/phase-4/feedback-guides.v1.json';
+import { buildLessonFeedback } from '../sellBetter/feedbackEngine.js';
+import type { FeedbackGuideCatalog, LessonFeedback } from '../sellBetter/feedbackEngine.js';
 
 type LessonArea = { id: string; name: string; shortName: string; description: string; lessonCount: number };
 type LessonCategory = { id: string; label: string };
@@ -18,6 +21,7 @@ type SellBetterLesson = {
 type PreviewCatalog = { areas: LessonArea[]; categories: LessonCategory[]; lessons: SellBetterLesson[] };
 
 const catalog = catalogJson as PreviewCatalog;
+const feedbackGuides = feedbackGuideJson as FeedbackGuideCatalog;
 const shopTypeCategory: Record<string, string> = {
   kirana: 'kirana-grocery',
   bakery: 'bakery-sweet-shop',
@@ -46,7 +50,10 @@ export function SellBetterPreview() {
   const [activePath, setActivePath] = useState<'learn' | 'sell-better'>('learn');
   const [stage, setStage] = useState<LessonStage>('think');
   const [lessonIndex, setLessonIndex] = useState(0);
+  const [lessonStep, setLessonStep] = useState(0);
   const [response, setResponse] = useState('');
+  const [feedback, setFeedback] = useState<LessonFeedback | null>(null);
+  const [responseMessage, setResponseMessage] = useState('');
 
   const recommendedIndex = useMemo(
     () => getRecommendedIndex(state.shopProfile.shopType),
@@ -56,24 +63,46 @@ export function SellBetterPreview() {
 
   const openSellBetter = () => {
     setLessonIndex(recommendedIndex);
+    setLessonStep(0);
     setResponse('');
+    setFeedback(null);
+    setResponseMessage('');
     setStage('think');
     setActivePath('sell-better');
   };
 
   const backToLearn = () => {
     setResponse('');
+    setFeedback(null);
+    setResponseMessage('');
     setStage('think');
+    setLessonStep(0);
     setActivePath('learn');
   };
 
+  const revealFeedback = () => {
+    const result = buildLessonFeedback(lesson.id, response, feedbackGuides);
+    if (result.status === 'needs_detail' || result.status === 'privacy') {
+      setResponseMessage(result.message || 'Please review your response and try again.');
+      return;
+    }
+    setResponseMessage('');
+    setFeedback(result);
+    setStage('discover');
+  };
+
   const continueLesson = () => {
-    if (lessonIndex + 1 >= catalog.lessons.length) {
+    if (lessonStep + 1 >= catalog.lessons.length) {
       setStage('complete');
       return;
     }
-    setLessonIndex((current) => current + 1);
+    // Start with the best explicit category match, then wrap once so all 24
+    // situations are visited exactly once before the completion screen.
+    setLessonIndex((current) => (current + 1) % catalog.lessons.length);
+    setLessonStep((current) => current + 1);
     setResponse('');
+    setFeedback(null);
+    setResponseMessage('');
     setStage('think');
   };
 
@@ -97,7 +126,7 @@ export function SellBetterPreview() {
                 </div>
                 <h1 className="mb-2 text-2xl font-bold">You've reached the end of this practice set.</h1>
                 <p className="mb-6 text-sm leading-6 text-text-secondary">
-                  You have worked through the available situations. More reviewed lessons can be added as Sell Better grows.
+                  You have worked through all 24 available situations. More reviewed lessons can be added as Sell Better grows.
                 </p>
                 <button type="button" onClick={backToLearn} className="min-h-11 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                   Back to Learn
@@ -133,20 +162,30 @@ export function SellBetterPreview() {
                       <textarea
                         id="sell-better-response"
                         value={response}
-                        onChange={(event) => setResponse(event.target.value.slice(0, 1500))}
+                        onChange={(event) => {
+                          setResponse(event.target.value.slice(0, 1500));
+                          setResponseMessage('');
+                        }}
                         rows={4}
                         maxLength={1500}
                         placeholder="Write what you would naturally say or do..."
+                        aria-describedby="sell-better-privacy"
                         className="min-h-[116px] w-full resize-y rounded-xl border border-border bg-card p-3 text-sm leading-relaxed outline-none placeholder:text-text-secondary focus:border-primary focus:ring-2 focus:ring-primary/20"
                       />
+                      <p id="sell-better-privacy" className="mt-2 text-xs leading-5 text-text-secondary">
+                        Keep customer details anonymous. Do not include names, phone numbers or payment IDs.
+                      </p>
+                      {responseMessage && (
+                        <p role="alert" className="mt-2 text-sm leading-5 text-red-600">{responseMessage}</p>
+                      )}
                     </div>
                     <button
                       type="button"
                       disabled={!response.trim()}
-                      onClick={() => setStage('discover')}
+                      onClick={revealFeedback}
                       className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                     >
-                      Continue <ChevronRight size={17} />
+                      Discover <ChevronRight size={17} />
                     </button>
                   </>
                 )}
@@ -157,12 +196,31 @@ export function SellBetterPreview() {
                       <p className="mb-2 text-[11px] font-bold tracking-[0.13em] text-text-secondary">YOUR RESPONSE</p>
                       <p className="whitespace-pre-wrap text-sm leading-6">{response}</p>
                     </section>
-                    <section className="mb-4 rounded-2xl border border-primary/25 bg-primary/5 p-4">
-                      <p className="mb-2 text-[11px] font-bold tracking-[0.13em] text-primary">WHAT TO CONSIDER</p>
-                      <p className="text-sm leading-6">{lesson.objective}</p>
-                    </section>
+                    {feedback?.message ? (
+                      <section className="mb-4 rounded-2xl border border-border bg-card p-4">
+                        <p className="text-sm leading-6">{feedback.message}</p>
+                        <p className="mt-2 text-sm leading-6">{lesson.objective}</p>
+                      </section>
+                    ) : (
+                      <>
+                        <section className="mb-4 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+                          <p className="mb-2 text-[11px] font-bold tracking-[0.13em] text-primary">
+                            {feedback?.status === 'matched' ? 'WHAT YOU CONSIDERED' : 'A NOTE ABOUT YOUR RESPONSE'}
+                          </p>
+                          <p className="text-sm leading-6">{feedback?.recognition}</p>
+                        </section>
+                        {feedback?.consideration && (
+                          <section className="mb-4 rounded-2xl border border-border bg-card p-4">
+                            <p className="mb-2 text-[11px] font-bold tracking-[0.13em] text-text-secondary">{feedback.consideration.heading}</p>
+                            <p className="mb-1 text-sm font-semibold">{feedback.consideration.label}</p>
+                            <p className="text-sm leading-6">{feedback.consideration.why}</p>
+                            <p className="mt-3 text-sm font-medium leading-6">{feedback.consideration.question}</p>
+                          </section>
+                        )}
+                      </>
+                    )}
                     <p className="mb-4 text-xs leading-5 text-text-secondary">
-                      This is a general lesson insight, not an AI assessment or a judgement of your answer.
+                      This is a guided reflection based on a limited set of lesson ideas, not a grade or a complete judgement. It may not recognise every valid way of expressing an idea.
                     </p>
                     <button type="button" onClick={() => setStage('apply')} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                       See what to apply <ChevronRight size={17} />
