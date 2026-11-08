@@ -1,5 +1,5 @@
 import { COACH_BASELINE_QUESTION_IDS } from './types';
-import type { CoachBaselineAnswer } from './types';
+import type { CoachBaselineAnswer, CoachBaselineQuestionId } from './types';
 import { normalizeCoachCategory } from './coachKnowledge';
 
 export type CoachAssessmentLanguage = 'en' | 'hi';
@@ -255,7 +255,7 @@ export function analyseCoachBaseline(
   language: CoachAssessmentLanguage = 'en',
 ): CoachAssessmentValidation<CoachBaselineObservation> {
   const validation = validateCoachBaseline(value);
-  if (!validation.ok) return validation;
+  if (validation.ok === false) return { ok: false, error: validation.error, questionIndex: validation.questionIndex };
 
   const hasPositiveSignal = (answer: string, matchers: readonly RegExp[]): boolean =>
     matchers.some((matcher) => {
@@ -323,7 +323,7 @@ export function createCoachPersonalizationProfile(input: {
 }): CoachAssessmentValidation<CoachPersonalizationProfile> {
   const language = input.preferredLanguage === 'hi' ? 'hi' : 'en';
   const observation = analyseCoachBaseline(input.answers, language);
-  if (!observation.ok) return observation;
+  if (observation.ok === false) return { ok: false, error: observation.error, questionIndex: observation.questionIndex };
 
   const safeLocation = typeof input.city === 'string'
     ? input.city.replace(/[\u0000-\u001F\u007F]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100) || null
@@ -362,10 +362,10 @@ export function restoreCoachBaselineAssessment(
 
   const record = value as Record<string, unknown>;
   const answers = validateCoachBaseline(record.answers);
-  if (!answers.ok) return answers;
+  if (answers.ok === false) return { ok: false, error: answers.error, questionIndex: answers.questionIndex };
 
   const fallback = analyseCoachBaseline(answers.value, language);
-  if (!fallback.ok) return fallback;
+  if (fallback.ok === false) return { ok: false, error: fallback.error, questionIndex: fallback.questionIndex };
 
   const saved = record.initialObservation;
   if (typeof saved !== 'object' || saved === null || Array.isArray(saved)) {
