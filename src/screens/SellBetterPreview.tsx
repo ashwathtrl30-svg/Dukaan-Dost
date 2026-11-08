@@ -3,7 +3,7 @@ import { ArrowLeft, BookOpen, Boxes, ChevronRight, PiggyBank, TrendingUp } from 
 import { useStore } from '../store';
 import catalogJson from '../../docs/sell-better/phase-2/lesson-catalog.preview.v2.json';
 import feedbackGuideJson from '../../docs/sell-better/phase-4/feedback-guides.v1.json';
-import { buildLessonFeedback } from '../sellBetter/feedbackEngine.js';
+import { buildLessonFeedback, getNextLessonIndex } from '../sellBetter/feedbackEngine.js';
 import type { FeedbackGuideCatalog, LessonFeedback } from '../sellBetter/feedbackEngine.js';
 
 type LessonArea = { id: string; name: string; shortName: string; description: string; lessonCount: number };
@@ -92,13 +92,14 @@ export function SellBetterPreview() {
   };
 
   const continueLesson = () => {
-    if (lessonStep + 1 >= catalog.lessons.length) {
+    const nextIndex = getNextLessonIndex(lessonIndex, catalog.lessons.length);
+    if (lessonStep + 1 >= catalog.lessons.length || nextIndex === null) {
       setStage('complete');
       return;
     }
     // Start with the best explicit category match, then wrap once so all 24
     // situations are visited exactly once before the completion screen.
-    setLessonIndex((current) => (current + 1) % catalog.lessons.length);
+    setLessonIndex(nextIndex);
     setLessonStep((current) => current + 1);
     setResponse('');
     setFeedback(null);
