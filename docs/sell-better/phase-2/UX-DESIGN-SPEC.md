@@ -10,23 +10,25 @@ Turn the Sell Better product foundation into a clear, mobile-first experience th
 
 This phase is a UX prototype. It does not implement personalised AI feedback, user accounts, cloud history, speech recognition, read-aloud, scoring, progress analytics or production publishing.
 
-## 2. Experience structure — deliberately compact
+## 2. Experience structure — three paths, direct lesson entry
 
-### Shopkeeper home
-- Show the Sell Better promise in a short headline and one supporting line.
-- Show a single **Your next practice** card, selected from the shop category when a reviewed category match exists.
-- One clear action opens that practice.
-- Do not display a situation library, search, six-area catalogue, lesson counts, or a long explanation of the learning method.
-- Do not claim category-personalised recommendations for categories that do not yet have a specific lesson. They receive a general cross-category practice.
+### Learn landing screen
+- When the shopkeeper opens Learn, show three clear business-improvement paths:
+  1. **Sell Better** — understand customers, build trust and improve selling decisions.
+  2. **Save Better** — make smarter money and cost decisions.
+  3. **Manage Stock Better** — make better stock and replenishment decisions.
+- Sell Better is available in this preview. Save Better and Manage Stock Better are visible as **Coming soon** because their curriculum and experience have not been built yet.
+- Do not show a situation library, search, six-area curriculum catalogue or lesson-selection menu.
 
-### Practice screen
-- One compact title, one short situation, one open-ended question, and one response field.
-- A simple back action returns to the home screen.
-- No large instructional panel, process explainer, progress meter, score, or artificial next-step action.
+### Sell Better entry
+- Tapping **Sell Better** opens a lesson immediately. There is no intermediate recommendation card or Start Practice screen.
+- Select a draft lesson for the shop category only where an explicit matching situation exists. Otherwise, use a general cross-category draft and do not imply dedicated category coverage.
+- The lesson screen contains one short title, one situation, one open-ended prompt and one response field.
+- A simple Back action returns to the three-path Learn screen.
 - The preview response remains in component memory and is cleared on exit. It is not sent to an API or written to local/cloud storage.
-- The screen identifies this as a prototype and does not pretend to provide response-aware feedback.
+- The screen does not pretend to provide response-aware feedback.
 
-The user-facing preview therefore has only two states: **Next practice** and **Respond**. The six learning areas and full 24-situation catalogue remain internal curriculum structure, not a shopkeeper-facing menu.
+The user-facing flow is **Learn → Sell Better → Lesson**. Save Better and Manage Stock Better remain visible, but are not yet interactive.
 
 ## 3. Content handling
 
@@ -91,3 +93,8 @@ The situation library, search interface, six-area card grid, long four-step expl
 The current selector only claims shop-category matching where an explicit matching category exists in the draft catalogue. For currently uncovered shop types (including medical, tea stall and restaurant), the preview uses a broad cross-category fallback rather than pretending it has dedicated category-specific lessons.
 
 This is still an English-only UI and content preview. Hindi/Hinglish, voice response and actual response-aware feedback remain future implementation/review work.
+
+
+## 10. Founder-directed information architecture
+
+Founder feedback clarified that Learn is the parent destination for three business-improvement paths: **Sell Better**, **Save Better** and **Manage Stock Better**. The preview now follows that structure. Sell Better opens directly into a lesson; there is no next-practice interstitial, situation library or browsing menu. The other two paths are presented as Coming soon until their own content and UX are developed.
