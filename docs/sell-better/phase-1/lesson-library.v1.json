@@ -189,8 +189,7 @@
         "Do not guarantee speed, lifespan or software support."
       ],
       "sources": [
-        "S3",
-        "S4"
+        "S3"
       ],
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
@@ -240,8 +239,7 @@
         "Do not pressure customers to buy more perishable goods."
       ],
       "sources": [
-        "S5",
-        "S6"
+        "S5"
       ],
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
@@ -288,7 +286,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "CO-02",
@@ -330,7 +329,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "CO-03",
@@ -372,7 +372,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "CO-04",
@@ -414,7 +415,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "PN-01",
@@ -457,7 +459,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "PN-02",
@@ -499,7 +502,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "PN-03",
@@ -541,7 +545,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "PN-04",
@@ -582,7 +587,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "HO-01",
@@ -623,7 +629,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "HO-02",
@@ -665,7 +672,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "HO-03",
@@ -706,7 +714,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "HO-04",
@@ -748,7 +757,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "CD-01",
@@ -792,7 +802,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "CD-02",
@@ -833,7 +844,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "CD-03",
@@ -875,7 +887,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "CD-04",
@@ -917,7 +930,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "LR-01",
@@ -960,7 +974,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "LR-02",
@@ -1003,7 +1018,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "LR-03",
@@ -1047,7 +1063,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     },
     {
       "id": "LR-04",
@@ -1091,7 +1108,8 @@
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "sources": []
     }
   ]
 }
