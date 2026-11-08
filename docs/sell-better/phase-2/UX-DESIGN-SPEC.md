@@ -6,7 +6,7 @@
 
 ## 1. Phase 2 objective
 
-Turn the Sell Better product foundation into a clear, mobile-first experience that lets a shopkeeper understand the product, browse the six learning areas, inspect a situation and see how the Think → Respond → Discover → Apply flow is intended to work.
+Turn the Sell Better product foundation into a clear, mobile-first experience that lets a shopkeeper choose one of three business-improvement paths and enter an available lesson with minimal friction.
 
 This phase is a UX prototype. It does not implement personalised AI feedback, user accounts, cloud history, speech recognition, read-aloud, scoring, progress analytics or production publishing.
 
@@ -41,10 +41,10 @@ The user-facing flow is **Learn → Sell Better → Lesson**. Save Better and Ma
 ## 4. Interaction and accessibility
 
 - Designed mobile-first with readable type, large tap targets, visible focus states, semantic buttons and labelled form controls.
-- Search and area filters are local, immediate and reversible.
-- Back navigation returns to the previous library context.
+- The three path cards have clear labels and concise descriptions.
+- Sell Better opens the lesson directly; Save Better and Manage Stock Better are labelled Coming soon.
+- Back navigation returns from the lesson to the three-path Learn screen.
 - Long situation text wraps and remains scrollable; no key content is truncated.
-- Empty search results provide a clear way to reset the search.
 
 ## 5. Technical boundaries
 
@@ -73,28 +73,12 @@ Phase 3 will implement the core lesson engine without AI. Response-aware feedbac
 
 ## 8. Implementation validation note
 
-The Phase 2 UI preview was deployed successfully from the development branch. A source-level audit confirmed 24 unique situation IDs, six declared learning areas with four situations each, valid category references, and complete title/situation/open-ended-prompt/objective/takeaway fields. The flagged preview route selects the new screen while the non-preview route retains the existing Learn screen.
+The final Phase 2 implementation uses three top-level Learn paths and direct Sell Better lesson entry. Source-level checks confirmed the 24-situation internal curriculum structure, the three visible learning-path labels, the Coming soon state for the two unbuilt areas, direct entry into one Sell Better lesson, and back navigation to Learn.
 
-The response field is component state only. Navigation clears its contents; there is no API call, browser storage write, Supabase use or AI-feedback request in the preview component. The all-situations library, area filtering, search and detail/back navigation paths were checked in source. A navigation edge case for returning from the featured situation was found and fixed before the final deployment.
+The response field is component state only. It is cleared on exit and is not sent to an API or written to local/cloud storage. The preview route is gated and the non-preview Learn screen is preserved. The branch-scoped preview environment keeps cloud persistence disabled and Supabase URL/key variables blank.
 
-Vercel reported the final development-branch deployment as `READY`. Its page and compiled JavaScript bundle returned HTTP 200, and the served bundle included the Sell Better headline, revised situation copy and preview disclaimers. The final deployment is linked below in the handoff.
+The final preview build and served JavaScript bundle must be checked after the latest UX commit. This validation is not a full device/browser automation run or a shopkeeper usability test. The curriculum remains draft content pending founder, shopkeeper and language/expert review.
 
-**Validation limitation:** This was a source, build, deployment and served-bundle smoke audit. It was not a full device/browser automation run or a shopkeeper usability test. Check the UI on an Android phone and desktop before treating the layout as accepted. The curriculum remains draft content pending founder, shopkeeper and language/expert review.
+## 9. Final information architecture
 
-
-## 9. Compact UX revision
-
-After founder review, the original Phase 2 preview was judged too long and too catalogue-driven. It has been simplified to two user-facing states:
-1. **Next practice:** product promise, one supporting line, one recommended practice and one Start practice action.
-2. **Respond:** situation, open-ended prompt and response field, with a simple Back action.
-
-The situation library, search interface, six-area card grid, long four-step explainer and extended Discover/Apply explainer have been removed from the shopkeeper-facing preview. The complete curriculum remains in the internal JSON catalogue.
-
-The current selector only claims shop-category matching where an explicit matching category exists in the draft catalogue. For currently uncovered shop types (including medical, tea stall and restaurant), the preview uses a broad cross-category fallback rather than pretending it has dedicated category-specific lessons.
-
-This is still an English-only UI and content preview. Hindi/Hinglish, voice response and actual response-aware feedback remain future implementation/review work.
-
-
-## 10. Founder-directed information architecture
-
-Founder feedback clarified that Learn is the parent destination for three business-improvement paths: **Sell Better**, **Save Better** and **Manage Stock Better**. The preview now follows that structure. Sell Better opens directly into a lesson; there is no next-practice interstitial, situation library or browsing menu. The other two paths are presented as Coming soon until their own content and UX are developed.
+The shopkeeper-facing Learn screen presents three paths: **Sell Better**, **Save Better** and **Manage Stock Better**. Tapping Sell Better opens one recommended lesson directly. There is no next-practice interstitial, lesson library, search or six-area menu. Save Better and Manage Stock Better are marked Coming soon until their own content and UX are developed.
