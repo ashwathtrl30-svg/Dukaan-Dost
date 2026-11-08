@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { consumeCoachRateLimit } from '../src/coach/coachRateLimit.js';
 import {
   buildCoachMilestonePrompt,
   validateCoachMilestoneReview,
@@ -46,18 +47,6 @@ function redact(value: unknown): string {
     .replace(/\b(?:otp|one[- ]time password|verification code)\s*[:=-]?\s*\d{4,8}\b/gi, '[code removed]')
     .slice(0, 4000);
 }
-const rateLimits = new Map<string, { start: number; count: number }>();
-function limited(userId: string): boolean {
-  const now = Date.now();
-  const previous = rateLimits.get(userId);
-  if (!previous || now - previous.start >= 60000) {
-    rateLimits.set(userId, { start: now, count: 1 });
-    return false;
-  }
-  previous.count += 1;
-  return previous.count > 6;
-}
-
 async function getCompletedCount(client: any, userId: string): Promise<number> {
   const result = await client.from('coach_sessions')
     .select('id', { count: 'exact', head: true })
@@ -150,6 +139,7 @@ async function generateReview(apiKey: string, sessions: readonly CoachMilestoneS
       contents: [{ role: 'user', parts: [{ text: buildCoachMilestonePrompt(sessions) }] }],
       generationConfig: { temperature: 0.25, maxOutputTokens: 1200, responseMimeType: 'application/json' },
     }),
+    signal: AbortSignal.timeout(25000),
   });
   const result = await response.json().catch(() => null);
   if (!response.ok) throw new Error('Milestone review generation failed.');
@@ -274,7 +264,7 @@ export default async function handler(req: any, res: any) {
     const auth = await client.auth.getUser(accessToken);
     if (auth.error || !auth.data.user) return send(res, 401, { error: 'Your sign-in session has expired.' });
     const userId = auth.data.user.id;
-    if (limited(userId)) return send(res, 429, { error: 'Too many Coach progress requests. Please wait a minute.' });
+    if (!(await consumeCoachRateLimit(client, 'milestone', 6))) return send(res, 429, { error: 'Too many Coach progress requests. Please wait a minute.' });
 
     if (body.action === 'progress') return await handleProgress(client, userId, res);
     return await handleReview(client, userId, gemini, res);
