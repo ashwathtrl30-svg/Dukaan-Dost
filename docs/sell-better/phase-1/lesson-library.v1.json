@@ -87,14 +87,19 @@
         "Do not infer medical, religious or dietary requirements.",
         "Do not claim one oil is healthier or better without substantiation."
       ],
-      "sources": [
-        "S1",
-        "S2"
-      ],
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "customerContext": {
+        "en": "A customer asks for cooking oil but is unsure which pack to take. They mention that it is for a family member who has a particular preference.",
+        "hi": "एक ग्राहक खाना पकाने का तेल माँगता है, लेकिन कौन-सा पैक लेना है इसे लेकर असमंजस में है। वह बताता है कि यह परिवार के किसी सदस्य की पसंद के लिए है।",
+        "hinglish": "Ek customer cooking oil maangta hai, par kaunsa pack lena hai isko lekar unsure hai. Woh batata hai ki yeh family member ki preference ke liye hai."
+      },
+      "sourceRefs": [
+        "S1",
+        "S2"
+      ]
     },
     {
       "id": "UC-02",
@@ -138,13 +143,18 @@
         "Do not judge body shape, gender expression or appearance.",
         "Do not claim a garment is suitable for a formal event without asking context."
       ],
-      "sources": [
-        "S3"
-      ],
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "customerContext": {
+        "en": "A customer looks at two shirts and says one is for an event next week. They have not said what kind of event it is or how they want to use the shirt afterwards.",
+        "hi": "एक ग्राहक दो शर्ट देखता है और बताता है कि एक अगले हफ़्ते के कार्यक्रम के लिए चाहिए। उसने कार्यक्रम या बाद में शर्ट के इस्तेमाल के बारे में नहीं बताया है।",
+        "hinglish": "Ek customer do shirts dekh raha hai aur kehta hai ki ek next week ke event ke liye chahiye. Event kaisa hai ya baad mein shirt ka use kya hoga, yeh abhi clear nahi hai."
+      },
+      "sourceRefs": [
+        "S3"
+      ]
     },
     {
       "id": "UC-03",
@@ -188,13 +198,16 @@
         "Never invent RAM, storage, battery, camera or network specifications.",
         "Do not guarantee speed, lifespan or software support."
       ],
-      "sources": [
-        "S3"
-      ],
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "customerContext": {
+        "en": "A customer is comparing two phones and says one has a better camera. They also mention using the phone for work, but have not explained which tasks matter most.",
+        "hi": "एक ग्राहक दो फ़ोन की तुलना कर रहा है और कहता है कि एक का कैमरा बेहतर है। वह काम के लिए भी फ़ोन इस्तेमाल करता है, लेकिन कौन-से काम ज़रूरी हैं यह स्पष्ट नहीं है।",
+        "hinglish": "Ek customer do phones compare kar raha hai. Kehta hai ek ka camera better hai, aur phone work ke liye bhi use karta hai. Par kaunse tasks important hain, yeh clear nahi."
+      },
+      "sourceRefs": []
     },
     {
       "id": "UC-04",
@@ -238,13 +251,18 @@
         "Do not make food-safety, freshness-duration or health claims beyond observable facts.",
         "Do not pressure customers to buy more perishable goods."
       ],
-      "sources": [
-        "S5"
-      ],
       "version": 1,
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
-      "lastReviewedAt": null
+      "lastReviewedAt": null,
+      "customerContext": {
+        "en": "A customer asks for tomatoes for the next few days and checks the produce carefully. They have not said how much they need or when they plan to use it.",
+        "hi": "एक ग्राहक अगले कुछ दिनों के लिए टमाटर माँगता है और सब्ज़ियाँ ध्यान से देखता है। उसने मात्रा या इस्तेमाल का समय नहीं बताया है।",
+        "hinglish": "Ek customer agle kuch din ke liye tamatar maangta hai aur dhyan se dekh raha hai. Kitni quantity chahiye aur kab use karega, yeh nahi bataya."
+      },
+      "sourceRefs": [
+        "S5"
+      ]
     },
     {
       "id": "CO-01",
@@ -287,7 +305,14 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer asks why two shirts have different prices. The visible difference is not obvious, and the labels show different fabric details.",
+        "hi": "ग्राहक पूछता है कि दो मिलती-जुलती शर्ट की कीमत अलग क्यों है। अंतर साफ़ नहीं दिखता, लेकिन लेबल पर कपड़े की जानकारी अलग है।",
+        "hinglish": "Customer poochta hai ki do similar shirts ki price alag kyun hai. Difference clearly nahi dikh raha, lekin labels par fabric details alag hain."
+      },
+      "sourceRefs": [
+        "S3"
+      ]
     },
     {
       "id": "CO-02",
@@ -330,7 +355,12 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer asks for a kurta alteration and says they want it to feel more comfortable. They point to the sleeve but have not explained the fit they prefer.",
+        "hi": "एक ग्राहक कुर्ते की सिलाई ठीक करवाना चाहता है और कहता है कि उसे ज़्यादा आरामदायक चाहिए। वह बाँह की ओर इशारा करता है, लेकिन पसंद का फिट नहीं बताता।",
+        "hinglish": "Ek customer kurta alteration karwana chahta hai aur kehta hai ki comfortable chahiye. Sleeve dikhata hai, par preferred fit explain nahi karta."
+      },
+      "sourceRefs": []
     },
     {
       "id": "CO-03",
@@ -373,7 +403,12 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer asks for a hair service after showing a reference photo. Their current hair and the photo appear different, and they ask whether the result will look exactly the same.",
+        "hi": "एक ग्राहक फोटो दिखाकर हेयर सर्विस पूछता है। उसके मौजूदा बाल और फोटो में अंतर है। वह पूछता है कि क्या बिल्कुल वैसा ही परिणाम मिलेगा।",
+        "hinglish": "Ek customer reference photo dikhakar hair service poochta hai. Uske current hair aur photo mein difference hai. Woh poochta hai ki exact same result milega kya."
+      },
+      "sourceRefs": []
     },
     {
       "id": "CO-04",
@@ -416,7 +451,12 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer asks for a fitting or connector for a home repair. They have brought a photo but not the old part or measurements.",
+        "hi": "एक ग्राहक घर की मरम्मत के लिए फिटिंग या कनेक्टर माँगता है। वह फोटो लाया है, लेकिन पुराना पार्ट या माप नहीं।",
+        "hinglish": "Ek customer home repair ke liye fitting ya connector maangta hai. Photo laya hai, par old part ya measurement nahi."
+      },
+      "sourceRefs": []
     },
     {
       "id": "PN-01",
@@ -460,7 +500,12 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A regular customer asks for a lower price on a few grocery items. The shopkeeper has not checked the current cost or margin for those items.",
+        "hi": "एक नियमित ग्राहक कुछ किराना सामान पर कम दाम माँगता है। दुकानदार ने उन सामानों की मौजूदा लागत या मार्जिन नहीं देखा है।",
+        "hinglish": "Ek regular customer kuch grocery items par discount maangta hai. Shopkeeper ne un items ki current cost ya margin check nahi kiya hai."
+      },
+      "sourceRefs": []
     },
     {
       "id": "PN-02",
@@ -503,7 +548,12 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer shows a lower online price for a phone and asks the shop to match it. The customer has not shown the exact model variant, seller or included terms.",
+        "hi": "एक ग्राहक फ़ोन की कम ऑनलाइन कीमत दिखाकर वही दाम माँगता है। उसने सही मॉडल वेरिएंट, विक्रेता या शर्तें नहीं दिखाईं।",
+        "hinglish": "Ek customer phone ka lower online price dikhakar same price maangta hai. Exact variant, seller aur included terms clear nahi hain."
+      },
+      "sourceRefs": []
     },
     {
       "id": "PN-03",
@@ -546,7 +596,12 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer wants a large box order for a family event and asks for a lower per-piece price. The quantity, preparation effort and delivery needs are not yet confirmed.",
+        "hi": "एक ग्राहक पारिवारिक कार्यक्रम के लिए बड़ा ऑर्डर चाहता है और प्रति पीस कम दाम माँगता है। मात्रा, तैयारी और डिलीवरी की ज़रूरत अभी तय नहीं है।",
+        "hinglish": "Ek customer family event ke liye bada box order chahta hai aur per-piece price kam maangta hai. Quantity, preparation effort aur delivery needs abhi confirm nahi hain."
+      },
+      "sourceRefs": []
     },
     {
       "id": "PN-04",
@@ -588,7 +643,12 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer likes a garment but repeatedly asks for a lower price. The shopkeeper has not checked whether any discount is available.",
+        "hi": "एक ग्राहक कपड़ा पसंद करता है, लेकिन बार-बार कम दाम माँगता है। दुकानदार ने यह नहीं देखा कि कोई छूट उपलब्ध है या नहीं।",
+        "hinglish": "Ek customer garment pasand karta hai, par baar-baar lower price maangta hai. Shopkeeper ne check nahi kiya ki discount available hai ya nahi."
+      },
+      "sourceRefs": []
     },
     {
       "id": "HO-01",
@@ -630,7 +690,12 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer has compared two phones and says they want time to think. They have not asked for more details.",
+        "hi": "एक ग्राहक ने दो फ़ोन की तुलना की है और कहता है कि वह सोचकर बताएगा। उसने और जानकारी नहीं माँगी है।",
+        "hinglish": "Customer ne do phones compare kiye aur kehta hai sochkar batayega. Usne aur details nahi maangi."
+      },
+      "sourceRefs": []
     },
     {
       "id": "HO-02",
@@ -673,7 +738,12 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer likes an outfit but says they want to ask a family member before deciding. They have not asked the shopkeeper to persuade anyone.",
+        "hi": "एक ग्राहक को कपड़े पसंद आए हैं, लेकिन वह फैसला करने से पहले परिवार के सदस्य से पूछना चाहता है। उसने मनाने को नहीं कहा है।",
+        "hinglish": "Customer ko outfit pasand aaya, par decide karne se pehle family member se poochna chahta hai. Usne kisi ko convince karne ko nahi kaha."
+      },
+      "sourceRefs": []
     },
     {
       "id": "HO-03",
@@ -715,7 +785,12 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer asks whether a sweet will remain suitable for an event later in the day. The shopkeeper has not checked the product's storage or handling guidance.",
+        "hi": "एक ग्राहक पूछता है कि मिठाई दिन में बाद के कार्यक्रम तक ठीक रहेगी या नहीं। दुकानदार ने भंडारण या संभालने की जानकारी नहीं जाँची है।",
+        "hinglish": "Customer poochta hai ki sweet later event tak theek rahegi kya. Shopkeeper ne storage ya handling guidance check nahi ki."
+      },
+      "sourceRefs": []
     },
     {
       "id": "HO-04",
@@ -758,7 +833,12 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer is considering a new salon service but asks several questions about the process and maintenance. They have not decided whether to proceed.",
+        "hi": "एक ग्राहक नई सैलून सर्विस पर विचार कर रहा है और प्रक्रिया व देखभाल के बारे में कई सवाल पूछता है। उसने अभी फैसला नहीं किया है।",
+        "hinglish": "Customer new salon service consider kar raha hai aur process aur maintenance ke baare mein questions pooch raha hai. Abhi decide nahi kiya."
+      },
+      "sourceRefs": []
     },
     {
       "id": "CD-01",
@@ -803,7 +883,14 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer returns with vegetables they bought earlier and says some pieces were not in good condition. The shopkeeper has not yet checked the produce or purchase details.",
+        "hi": "एक ग्राहक पहले खरीदी सब्ज़ियाँ लेकर लौटता है और कहता है कि कुछ खराब हालत में थीं। दुकानदार ने अभी सब्ज़ी या खरीद की जानकारी नहीं देखी है।",
+        "hinglish": "Customer pehle kharidi sabzi lekar lautta hai aur kehta hai kuch pieces achhe nahi the. Shopkeeper ne abhi produce ya purchase details check nahi ki."
+      },
+      "sourceRefs": [
+        "S9"
+      ]
     },
     {
       "id": "CD-02",
@@ -845,7 +932,14 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer arrives to collect a garment, but the alteration is not finished. The shopkeeper had earlier given an estimated collection time.",
+        "hi": "एक ग्राहक कपड़ा लेने आता है, लेकिन बदलाव का काम पूरा नहीं हुआ है। दुकानदार ने पहले अनुमानित समय बताया था।",
+        "hinglish": "Customer garment lene aata hai, par alteration complete nahi hua. Shopkeeper ne pehle estimated collection time diya tha."
+      },
+      "sourceRefs": [
+        "S9"
+      ]
     },
     {
       "id": "CD-03",
@@ -888,7 +982,14 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer returns an accessory and says it does not work with their device. The shopkeeper has not checked the exact device model or accessory specification.",
+        "hi": "एक ग्राहक एक्सेसरी लौटाकर कहता है कि वह उसके फ़ोन के साथ काम नहीं करती। दुकानदार ने सही मॉडल या एक्सेसरी की जानकारी नहीं जाँची है।",
+        "hinglish": "Customer accessory lekar aata hai aur kehta hai device ke saath kaam nahi karti. Shopkeeper ne exact device model ya accessory specification check nahi ki."
+      },
+      "sourceRefs": [
+        "S9"
+      ]
     },
     {
       "id": "CD-04",
@@ -931,7 +1032,14 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "After a salon service, a customer says the result is not what they expected. The stylist has not yet asked what looks different to them.",
+        "hi": "सैलून सर्विस के बाद ग्राहक कहता है कि परिणाम उसकी उम्मीद जैसा नहीं है। स्टाइलिस्ट ने अभी नहीं पूछा कि उसे क्या अलग लग रहा है।",
+        "hinglish": "Salon service ke baad customer kehta hai result expectation jaisa nahi. Stylist ne abhi nahi poochha ki unhe kya different lag raha hai."
+      },
+      "sourceRefs": [
+        "S9"
+      ]
     },
     {
       "id": "LR-01",
@@ -975,7 +1083,15 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A regular customer often buys the same tea, but today asks whether another pack is available. The shopkeeper remembers the usual choice but does not know whether the customer wants a change.",
+        "hi": "एक नियमित ग्राहक अक्सर वही चाय लेता है, लेकिन आज दूसरा पैक पूछता है। दुकानदार को उसकी पुरानी पसंद याद है, पर बदलाव का कारण नहीं पता।",
+        "hinglish": "Ek regular customer aksar wahi tea leta hai, par aaj doosra pack poochta hai. Shopkeeper ko usual choice yaad hai, par change ka reason nahi pata."
+      },
+      "sourceRefs": [
+        "S1",
+        "S2"
+      ]
     },
     {
       "id": "LR-02",
@@ -1019,7 +1135,14 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A familiar customer asks to take goods on credit and says they will pay later. The shopkeeper has not checked the outstanding balance or agreed terms.",
+        "hi": "एक परिचित ग्राहक उधार सामान माँगता है और बाद में पैसे देने की बात कहता है। दुकानदार ने बकाया या तय शर्तें नहीं देखी हैं।",
+        "hinglish": "Ek familiar customer udhaar samaan maangta hai aur baad mein payment ki baat karta hai. Shopkeeper ne outstanding balance ya agreed terms check nahi kiye."
+      },
+      "sourceRefs": [
+        "S1"
+      ]
     },
     {
       "id": "LR-03",
@@ -1064,7 +1187,12 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer has asked the shop to contact them when a repair, alteration or service update is ready. The shop has the customer's preferred contact method, but no permission for promotional messages.",
+        "hi": "एक ग्राहक ने मरम्मत, बदलाव या सर्विस तैयार होने पर संपर्क करने को कहा है। दुकान के पास पसंदीदा संपर्क तरीका है, लेकिन प्रचार संदेशों की अनुमति नहीं है।",
+        "hinglish": "Customer ne repair, alteration ya service ready hone par contact karne ko kaha hai. Preferred contact method hai, par promotional messages ki permission nahi hai."
+      },
+      "sourceRefs": []
     },
     {
       "id": "LR-04",
@@ -1109,7 +1237,13 @@
       "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
       "reviewer": null,
       "lastReviewedAt": null,
-      "sources": []
+      "customerContext": {
+        "en": "A customer says they were satisfied with a purchase or service. The shopkeeper wants to encourage word of mouth but does not want to make the customer uncomfortable.",
+        "hi": "एक ग्राहक कहता है कि वह खरीद या सर्विस से संतुष्ट है। दुकानदार चाहता है कि वह दूसरों को बताए, लेकिन ग्राहक को असहज नहीं करना चाहता।",
+        "hinglish": "Customer kehta hai ki purchase ya service se satisfied hai. Shopkeeper word-of-mouth encourage karna chahta hai, par customer ko uncomfortable nahi karna chahta."
+      },
+      "sourceRefs": []
     }
-  ]
+  ],
+  "sourceReferenceField": "sourceRefs"
 }
