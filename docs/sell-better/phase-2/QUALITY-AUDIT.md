@@ -104,3 +104,20 @@ The selector makes an exact category match only for shop categories explicitly r
 - [x] Response remains ephemeral and is cleared on exit.
 - [x] Unsupported category matches are not presented as category-specific recommendations.
 - [ ] Shopkeeper usability validation and real-device review remain open.
+
+
+## 8. Final founder-directed information architecture
+
+The shopkeeper-facing Learn screen now offers exactly three top-level paths:
+- Sell Better — available and opens the current recommended draft lesson immediately.
+- Save Better — shown as Coming soon.
+- Manage Stock Better — shown as Coming soon.
+
+The previous Next Practice interstitial has been removed. The Sell Better card navigates directly to one situation with its open-ended prompt and response field. Back returns to the three-path Learn screen. The complete 24-situation catalogue remains internal and is not displayed as a library.
+
+- [x] Three top-level paths appear on Learn.
+- [x] Sell Better opens its lesson directly, with no extra start button or intermediate screen.
+- [x] Save Better and Manage Stock Better are visibly marked Coming soon.
+- [x] Lesson back navigation returns to the three-path Learn screen.
+- [x] Response remains ephemeral and is cleared on exit.
+- [ ] Save Better and Manage Stock Better curricula and experiences are future work.
