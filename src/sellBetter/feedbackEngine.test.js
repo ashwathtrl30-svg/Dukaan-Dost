@@ -1,7 +1,11 @@
-import assert from 'node:assert/strict';\nimport { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
 import test from 'node:test';
-import guides from '../../docs/sell-better/phase-4/feedback-guides.v1.json' with { type: 'json' };
-import { buildLessonFeedback } from './feedbackEngine.js';
+import { readFileSync } from 'node:fs';
+import { buildLessonFeedback, getNextLessonIndex } from './feedbackEngine.js';
+
+const guides = JSON.parse(
+  readFileSync(new URL('../../docs/sell-better/phase-4/feedback-guides.v1.json', import.meta.url), 'utf8'),
+);
 
 test('all 24 lesson feedback guides are present and structurally complete', () => {
   assert.equal(guides.lessons.length, 24);
@@ -41,6 +45,7 @@ test('short answers ask for more detail instead of pretending to assess', () => 
 
 test('real customer phone numbers, emails and UPI IDs are rejected', () => {
   assert.equal(buildLessonFeedback('UC-01', 'Call customer 9876543210 and ask about their needs.', guides).status, 'privacy');
+  assert.equal(buildLessonFeedback('UC-01', 'Call customer +91 98765 43210 and ask about their needs.', guides).status, 'privacy');
   assert.equal(buildLessonFeedback('UC-01', 'Email customer person@example.com to ask what they need.', guides).status, 'privacy');
   assert.equal(buildLessonFeedback('UC-01', 'Use customer name@oksbi and then explain options.', guides).status, 'privacy');
 });
