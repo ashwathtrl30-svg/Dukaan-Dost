@@ -1,0 +1,1097 @@
+{
+  "schemaVersion": 1,
+  "product": "Dukaan Dost — Sell Better",
+  "phase": 1,
+  "status": "draft_for_founder_and_field_review",
+  "languages": [
+    "en",
+    "hi",
+    "hinglish"
+  ],
+  "languageOrder": "en, hi, hinglish",
+  "languageNote": "Language arrays use this exact order. Hindi and Hinglish are initial editorial drafts, not certified translations. Validate naturalness with native-speaking shopkeepers before release.",
+  "reviewNote": "These records are authored curriculum drafts informed by the cited evidence. They have not been reviewed by a practising shopkeeper or independent retail subject-matter expert. Do not label as approved/published until those reviews are completed.",
+  "lessonCount": 24,
+  "learningAreas": [
+    {
+      "id": "understand-customer",
+      "name": "Understand the Customer",
+      "goal": "Understand stated needs and context before recommending."
+    },
+    {
+      "id": "communicate-better",
+      "name": "Communicate Better",
+      "goal": "Explain clearly, listen, and set realistic expectations."
+    },
+    {
+      "id": "prices-negotiations",
+      "name": "Handle Prices and Negotiations",
+      "goal": "Handle price requests fairly while checking real business economics."
+    },
+    {
+      "id": "hesitation-objections",
+      "name": "Handle Hesitation and Objections",
+      "goal": "Respect uncertainty and support informed decisions without pressure."
+    },
+    {
+      "id": "complaints-difficult-situations",
+      "name": "Handle Complaints and Difficult Situations",
+      "goal": "Listen, verify facts and resolve issues within actual policies and safety limits."
+    },
+    {
+      "id": "long-term-relationships",
+      "name": "Build Long-Term Customer Relationships",
+      "goal": "Build trust through consistency, privacy and clear boundaries."
+    }
+  ],
+  "lessons": [
+    {
+      "id": "UC-01",
+      "area": "understand-customer",
+      "categories": [
+        "kirana-grocery"
+      ],
+      "topic": "Clarify who the purchase is for and how it will be used",
+      "situation": {
+        "en": "A customer asks for cooking oil but is unsure which pack to take. They mention that it is for a family member who has a particular preference.",
+        "hi": "एक ग्राहक खाना पकाने का तेल माँगता है, लेकिन कौन-सा पैक लेना है इसे लेकर असमंजस में है। वह बताता है कि यह परिवार के किसी सदस्य की पसंद के लिए है।",
+        "hinglish": "Ek customer cooking oil maangta hai, par kaunsa pack lena hai isko lekar unsure hai. Woh batata hai ki yeh family member ki preference ke liye hai."
+      },
+      "prompt": {
+        "en": "What would you ask or explain before recommending a pack?",
+        "hi": "पैक सुझाने से पहले आप क्या पूछेंगे या समझाएँगे?",
+        "hinglish": "Pack suggest karne se pehle aap kya poochhenge ya samjhayenge?"
+      },
+      "objective": "Ask a relevant clarifying question before recommending.",
+      "principle": "Understand the intended use and the buyer's stated need before suggesting a product.",
+      "considerations": [
+        "Who will use it and what preference was actually stated?",
+        "Pack size, budget, brand or ingredient preference only if relevant.",
+        "Do not assume health or dietary needs."
+      ],
+      "blindSpots": [
+        "Recommending the familiar bestseller without checking the stated preference.",
+        "Assuming the family member's preference means a medical requirement."
+      ],
+      "teaching": {
+        "en": "A useful recommendation starts with the need, not the product you want to sell. Ask one simple question about the preference or intended use, then explain only options that fit. If the customer does not know, show the available choices without pressure.",
+        "hi": "अच्छी सलाह ग्राहक की ज़रूरत समझने से शुरू होती है, सीधे सामान सुझाने से नहीं। पसंद या इस्तेमाल के बारे में एक आसान सवाल पूछें, फिर उसी के अनुसार उपलब्ध विकल्प समझाएँ। दबाव न डालें।",
+        "hinglish": "Achhi recommendation customer ki need samajhne se shuru hoti hai. Preference ya use ke baare mein ek simple sawaal poochho, phir matching options samjhao. Pressure mat banao."
+      },
+      "takeaway": {
+        "en": "Ask about the need before naming the product.",
+        "hi": "सामान सुझाने से पहले ज़रूरत पूछें।",
+        "hinglish": "Product suggest karne se pehle need samjho."
+      },
+      "guardrails": [
+        "Do not infer medical, religious or dietary requirements.",
+        "Do not claim one oil is healthier or better without substantiation."
+      ],
+      "sources": [
+        "S1",
+        "S2"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "UC-02",
+      "area": "understand-customer",
+      "categories": [
+        "clothing-apparel"
+      ],
+      "topic": "Find the occasion and practical requirement",
+      "situation": {
+        "en": "A customer looks at two shirts and says one is for an event next week. They have not said what kind of event it is or how they want to use the shirt afterwards.",
+        "hi": "एक ग्राहक दो शर्ट देखता है और बताता है कि एक अगले हफ़्ते के कार्यक्रम के लिए चाहिए। उसने कार्यक्रम या बाद में शर्ट के इस्तेमाल के बारे में नहीं बताया है।",
+        "hinglish": "Ek customer do shirts dekh raha hai aur kehta hai ki ek next week ke event ke liye chahiye. Event kaisa hai ya baad mein shirt ka use kya hoga, yeh abhi clear nahi hai."
+      },
+      "prompt": {
+        "en": "What would you ask to understand what matters most to this customer?",
+        "hi": "ग्राहक की असली ज़रूरत समझने के लिए आप क्या पूछेंगे?",
+        "hinglish": "Customer ki actual need samajhne ke liye aap kya poochhenge?"
+      },
+      "objective": "Use a neutral question to understand the occasion and use.",
+      "principle": "A product choice depends on context; avoid assuming what the customer considers suitable.",
+      "considerations": [
+        "Type of event, comfort, fit, dress expectations if the customer wants to share.",
+        "Whether the customer wants to reuse it for everyday wear.",
+        "Budget and care preferences, if relevant."
+      ],
+      "blindSpots": [
+        "Assuming the most expensive or fashionable shirt is best.",
+        "Assuming the event has a particular dress code."
+      ],
+      "teaching": {
+        "en": "Two customers buying a shirt for an event may need different things. Ask what kind of occasion it is and whether they want to wear the shirt again. Then show suitable choices and let the customer decide what feels right.",
+        "hi": "एक ही कार्यक्रम के लिए दो ग्राहकों की ज़रूरत अलग हो सकती है। पूछें कि कार्यक्रम कैसा है और क्या शर्ट बाद में भी पहननी है। फिर उपयुक्त विकल्प दिखाएँ और फैसला ग्राहक पर छोड़ें।",
+        "hinglish": "Same event ke liye alag customers ki needs alag ho sakti hain. Poochho event kaisa hai aur shirt baad mein bhi pehenni hai kya. Phir suitable options dikhao."
+      },
+      "takeaway": {
+        "en": "Understand the occasion before recommending the style.",
+        "hi": "स्टाइल सुझाने से पहले अवसर समझें।",
+        "hinglish": "Style suggest karne se pehle occasion samjho."
+      },
+      "guardrails": [
+        "Do not judge body shape, gender expression or appearance.",
+        "Do not claim a garment is suitable for a formal event without asking context."
+      ],
+      "sources": [
+        "S3"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "UC-03",
+      "area": "understand-customer",
+      "categories": [
+        "mobile-phone-shops"
+      ],
+      "topic": "Discover the customer's actual phone use",
+      "situation": {
+        "en": "A customer is comparing two phones and says one has a better camera. They also mention using the phone for work, but have not explained which tasks matter most.",
+        "hi": "एक ग्राहक दो फ़ोन की तुलना कर रहा है और कहता है कि एक का कैमरा बेहतर है। वह काम के लिए भी फ़ोन इस्तेमाल करता है, लेकिन कौन-से काम ज़रूरी हैं यह स्पष्ट नहीं है।",
+        "hinglish": "Ek customer do phones compare kar raha hai. Kehta hai ek ka camera better hai, aur phone work ke liye bhi use karta hai. Par kaunse tasks important hain, yeh clear nahi."
+      },
+      "prompt": {
+        "en": "How would you find out which features matter for this customer's daily use?",
+        "hi": "आप कैसे समझेंगे कि ग्राहक के रोज़मर्रा के इस्तेमाल के लिए कौन-से फ़ीचर ज़रूरी हैं?",
+        "hinglish": "Aap kaise samjhenge ki customer ke daily use ke liye kaunse features zaroori hain?"
+      },
+      "objective": "Connect product features to actual use rather than listing specifications.",
+      "principle": "A feature matters when it solves a need the customer has.",
+      "considerations": [
+        "Ask what work tasks they do and how often they use the camera.",
+        "Battery, storage, durability, service access and budget may matter depending on use.",
+        "Explain specifications only when verified."
+      ],
+      "blindSpots": [
+        "Reciting specifications without connecting them to the customer's tasks.",
+        "Promising performance based on a model name alone."
+      ],
+      "teaching": {
+        "en": "Do not assume the camera is the deciding feature just because the customer mentioned it. Ask what they use the phone for most and which task causes difficulty today. Compare only the features that matter, using verified specifications.",
+        "hi": "ग्राहक ने कैमरे का ज़िक्र किया है, इसका मतलब यह नहीं कि वही सबसे ज़रूरी है। पूछें कि फ़ोन का सबसे ज़्यादा इस्तेमाल किस काम में होता है। फिर जाँची हुई जानकारी के आधार पर तुलना करें।",
+        "hinglish": "Customer ne camera bola, iska matlab yeh nahi ki wahi sabse important hai. Poochho phone sabse zyada kis kaam aata hai. Phir verified details ke basis par compare karo."
+      },
+      "takeaway": {
+        "en": "Match features to real use, not just specifications.",
+        "hi": "फ़ीचर को असली इस्तेमाल से जोड़ें।",
+        "hinglish": "Features ko actual use se match karo."
+      },
+      "guardrails": [
+        "Never invent RAM, storage, battery, camera or network specifications.",
+        "Do not guarantee speed, lifespan or software support."
+      ],
+      "sources": [
+        "S3",
+        "S4"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "UC-04",
+      "area": "understand-customer",
+      "categories": [
+        "fruit-vegetable-vendors"
+      ],
+      "topic": "Balance freshness, quantity and budget",
+      "situation": {
+        "en": "A customer asks for tomatoes for the next few days and checks the produce carefully. They have not said how much they need or when they plan to use it.",
+        "hi": "एक ग्राहक अगले कुछ दिनों के लिए टमाटर माँगता है और सब्ज़ियाँ ध्यान से देखता है। उसने मात्रा या इस्तेमाल का समय नहीं बताया है।",
+        "hinglish": "Ek customer agle kuch din ke liye tamatar maangta hai aur dhyan se dekh raha hai. Kitni quantity chahiye aur kab use karega, yeh nahi bataya."
+      },
+      "prompt": {
+        "en": "What would you ask before selecting the quantity or produce?",
+        "hi": "मात्रा या सब्ज़ी चुनने से पहले आप क्या पूछेंगे?",
+        "hinglish": "Quantity ya sabzi select karne se pehle aap kya poochhenge?"
+      },
+      "objective": "Understand timing and quantity before choosing perishable goods.",
+      "principle": "For perishable products, quantity and intended use affect a useful recommendation.",
+      "considerations": [
+        "How many people or meals the purchase is for, if customer volunteers.",
+        "When it will be used and how it will be stored.",
+        "Show actual produce condition honestly."
+      ],
+      "blindSpots": [
+        "Pushing a larger quantity without understanding use.",
+        "Claiming produce will stay fresh for a certain number of days without basis."
+      ],
+      "teaching": {
+        "en": "For fresh produce, the right quantity depends on when it will be used and how it will be stored. Ask a simple question about timing and quantity. Show the actual condition honestly; let the customer choose.",
+        "hi": "ताज़ी सब्ज़ियों की सही मात्रा इस बात पर निर्भर करती है कि उनका इस्तेमाल कब होगा और उन्हें कैसे रखा जाएगा। समय और मात्रा पूछें। सब्ज़ी की असली हालत ईमानदारी से दिखाएँ।",
+        "hinglish": "Fresh produce ki sahi quantity depend karti hai ki use kab hoga aur store kaise karenge. Timing aur quantity poochho. Produce ki actual condition honestly dikhao."
+      },
+      "takeaway": {
+        "en": "Ask when it will be used before suggesting quantity.",
+        "hi": "मात्रा सुझाने से पहले इस्तेमाल का समय पूछें।",
+        "hinglish": "Quantity suggest karne se pehle use ka time poochho."
+      },
+      "guardrails": [
+        "Do not make food-safety, freshness-duration or health claims beyond observable facts.",
+        "Do not pressure customers to buy more perishable goods."
+      ],
+      "sources": [
+        "S5",
+        "S6"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "CO-01",
+      "area": "communicate-better",
+      "categories": [
+        "clothing-apparel"
+      ],
+      "topic": "Explain two similar-looking options clearly",
+      "situation": {
+        "en": "A customer asks why two shirts have different prices. The visible difference is not obvious, and the labels show different fabric details.",
+        "hi": "ग्राहक पूछता है कि दो मिलती-जुलती शर्ट की कीमत अलग क्यों है। अंतर साफ़ नहीं दिखता, लेकिन लेबल पर कपड़े की जानकारी अलग है।",
+        "hinglish": "Customer poochta hai ki do similar shirts ki price alag kyun hai. Difference clearly nahi dikh raha, lekin labels par fabric details alag hain."
+      },
+      "prompt": {
+        "en": "How would you explain the difference without exaggerating either shirt?",
+        "hi": "आप दोनों शर्ट का अंतर बिना बढ़ा-चढ़ाकर कैसे समझाएँगे?",
+        "hinglish": "Aap dono shirts ka difference bina badha-chadha kar kaise samjhayenge?"
+      },
+      "objective": "Explain verified differences in plain language and let the customer weigh them.",
+      "principle": "Compare only verified fabric, construction, care or fit details; ask what matters to them.",
+      "considerations": "Calling one option premium or superior without evidence.",
+      "blindSpots": "Two products can differ in ways that matter to different people. Point to the verified label or construction difference, explain what it may mean in everyday use, and ask which factor matters to the customer. Avoid claiming one is automatically better.",
+      "teaching": {
+        "en": "दोनों उत्पाद अलग-अलग ज़रूरतों के लिए उपयोगी हो सकते हैं। लेबल या बनावट का जाँचा हुआ अंतर बताएं और समझाएँ कि रोज़मर्रा में उसका क्या मतलब हो सकता है। ग्राहक को चुनने दें।",
+        "hi": "Dono products alag needs ke liye useful ho sakte hain. Label ya stitching ka verified difference samjhao aur customer ko decide karne do.",
+        "hinglish": "Explain the difference; don't declare a winner."
+      },
+      "takeaway": {
+        "en": "अंतर समझाएँ, किसी एक को बिना वजह बेहतर न कहें।",
+        "hi": "Difference samjhao, bina reason kisi ko best mat bolo.",
+        "hinglish": [
+          "Do not invent fabric composition or care instructions.",
+          "Do not shame customer preference."
+        ]
+      },
+      "guardrails": [
+        "S3"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "CO-02",
+      "area": "communicate-better",
+      "categories": [
+        "tailoring"
+      ],
+      "topic": "Clarify a tailoring request before confirming",
+      "situation": {
+        "en": "A customer asks for a kurta alteration and says they want it to feel more comfortable. They point to the sleeve but have not explained the fit they prefer.",
+        "hi": "एक ग्राहक कुर्ते की सिलाई ठीक करवाना चाहता है और कहता है कि उसे ज़्यादा आरामदायक चाहिए। वह बाँह की ओर इशारा करता है, लेकिन पसंद का फिट नहीं बताता।",
+        "hinglish": "Ek customer kurta alteration karwana chahta hai aur kehta hai ki comfortable chahiye. Sleeve dikhata hai, par preferred fit explain nahi karta."
+      },
+      "prompt": {
+        "en": "What would you clarify before promising the alteration?",
+        "hi": "काम तय करने से पहले आप क्या स्पष्ट करेंगे?",
+        "hinglish": "Kaam confirm karne se pehle aap kya clarify karenge?"
+      },
+      "objective": "Confirm the desired change and practical constraints before promising an outcome.",
+      "principle": "Ask what feels uncomfortable, how much ease they prefer, deadline and what alteration is feasible after checking the garment.",
+      "considerations": "Assuming a particular fit or promising a result without examining the garment.",
+      "blindSpots": "Repeat the customer's request in your own words and confirm the exact change. Check the garment before promising what is possible, and agree on timing only after considering the work involved.",
+      "teaching": {
+        "en": "ग्राहक की बात अपने शब्दों में दोहराकर बदलाव स्पष्ट करें। कपड़ा देखकर ही बताएँ कि क्या संभव है। काम और समय जाँचने के बाद ही तारीख तय करें।",
+        "hi": "Customer ki baat apne words mein confirm karo. Garment check karke hi batao kya possible hai, phir time commit karo.",
+        "hinglish": "Confirm the change before confirming the job."
+      },
+      "takeaway": {
+        "en": "काम तय करने से पहले बदलाव स्पष्ट करें।",
+        "hi": "Job confirm karne se pehle change clear karo.",
+        "hinglish": [
+          "Do not promise fit or completion time before inspection.",
+          "Avoid body judgement."
+        ]
+      },
+      "guardrails": [
+        "S3"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "CO-03",
+      "area": "communicate-better",
+      "categories": [
+        "salons"
+      ],
+      "topic": "Explain a service and its limits",
+      "situation": {
+        "en": "A customer asks for a hair service after showing a reference photo. Their current hair and the photo appear different, and they ask whether the result will look exactly the same.",
+        "hi": "एक ग्राहक फोटो दिखाकर हेयर सर्विस पूछता है। उसके मौजूदा बाल और फोटो में अंतर है। वह पूछता है कि क्या बिल्कुल वैसा ही परिणाम मिलेगा।",
+        "hinglish": "Ek customer reference photo dikhakar hair service poochta hai. Uske current hair aur photo mein difference hai. Woh poochta hai ki exact same result milega kya."
+      },
+      "prompt": {
+        "en": "How would you explain what may be possible without making a guarantee?",
+        "hi": "बिना गारंटी दिए आप क्या संभव है, यह कैसे समझाएँगे?",
+        "hinglish": "Bina guarantee diye aap kya possible hai, kaise samjhayenge?"
+      },
+      "objective": "Set realistic expectations after assessing the actual starting point and service limits.",
+      "principle": "Discuss desired outcome, current condition, maintenance, time, price and any relevant professional limitations.",
+      "considerations": "Guaranteeing an exact result from a reference photo.",
+      "blindSpots": "A reference photo shows a preference, not a guaranteed outcome. First assess the customer's current hair and explain what can reasonably be attempted, what may differ, and any maintenance involved. If unsure, say so before beginning.",
+      "teaching": {
+        "en": "रेफ़रेंस फोटो पसंद बताती है, पक्का परिणाम नहीं। पहले मौजूदा बाल देखें और साफ़ बताएँ कि क्या किया जा सकता है और क्या अलग हो सकता है।",
+        "hi": "Reference photo preference dikhati hai, guarantee nahi. Pehle current hair assess karo aur clearly batao kya possible hai aur kya different ho sakta hai.",
+        "hinglish": "Set expectations before starting the service."
+      },
+      "takeaway": {
+        "en": "सर्विस शुरू करने से पहले अपेक्षाएँ स्पष्ट करें।",
+        "hi": "Service shuru karne se pehle expectations clear karo.",
+        "hinglish": [
+          "No medical or scalp-treatment advice.",
+          "Do not guarantee exact appearance or outcome."
+        ]
+      },
+      "guardrails": [
+        "S7"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "CO-04",
+      "area": "communicate-better",
+      "categories": [
+        "hardware"
+      ],
+      "topic": "Explain compatibility before selling a part",
+      "situation": {
+        "en": "A customer asks for a fitting or connector for a home repair. They have brought a photo but not the old part or measurements.",
+        "hi": "एक ग्राहक घर की मरम्मत के लिए फिटिंग या कनेक्टर माँगता है। वह फोटो लाया है, लेकिन पुराना पार्ट या माप नहीं।",
+        "hinglish": "Ek customer home repair ke liye fitting ya connector maangta hai. Photo laya hai, par old part ya measurement nahi."
+      },
+      "prompt": {
+        "en": "How would you check compatibility before recommending a part?",
+        "hi": "पार्ट सुझाने से पहले उसकी अनुकूलता कैसे जाँचेंगे?",
+        "hinglish": "Part suggest karne se pehle compatibility kaise check karenge?"
+      },
+      "objective": "Verify dimensions and connection type before recommending a technical part.",
+      "principle": "Ask for exact measurements, model/connection details or the old part; recommend checking with a qualified installer for safety-critical work.",
+      "considerations": "Guessing based on appearance or selling a part that may not fit.",
+      "blindSpots": "A photo may not show the measurements or connection needed. Ask for the old part, model or exact dimensions before recommending. If the repair affects electrical, gas or structural safety, direct the customer to a qualified professional.",
+      "teaching": {
+        "en": "फोटो से हर माप या कनेक्शन पता नहीं चलता। पुराना पार्ट, मॉडल या सही माप जाँचें। बिजली, गैस या ढाँचे की सुरक्षा से जुड़ा काम योग्य विशेषज्ञ से करवाएँ।",
+        "hi": "Photo se exact measurement ya connection clear nahi hota. Old part, model ya size check karo. Safety-critical kaam qualified expert se karwao.",
+        "hinglish": "Check fit and safety before recommending."
+      },
+      "takeaway": {
+        "en": "पार्ट सुझाने से पहले फिट और सुरक्षा जाँचें।",
+        "hi": "Part suggest karne se pehle fit aur safety check karo.",
+        "hinglish": [
+          "Do not guess technical compatibility.",
+          "Do not provide hazardous installation instructions."
+        ]
+      },
+      "guardrails": [
+        "S3"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "PN-01",
+      "area": "prices-negotiations",
+      "categories": [
+        "kirana-grocery"
+      ],
+      "topic": "Respond to a request for a discount",
+      "situation": {
+        "en": "A regular customer asks for a lower price on a few grocery items. The shopkeeper has not checked the current cost or margin for those items.",
+        "hi": "एक नियमित ग्राहक कुछ किराना सामान पर कम दाम माँगता है। दुकानदार ने उन सामानों की मौजूदा लागत या मार्जिन नहीं देखा है।",
+        "hinglish": "Ek regular customer kuch grocery items par discount maangta hai. Shopkeeper ne un items ki current cost ya margin check nahi kiya hai."
+      },
+      "prompt": {
+        "en": "What would you consider before deciding whether to reduce the price?",
+        "hi": "कीमत कम करने का फैसला करने से पहले आप क्या देखेंगे?",
+        "hinglish": "Price kam karne se pehle aap kya check karenge?"
+      },
+      "objective": "Consider actual item economics and the customer's request before agreeing to a discount.",
+      "principle": "Check item cost, current price, quantity, any approved offer and whether a discount is viable.",
+      "considerations": "Giving a discount automatically to avoid an awkward conversation.",
+      "blindSpots": "A discount is not automatically good service. First check whether the price reduction is affordable for the shop and whether the quantity or an existing offer changes the economics. If you cannot offer it, explain politely rather than making a loss-making promise.",
+      "teaching": {
+        "en": "छूट देना हमेशा अच्छी सेवा नहीं होती। पहले लागत, मात्रा और उपलब्ध ऑफ़र देखकर तय करें कि छूट संभव है या नहीं। संभव न हो तो विनम्रता से कारण बताएँ।",
+        "hi": "Discount dena hamesha achhi service nahi. Cost, quantity aur available offer check karke hi decide karo. Possible na ho toh politely samjhao.",
+        "hinglish": "Check the numbers before agreeing to a discount."
+      },
+      "takeaway": {
+        "en": "छूट देने से पहले हिसाब देखें।",
+        "hi": "Discount dene se pehle hisaab check karo.",
+        "hinglish": [
+          "Never invent costs, margins or a safe discount amount.",
+          "Do not encourage selling below cost."
+        ]
+      },
+      "guardrails": [
+        "S1",
+        "S8"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "PN-02",
+      "area": "prices-negotiations",
+      "categories": [
+        "mobile-phone-shops"
+      ],
+      "topic": "Handle a competitor price comparison",
+      "situation": {
+        "en": "A customer shows a lower online price for a phone and asks the shop to match it. The customer has not shown the exact model variant, seller or included terms.",
+        "hi": "एक ग्राहक फ़ोन की कम ऑनलाइन कीमत दिखाकर वही दाम माँगता है। उसने सही मॉडल वेरिएंट, विक्रेता या शर्तें नहीं दिखाईं।",
+        "hinglish": "Ek customer phone ka lower online price dikhakar same price maangta hai. Exact variant, seller aur included terms clear nahi hain."
+      },
+      "prompt": {
+        "en": "How would you compare the offers fairly before responding?",
+        "hi": "जवाब देने से पहले दोनों ऑफ़र की सही तुलना कैसे करेंगे?",
+        "hinglish": "Reply dene se pehle dono offers ko fairly kaise compare karenge?"
+      },
+      "objective": "Compare like-for-like products and total terms, not headline prices alone.",
+      "principle": "Exact model/variant, storage, warranty source, taxes, delivery, exchange conditions and shop's own costs/policy if known.",
+      "considerations": "Assuming the online listing is identical or claiming it is unreliable without evidence.",
+      "blindSpots": "First verify that both offers are for the same model and variant. Compare the final price and included terms, then explain what your shop can actually provide. If you cannot match the price, be transparent rather than attacking the other seller.",
+      "teaching": {
+        "en": "पहले जाँचें कि दोनों ऑफ़र एक ही मॉडल और वेरिएंट के हैं। कुल कीमत और शर्तें तुलना करें। जो सुविधा आपकी दुकान सच में दे सकती है, वही स्पष्ट बताएँ।",
+        "hi": "Pehle verify karo ki dono same model aur variant hain. Final price aur terms compare karo. Apni shop jo sach mein de sakti hai, wahi batao.",
+        "hinglish": "Compare the complete offer, not just the displayed price."
+      },
+      "takeaway": {
+        "en": "सिर्फ दिखाई गई कीमत नहीं, पूरा ऑफ़र तुलना करें।",
+        "hi": "Sirf displayed price nahi, poora offer compare karo.",
+        "hinglish": [
+          "Do not fabricate online seller practices or warranty terms.",
+          "Do not disparage competitors without evidence."
+        ]
+      },
+      "guardrails": [
+        "S4"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "PN-03",
+      "area": "prices-negotiations",
+      "categories": [
+        "bakery-sweet-shop"
+      ],
+      "topic": "Evaluate a bulk-order discount request",
+      "situation": {
+        "en": "A customer wants a large box order for a family event and asks for a lower per-piece price. The quantity, preparation effort and delivery needs are not yet confirmed.",
+        "hi": "एक ग्राहक पारिवारिक कार्यक्रम के लिए बड़ा ऑर्डर चाहता है और प्रति पीस कम दाम माँगता है। मात्रा, तैयारी और डिलीवरी की ज़रूरत अभी तय नहीं है।",
+        "hinglish": "Ek customer family event ke liye bada box order chahta hai aur per-piece price kam maangta hai. Quantity, preparation effort aur delivery needs abhi confirm nahi hain."
+      },
+      "prompt": {
+        "en": "What information would you need before deciding whether a bulk price is workable?",
+        "hi": "थोक कीमत संभव है या नहीं, यह तय करने से पहले क्या जानकारी चाहिए?",
+        "hinglish": "Bulk price workable hai ya nahi, decide karne se pehle kya info chahiye?"
+      },
+      "objective": "Evaluate total workload and costs before agreeing to a bulk rate.",
+      "principle": "Confirm quantity, product mix, customisation, packaging, timing, delivery and ingredient/labour costs using actual shop figures.",
+      "considerations": "Treating larger order size as automatically more profitable.",
+      "blindSpots": "A larger order can also require more preparation, packaging or delivery. Confirm the details and calculate the actual cost before offering a lower rate. If a discount is not viable, explain what options are available without promising a figure you have not checked.",
+      "teaching": {
+        "en": "बड़ा ऑर्डर होने से मुनाफ़ा अपने-आप नहीं बढ़ता। मात्रा, पैकिंग, तैयारी, समय और असली लागत जाँचकर ही कम दर तय करें।",
+        "hi": "Bada order hone se profit automatically nahi badhta. Quantity, packing, preparation, time aur actual cost check karke hi rate decide karo.",
+        "hinglish": "A bigger order still needs a cost check."
+      },
+      "takeaway": {
+        "en": "बड़े ऑर्डर की लागत भी जाँचें।",
+        "hi": "Bade order ki cost bhi check karo.",
+        "hinglish": [
+          "Never invent ingredient costs or margin.",
+          "Observe food safety and confirmed capacity."
+        ]
+      },
+      "guardrails": [
+        "S8"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "PN-04",
+      "area": "prices-negotiations",
+      "categories": [
+        "clothing-apparel"
+      ],
+      "topic": "Handle repeated bargaining respectfully",
+      "situation": {
+        "en": "A customer likes a garment but repeatedly asks for a lower price. The shopkeeper has not checked whether any discount is available.",
+        "hi": "एक ग्राहक कपड़ा पसंद करता है, लेकिन बार-बार कम दाम माँगता है। दुकानदार ने यह नहीं देखा कि कोई छूट उपलब्ध है या नहीं।",
+        "hinglish": "Ek customer garment pasand karta hai, par baar-baar lower price maangta hai. Shopkeeper ne check nahi kiya ki discount available hai ya nahi."
+      },
+      "prompt": {
+        "en": "How would you respond respectfully while protecting the shop's pricing?",
+        "hi": "दुकान की कीमत का सम्मान रखते हुए आप विनम्रता से क्या जवाब देंगे?",
+        "hinglish": "Shop ki pricing protect karte hue respectfully kya reply denge?"
+      },
+      "objective": "Set a clear, respectful boundary and offer only genuine available options.",
+      "principle": "Check marked price, authorised offers, actual discount rules and whether an alternative product fits the budget.",
+      "considerations": "Taking bargaining personally or inventing a fake 'last price'.",
+      "blindSpots": "Stay calm and avoid turning bargaining into an argument. State the actual price and any genuine offer. If the budget is lower, you can show a different option rather than inventing a discount or pressuring the customer.",
+      "teaching": {
+        "en": "बातचीत को बहस न बनाएँ। असली कीमत और उपलब्ध ऑफ़र बताएँ। बजट कम हो तो दूसरा विकल्प दिखाएँ; नकली आख़िरी कीमत न बताएँ।",
+        "hi": "Bargaining ko argument mat banao. Actual price aur genuine offer batao. Budget kam ho toh doosra option dikhao, fake last price mat bolo.",
+        "hinglish": "Be respectful; never invent a discount."
+      },
+      "takeaway": {
+        "en": "सम्मान से बात करें, नकली छूट न बनाएँ।",
+        "hi": "Respectfully baat karo, fake discount mat banao.",
+        "hinglish": [
+          "Do not invent discounts, scarcity or authority approvals."
+        ]
+      },
+      "guardrails": [
+        "S8"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "HO-01",
+      "area": "hesitation-objections",
+      "categories": [
+        "mobile-phone-shops"
+      ],
+      "topic": "Respond when a customer says they will think about it",
+      "situation": {
+        "en": "A customer has compared two phones and says they want time to think. They have not asked for more details.",
+        "hi": "एक ग्राहक ने दो फ़ोन की तुलना की है और कहता है कि वह सोचकर बताएगा। उसने और जानकारी नहीं माँगी है।",
+        "hinglish": "Customer ne do phones compare kiye aur kehta hai sochkar batayega. Usne aur details nahi maangi."
+      },
+      "prompt": {
+        "en": "How would you respond while respecting the customer's decision?",
+        "hi": "ग्राहक के फैसले का सम्मान करते हुए आप क्या जवाब देंगे?",
+        "hinglish": "Customer ke decision ka respect karte hue aap kya reply denge?"
+      },
+      "objective": "Respect a pause and offer useful information without pressure.",
+      "principle": "Ask whether one specific detail remains unclear, or simply let them take time; share written verified details if requested.",
+      "considerations": "Treating hesitation as an objection that must be defeated.",
+      "blindSpots": "A customer may need time, want to compare or simply not be ready. You can ask once whether any detail is unclear, then respect their decision. A calm, helpful close protects trust better than pressure.",
+      "teaching": {
+        "en": "ग्राहक को सोचने का समय चाहिए हो सकता है। एक बार पूछें कि कोई बात स्पष्ट करनी है क्या, फिर उनके फैसले का सम्मान करें।",
+        "hi": "Customer ko time chahiye ho sakta hai. Ek baar poochho koi detail clear karni hai kya, phir unke decision ka respect karo.",
+        "hinglish": "Give information; leave the decision with the customer."
+      },
+      "takeaway": {
+        "en": "जानकारी दें, फैसला ग्राहक पर छोड़ें।",
+        "hi": "Info do, decision customer par chhodo.",
+        "hinglish": [
+          "No false urgency or claims that stock/price will change unless verified."
+        ]
+      },
+      "guardrails": [
+        "S4"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "HO-02",
+      "area": "hesitation-objections",
+      "categories": [
+        "clothing-apparel"
+      ],
+      "topic": "Respond when a customer wants to consult family",
+      "situation": {
+        "en": "A customer likes an outfit but says they want to ask a family member before deciding. They have not asked the shopkeeper to persuade anyone.",
+        "hi": "एक ग्राहक को कपड़े पसंद आए हैं, लेकिन वह फैसला करने से पहले परिवार के सदस्य से पूछना चाहता है। उसने मनाने को नहीं कहा है।",
+        "hinglish": "Customer ko outfit pasand aaya, par decide karne se pehle family member se poochna chahta hai. Usne kisi ko convince karne ko nahi kaha."
+      },
+      "prompt": {
+        "en": "How can you help without pressuring the customer or their family?",
+        "hi": "ग्राहक या उनके परिवार पर दबाव डाले बिना आप कैसे मदद करेंगे?",
+        "hinglish": "Customer ya family par pressure dale bina aap kaise help karenge?"
+      },
+      "objective": "Support the customer's decision process with clear, portable information.",
+      "principle": "Offer to note the size, price and verified product details or hold an item only if the shop actually offers that service and terms are clear.",
+      "considerations": "Creating urgency or treating family consultation as an obstacle.",
+      "blindSpots": "Respect the customer's wish to consult someone. Offer clear details they can share, such as the price, size and care information. Do not create artificial urgency or promise to reserve the item unless that is genuinely your shop's policy.",
+      "teaching": {
+        "en": "परिवार से सलाह लेना ग्राहक का फैसला है। कीमत, साइज़ और देखभाल की जानकारी दें जिसे वह साझा कर सके। झूठी जल्दी न बनाएँ।",
+        "hi": "Family se poochna customer ka decision hai. Price, size aur care details share karne layak de do. Fake urgency mat banao.",
+        "hinglish": "Help them compare; don't rush them."
+      },
+      "takeaway": {
+        "en": "तुलना में मदद करें, जल्दबाज़ी न कराएँ।",
+        "hi": "Compare karne mein help karo, rush mat karo.",
+        "hinglish": [
+          "Do not invent reservation or hold policies.",
+          "Do not stereotype family decision roles."
+        ]
+      },
+      "guardrails": [
+        "S3"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "HO-03",
+      "area": "hesitation-objections",
+      "categories": [
+        "bakery-sweet-shop"
+      ],
+      "topic": "Understand a customer's quality concern",
+      "situation": {
+        "en": "A customer asks whether a sweet will remain suitable for an event later in the day. The shopkeeper has not checked the product's storage or handling guidance.",
+        "hi": "एक ग्राहक पूछता है कि मिठाई दिन में बाद के कार्यक्रम तक ठीक रहेगी या नहीं। दुकानदार ने भंडारण या संभालने की जानकारी नहीं जाँची है।",
+        "hinglish": "Customer poochta hai ki sweet later event tak theek rahegi kya. Shopkeeper ne storage ya handling guidance check nahi ki."
+      },
+      "prompt": {
+        "en": "How would you answer without guessing about freshness or safety?",
+        "hi": "ताज़गी या सुरक्षा के बारे में अंदाज़ा लगाए बिना आप क्या जवाब देंगे?",
+        "hinglish": "Freshness ya safety ke baare mein guess kiye bina kya jawab denge?"
+      },
+      "objective": "Be transparent about known storage guidance and verify uncertain details.",
+      "principle": "Check product-specific storage/label guidance and preparation time; explain known facts and uncertainty.",
+      "considerations": "Saying it will definitely remain fresh without checking.",
+      "blindSpots": "Do not guess. Check the product's actual storage guidance and preparation details. If you cannot verify how long it remains suitable, say so and help the customer choose an option that fits the timing, without making a food-safety guarantee.",
+      "teaching": {
+        "en": "अंदाज़ा न लगाएँ। मिठाई की वास्तविक भंडारण जानकारी जाँचें। अवधि पक्की न हो तो साफ़ बताएँ और समय के अनुसार विकल्प दिखाएँ।",
+        "hi": "Guess mat karo. Actual storage guidance check karo. Duration confirm na ho toh clearly bolo aur timing ke hisaab se option dikhao.",
+        "hinglish": "If unsure, verify before reassuring."
+      },
+      "takeaway": {
+        "en": "पक्का न हो तो भरोसा दिलाने से पहले जाँचें।",
+        "hi": "Sure na ho toh reassure karne se pehle check karo.",
+        "hinglish": [
+          "No food-safety or shelf-life claims without verified product-specific basis."
+        ]
+      },
+      "guardrails": [
+        "S5"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "HO-04",
+      "area": "hesitation-objections",
+      "categories": [
+        "salons"
+      ],
+      "topic": "Understand hesitation about a service",
+      "situation": {
+        "en": "A customer is considering a new salon service but asks several questions about the process and maintenance. They have not decided whether to proceed.",
+        "hi": "एक ग्राहक नई सैलून सर्विस पर विचार कर रहा है और प्रक्रिया व देखभाल के बारे में कई सवाल पूछता है। उसने अभी फैसला नहीं किया है।",
+        "hinglish": "Customer new salon service consider kar raha hai aur process aur maintenance ke baare mein questions pooch raha hai. Abhi decide nahi kiya."
+      },
+      "prompt": {
+        "en": "What would you explain so the customer can make an informed decision?",
+        "hi": "ग्राहक सही जानकारी के साथ फैसला कर सके, इसके लिए आप क्या समझाएँगे?",
+        "hinglish": "Customer informed decision le sake, iske liye aap kya samjhayenge?"
+      },
+      "objective": "Explain process, limits, aftercare and price clearly; allow the customer to decline.",
+      "principle": "Describe steps, duration, price, maintenance, possible variation and relevant professional cautions.",
+      "considerations": "Interpreting questions as distrust or pushing an add-on.",
+      "blindSpots": "Questions are a chance to make the service clear. Explain the process, price, time, maintenance and realistic limits. Give the customer room to decide, and do not add services they did not ask for.",
+      "teaching": {
+        "en": "सवाल पूछना ग्राहक का अधिकार है। प्रक्रिया, कीमत, समय, देखभाल और सीमाएँ स्पष्ट करें। उन्हें फैसला करने का समय दें और अनचाही सर्विस न जोड़ें।",
+        "hi": "Questions poochna customer ka right hai. Process, price, time, maintenance aur limits clear karo. Unhe decide karne do; extra service push mat karo.",
+        "hinglish": "Clarity builds confidence; pressure does not."
+      },
+      "takeaway": {
+        "en": "स्पष्ट जानकारी दें, दबाव नहीं।",
+        "hi": "Clarity do, pressure nahi.",
+        "hinglish": [
+          "No medical or dermatological claims or diagnosis.",
+          "No unrequested upselling."
+        ]
+      },
+      "guardrails": [
+        "S7"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "CD-01",
+      "area": "complaints-difficult-situations",
+      "categories": [
+        "fruit-vegetable-vendors",
+        "kirana-grocery"
+      ],
+      "topic": "Respond to a complaint about produce quality",
+      "situation": {
+        "en": "A customer returns with vegetables they bought earlier and says some pieces were not in good condition. The shopkeeper has not yet checked the produce or purchase details.",
+        "hi": "एक ग्राहक पहले खरीदी सब्ज़ियाँ लेकर लौटता है और कहता है कि कुछ खराब हालत में थीं। दुकानदार ने अभी सब्ज़ी या खरीद की जानकारी नहीं देखी है।",
+        "hinglish": "Customer pehle kharidi sabzi lekar lautta hai aur kehta hai kuch pieces achhe nahi the. Shopkeeper ne abhi produce ya purchase details check nahi ki."
+      },
+      "prompt": {
+        "en": "What would you do first, before deciding on a solution?",
+        "hi": "समाधान तय करने से पहले आप सबसे पहले क्या करेंगे?",
+        "hinglish": "Solution decide karne se pehle sabse pehle kya karenge?"
+      },
+      "objective": "Listen, inspect the facts and follow the shop's actual policy and applicable requirements.",
+      "principle": "Hear the concern, inspect the item and relevant purchase details, separate affected stock where appropriate, and follow verified policy.",
+      "considerations": "Arguing immediately or promising a refund/replacement without checking policy and facts.",
+      "blindSpots": "Let the customer explain without interruption. Check the item and purchase details calmly. Follow the shop's actual policy and applicable requirements; do not make up a remedy. If other stock may be affected, handle it responsibly rather than selling it without checking.",
+      "teaching": {
+        "en": "ग्राहक की बात पूरी सुनें। सामान और खरीद की जानकारी जाँचें। दुकान की वास्तविक नीति और लागू नियमों के अनुसार समाधान दें; खुद से नियम न बनाएँ।",
+        "hi": "Customer ki baat poori suno. Item aur purchase details check karo. Actual shop policy aur applicable rules ke hisaab se solution do; policy invent mat karo.",
+        "hinglish": "Listen first, check facts, then resolve fairly."
+      },
+      "takeaway": {
+        "en": "पहले सुनें, तथ्य जाँचें, फिर उचित समाधान दें।",
+        "hi": "Pehle suno, facts check karo, phir fair solution do.",
+        "hinglish": [
+          "Do not make food safety, legal entitlement or refund-policy claims without verification.",
+          "Do not resell potentially unsafe stock."
+        ]
+      },
+      "guardrails": [
+        "S5",
+        "S9"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "CD-02",
+      "area": "complaints-difficult-situations",
+      "categories": [
+        "tailoring"
+      ],
+      "topic": "Handle a delayed order honestly",
+      "situation": {
+        "en": "A customer arrives to collect a garment, but the alteration is not finished. The shopkeeper had earlier given an estimated collection time.",
+        "hi": "एक ग्राहक कपड़ा लेने आता है, लेकिन बदलाव का काम पूरा नहीं हुआ है। दुकानदार ने पहले अनुमानित समय बताया था।",
+        "hinglish": "Customer garment lene aata hai, par alteration complete nahi hua. Shopkeeper ne pehle estimated collection time diya tha."
+      },
+      "prompt": {
+        "en": "How would you explain the delay and agree on a realistic next step?",
+        "hi": "देरी कैसे समझाएँगे और अगला वास्तविक कदम कैसे तय करेंगे?",
+        "hinglish": "Delay kaise explain karenge aur realistic next step kaise decide karenge?"
+      },
+      "objective": "Acknowledge the missed expectation, explain only known facts and give a realistic update.",
+      "principle": "Apologise where appropriate, state current status, check remaining work and agree on a new time only after checking capacity.",
+      "considerations": "Blaming staff or promising another unverified deadline.",
+      "blindSpots": "Acknowledge that the agreed estimate was missed. Explain the actual status without blaming someone else. Check the remaining work before giving a new time, and update the customer if anything changes.",
+      "teaching": {
+        "en": "बताए गए समय पर काम पूरा न होने की बात स्वीकारें। वास्तविक स्थिति बताएँ, किसी पर दोष न डालें। बाकी काम जाँचकर ही नया समय दें।",
+        "hi": "Time miss hua hai toh accept karo. Actual status batao, blame mat karo. Remaining work check karke hi naya time do.",
+        "hinglish": "Own the update; don't guess a new deadline."
+      },
+      "takeaway": {
+        "en": "देरी की जानकारी दें, नया समय अंदाज़े से न बताएँ।",
+        "hi": "Update do, naya time guess mat karo.",
+        "hinglish": [
+          "Do not invent excuses or guarantee completion without capacity check."
+        ]
+      },
+      "guardrails": [
+        "S3"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "CD-03",
+      "area": "complaints-difficult-situations",
+      "categories": [
+        "mobile-phone-shops"
+      ],
+      "topic": "Handle a compatibility complaint",
+      "situation": {
+        "en": "A customer returns an accessory and says it does not work with their device. The shopkeeper has not checked the exact device model or accessory specification.",
+        "hi": "एक ग्राहक एक्सेसरी लौटाकर कहता है कि वह उसके फ़ोन के साथ काम नहीं करती। दुकानदार ने सही मॉडल या एक्सेसरी की जानकारी नहीं जाँची है।",
+        "hinglish": "Customer accessory lekar aata hai aur kehta hai device ke saath kaam nahi karti. Shopkeeper ne exact device model ya accessory specification check nahi ki."
+      },
+      "prompt": {
+        "en": "What would you check before deciding what went wrong?",
+        "hi": "क्या गलत हुआ यह तय करने से पहले आप क्या जाँचेंगे?",
+        "hinglish": "Problem samajhne se pehle aap kya check karenge?"
+      },
+      "objective": "Diagnose the mismatch from verified model and product information before deciding next steps.",
+      "principle": "Check exact device model, accessory model, connection, setup instructions and purchase details; follow actual return/exchange policy.",
+      "considerations": "Blaming the customer or asserting compatibility without checking.",
+      "blindSpots": "Stay neutral. Check the device model, accessory details and any setup requirements. Then explain what you can verify and follow the shop's actual return or exchange policy. Do not blame the customer or promise an exception you cannot authorise.",
+      "teaching": {
+        "en": "शांत रहें। फ़ोन मॉडल, एक्सेसरी और सेटअप की जानकारी जाँचें। फिर दुकान की वास्तविक वापसी या बदलने की नीति के अनुसार बात करें।",
+        "hi": "Neutral raho. Device model, accessory aur setup details check karo. Phir actual return/exchange policy follow karo.",
+        "hinglish": "Check compatibility before assigning blame."
+      },
+      "takeaway": {
+        "en": "दोष देने से पहले अनुकूलता जाँचें।",
+        "hi": "Blame se pehle compatibility check karo.",
+        "hinglish": [
+          "Do not invent warranty or return rights.",
+          "Do not provide unsafe repair instructions."
+        ]
+      },
+      "guardrails": [
+        "S4"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "CD-04",
+      "area": "complaints-difficult-situations",
+      "categories": [
+        "salons"
+      ],
+      "topic": "Respond when a customer is unhappy with a service",
+      "situation": {
+        "en": "After a salon service, a customer says the result is not what they expected. The stylist has not yet asked what looks different to them.",
+        "hi": "सैलून सर्विस के बाद ग्राहक कहता है कि परिणाम उसकी उम्मीद जैसा नहीं है। स्टाइलिस्ट ने अभी नहीं पूछा कि उसे क्या अलग लग रहा है।",
+        "hinglish": "Salon service ke baad customer kehta hai result expectation jaisa nahi. Stylist ne abhi nahi poochha ki unhe kya different lag raha hai."
+      },
+      "prompt": {
+        "en": "How would you understand the concern before suggesting a remedy?",
+        "hi": "समाधान सुझाने से पहले आप परेशानी कैसे समझेंगे?",
+        "hinglish": "Remedy suggest karne se pehle concern kaise samjhenge?"
+      },
+      "objective": "Clarify the specific concern, compare it with the agreed request and discuss feasible options.",
+      "principle": "Listen, ask what differs from the agreed reference/request, assess what can safely and realistically be adjusted, and explain any limits.",
+      "considerations": "Defending the work immediately or promising a correction before assessment.",
+      "blindSpots": "Listen first and ask what specifically feels different from what was agreed. Review the request and assess what adjustment is possible. Explain the options and limits honestly before proceeding.",
+      "teaching": {
+        "en": "पहले सुनें और पूछें कि तय बात से क्या अलग है। अनुरोध फिर से देखें और जाँचें कि क्या सुधार संभव है। आगे बढ़ने से पहले विकल्प और सीमाएँ बताएँ।",
+        "hi": "Pehle suno aur poochho agreed request se kya different hai. Phir assess karo kya adjustment possible hai aur limits clear karo.",
+        "hinglish": "Understand the gap before offering a fix."
+      },
+      "takeaway": {
+        "en": "सुधार बताने से पहले अंतर समझें।",
+        "hi": "Fix suggest karne se pehle gap samjho.",
+        "hinglish": [
+          "No medical or body-image judgements.",
+          "Do not promise a correction before assessing safety and feasibility."
+        ]
+      },
+      "guardrails": [
+        "S7"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "LR-01",
+      "area": "long-term-relationships",
+      "categories": [
+        "kirana-grocery"
+      ],
+      "topic": "Remember a regular customer's preference respectfully",
+      "situation": {
+        "en": "A regular customer often buys the same tea, but today asks whether another pack is available. The shopkeeper remembers the usual choice but does not know whether the customer wants a change.",
+        "hi": "एक नियमित ग्राहक अक्सर वही चाय लेता है, लेकिन आज दूसरा पैक पूछता है। दुकानदार को उसकी पुरानी पसंद याद है, पर बदलाव का कारण नहीं पता।",
+        "hinglish": "Ek regular customer aksar wahi tea leta hai, par aaj doosra pack poochta hai. Shopkeeper ko usual choice yaad hai, par change ka reason nahi pata."
+      },
+      "prompt": {
+        "en": "How would you use what you remember without assuming the customer still wants the same thing?",
+        "hi": "पुरानी पसंद याद रखते हुए भी आप ग्राहक की आज की ज़रूरत कैसे समझेंगे?",
+        "hinglish": "Purani preference yaad rakhte hue bhi aaj ki need kaise samjhenge?"
+      },
+      "objective": "Use familiarity as a helpful prompt, not as permission to assume or expose personal details.",
+      "principle": "Mention the usual product lightly and ask whether they want the same or a different option; respect privacy.",
+      "considerations": "Automatically packing the old choice or revealing remembered purchases in front of others.",
+      "blindSpots": "Remembering a preference can save time, but the customer may want something different today. Ask naturally whether they want their usual choice or would like to compare. Use only relevant information and avoid sharing purchase history with others.",
+      "teaching": {
+        "en": "पुरानी पसंद याद रखना मददगार है, लेकिन आज ग्राहक कुछ अलग चाह सकता है। सहजता से पूछें कि वही चाहिए या दूसरा विकल्प देखना है। निजी खरीद जानकारी दूसरों के सामने न बताएँ।",
+        "hi": "Preference yaad rakhna helpful hai, par aaj customer kuch aur chahega. Naturally poochho usual chahiye ya doosra option. Purchase history dusron ko mat batao.",
+        "hinglish": "Remember the person; confirm today's need."
+      },
+      "takeaway": {
+        "en": "ग्राहक को याद रखें, आज की ज़रूरत पूछें।",
+        "hi": "Customer ko yaad rakho, aaj ki need confirm karo.",
+        "hinglish": [
+          "Do not expose private purchase or credit history.",
+          "Do not infer sensitive preferences."
+        ]
+      },
+      "guardrails": [
+        "S1",
+        "S2"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "LR-02",
+      "area": "long-term-relationships",
+      "categories": [
+        "kirana-grocery",
+        "small-retail"
+      ],
+      "topic": "Set a clear boundary around customer credit",
+      "situation": {
+        "en": "A familiar customer asks to take goods on credit and says they will pay later. The shopkeeper has not checked the outstanding balance or agreed terms.",
+        "hi": "एक परिचित ग्राहक उधार सामान माँगता है और बाद में पैसे देने की बात कहता है। दुकानदार ने बकाया या तय शर्तें नहीं देखी हैं।",
+        "hinglish": "Ek familiar customer udhaar samaan maangta hai aur baad mein payment ki baat karta hai. Shopkeeper ne outstanding balance ya agreed terms check nahi kiye."
+      },
+      "prompt": {
+        "en": "How would you respond fairly while protecting both the relationship and the shop?",
+        "hi": "रिश्ता और दुकान दोनों का ध्यान रखते हुए आप क्या जवाब देंगे?",
+        "hinglish": "Relationship aur shop dono ka dhyan rakhte hue kya reply denge?"
+      },
+      "objective": "Use clear, consistent and affordable credit terms; familiarity does not remove the need to check records.",
+      "principle": "Check actual outstanding amount, agreed due date, shop policy and ability to extend more credit; communicate respectfully.",
+      "considerations": "Agreeing from social pressure without knowing the balance or terms.",
+      "blindSpots": "A respectful relationship also needs clear boundaries. Check the actual balance and the shop's agreed terms before deciding. If more credit is not workable, explain calmly and offer a clear way to settle the existing amount.",
+      "teaching": {
+        "en": "अच्छे रिश्ते में भी साफ़ शर्तें ज़रूरी हैं। फैसला करने से पहले बकाया और दुकान की तय नीति देखें। उधार संभव न हो तो शांतिपूर्वक कारण बताएँ।",
+        "hi": "Achhe relationship mein bhi clear terms zaroori hain. Balance aur shop policy check karo. Credit possible na ho toh calmly explain karo.",
+        "hinglish": "Be kind and clear about credit."
+      },
+      "takeaway": {
+        "en": "उधार के मामले में विनम्र और स्पष्ट रहें।",
+        "hi": "Udhaar mein polite aur clear raho.",
+        "hinglish": [
+          "Do not encourage discriminatory credit decisions.",
+          "Do not invent legal debt collection advice or expose balances."
+        ]
+      },
+      "guardrails": [
+        "S1"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "LR-03",
+      "area": "long-term-relationships",
+      "categories": [
+        "tailoring",
+        "mobile-phone-shops",
+        "salons"
+      ],
+      "topic": "Follow up only when it is useful and welcome",
+      "situation": {
+        "en": "A customer has asked the shop to contact them when a repair, alteration or service update is ready. The shop has the customer's preferred contact method, but no permission for promotional messages.",
+        "hi": "एक ग्राहक ने मरम्मत, बदलाव या सर्विस तैयार होने पर संपर्क करने को कहा है। दुकान के पास पसंदीदा संपर्क तरीका है, लेकिन प्रचार संदेशों की अनुमति नहीं है।",
+        "hinglish": "Customer ne repair, alteration ya service ready hone par contact karne ko kaha hai. Preferred contact method hai, par promotional messages ki permission nahi hai."
+      },
+      "prompt": {
+        "en": "What kind of follow-up is appropriate here?",
+        "hi": "इस स्थिति में किस तरह का फ़ॉलो-अप उचित होगा?",
+        "hinglish": "Is situation mein kaunsa follow-up appropriate hoga?"
+      },
+      "objective": "Use contact details only for the purpose the customer agreed to.",
+      "principle": "Send only the requested status update through the agreed channel; ask separately before any promotional communication.",
+      "considerations": "Treating permission for one update as permission for ongoing marketing.",
+      "blindSpots": "The customer agreed to receive a service update, not ongoing promotions. Send only the information they requested through the agreed method. Ask separately before adding them to marketing messages, and respect a refusal.",
+      "teaching": {
+        "en": "ग्राहक ने सिर्फ काम की जानकारी माँगी है, प्रचार नहीं। तय तरीके से वही अपडेट भेजें। प्रचार संदेश भेजने से पहले अलग अनुमति लें।",
+        "hi": "Customer ne sirf service update maanga hai, marketing nahi. Agreed channel par wahi update bhejo. Promotions ke liye separate permission lo.",
+        "hinglish": "Use contact details only for the agreed purpose."
+      },
+      "takeaway": {
+        "en": "संपर्क जानकारी उसी काम के लिए इस्तेमाल करें जिसकी अनुमति है।",
+        "hi": "Contact details sirf agreed purpose ke liye use karo.",
+        "hinglish": [
+          "No unsolicited marketing or sharing contact details.",
+          "Respect opt-out and privacy."
+        ]
+      },
+      "guardrails": [
+        "S10"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    },
+    {
+      "id": "LR-04",
+      "area": "long-term-relationships",
+      "categories": [
+        "clothing-apparel",
+        "bakery-sweet-shop",
+        "small-retail"
+      ],
+      "topic": "Invite a recommendation without pressure",
+      "situation": {
+        "en": "A customer says they were satisfied with a purchase or service. The shopkeeper wants to encourage word of mouth but does not want to make the customer uncomfortable.",
+        "hi": "एक ग्राहक कहता है कि वह खरीद या सर्विस से संतुष्ट है। दुकानदार चाहता है कि वह दूसरों को बताए, लेकिन ग्राहक को असहज नहीं करना चाहता।",
+        "hinglish": "Customer kehta hai ki purchase ya service se satisfied hai. Shopkeeper word-of-mouth encourage karna chahta hai, par customer ko uncomfortable nahi karna chahta."
+      },
+      "prompt": {
+        "en": "How could you invite feedback or a recommendation while leaving the choice entirely to the customer?",
+        "hi": "ग्राहक को पूरी स्वतंत्रता देते हुए आप प्रतिक्रिया या सुझाव कैसे माँगेंगे?",
+        "hinglish": "Customer ko full choice dete hue feedback ya recommendation kaise maangenge?"
+      },
+      "objective": "Make a simple, optional invitation and accept either response.",
+      "principle": "Thank them, invite honest feedback or say they may recommend the shop if someone asks; do not demand contacts or a public review.",
+      "considerations": "Turning satisfaction into an obligation or asking for a positive review only.",
+      "blindSpots": "A satisfied customer may choose to recommend the shop, but it should remain their choice. Thank them and invite honest feedback without asking for a guaranteed positive review or making them feel obliged.",
+      "teaching": {
+        "en": "संतुष्ट ग्राहक अपनी इच्छा से दुकान की सलाह दे सकता है। धन्यवाद दें और ईमानदार प्रतिक्रिया माँगें, लेकिन सकारात्मक समीक्षा के लिए दबाव न डालें।",
+        "hi": "Satisfied customer apni marzi se recommend kar sakta hai. Thank karo aur honest feedback invite karo, positive review ka pressure mat do.",
+        "hinglish": "Invite; never demand."
+      },
+      "takeaway": {
+        "en": "अनुरोध करें, दबाव नहीं।",
+        "hi": "Invite karo, demand mat karo.",
+        "hinglish": [
+          "No review manipulation, incentives conditioned on positive reviews, or contact harvesting."
+        ]
+      },
+      "guardrails": [
+        "S2",
+        "S10"
+      ],
+      "version": 1,
+      "reviewStatus": "draft_needs_shopkeeper_and_expert_review",
+      "reviewer": null,
+      "lastReviewedAt": null
+    }
+  ]
+}
