@@ -720,10 +720,15 @@ export function LearnScreen() {
               <span>{copy.eyebrow}</span>
             </div>
             <h1 className="text-screen-title text-text mt-2">{copy.headline}</h1>
-            <p className="text-small text-text-secondary mt-2 leading-relaxed">{copy.subhead}</p>
+            <p className="text-small text-text-secondary mt-2 leading-relaxed">
+              {isDesignPreview
+                ? (lang === 'hi' ? 'अपने कारोबार को बेहतर बनाने के व्यावहारिक तरीके खोजें।' : 'Explore practical ways to strengthen your business.')
+                : copy.subhead}
+            </p>
           </div>
 
           <div className="flex-1 min-h-0 scroll-area px-5 pb-6">
+            {!isDesignPreview && (
             <div className="rounded-2xl p-4 mb-5 border border-primary/10 bg-primary/5">
               <div className="flex items-start gap-3">
                 <div className="w-11 h-11 shrink-0 rounded-xl bg-card flex items-center justify-center text-primary shadow-sm">
@@ -735,10 +740,13 @@ export function LearnScreen() {
                 </div>
               </div>
             </div>
+            )}
 
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-bold text-text-secondary tracking-[0.12em]">
-                {lang === 'hi' ? 'अपना कोच चुनें' : 'CHOOSE YOUR COACH'}
+                {isDesignPreview
+                  ? (lang === 'hi' ? 'सीखने के क्षेत्र' : 'LEARNING AREAS')
+                  : (lang === 'hi' ? 'अपना कोच चुनें' : 'CHOOSE YOUR COACH')}
               </p>
               {isDesignPreview && (
                 <span className="text-[10px] font-bold tracking-wide text-amber-800 bg-amber-100 rounded-full px-2.5 py-1">
@@ -748,6 +756,7 @@ export function LearnScreen() {
             </div>
 
             <div className="space-y-3">
+              {!isDesignPreview && (
               <button
                 type="button"
                 onClick={() => setScreen('sales-intro')}
@@ -776,6 +785,7 @@ export function LearnScreen() {
                   <span>{lang === 'hi' ? 'व्यावहारिक बातचीत' : 'Practical conversations'}</span>
                 </div>
               </button>
+              )}
 
               <div className="rounded-2xl border border-border bg-card/70 p-4 opacity-80">
                 <div className="flex items-start gap-3">
@@ -808,10 +818,12 @@ export function LearnScreen() {
               </div>
             </div>
 
+            {!isDesignPreview && (
             <div className="mt-5 flex items-start gap-2 text-xs text-text-secondary leading-relaxed">
               <ShieldCheck size={16} className="text-primary shrink-0 mt-0.5" />
               <p>{copy.transparency}</p>
             </div>
+            )}
           </div>
         </>
       )}
