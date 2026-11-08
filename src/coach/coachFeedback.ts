@@ -1,5 +1,5 @@
-import type { CoachLanguage } from './types';
-import type { CoachTranscriptMessage } from './coachSimulation';
+import type { CoachLanguage } from './types.js';
+import type { CoachTranscriptMessage } from './coachSimulation.js';
 
 export interface CoachSessionFeedback {
   currentFeedback: string;
