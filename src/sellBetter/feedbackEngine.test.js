@@ -1,4 +1,4 @@
-import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';\nimport { readFileSync } from 'node:fs';
 import test from 'node:test';
 import guides from '../../docs/sell-better/phase-4/feedback-guides.v1.json' with { type: 'json' };
 import { buildLessonFeedback } from './feedbackEngine.js';
@@ -57,4 +57,12 @@ test('feedback does not expose a score or echo the complete response', () => {
   const serialized = JSON.stringify(result);
   assert.doesNotMatch(serialized, /score|rating|grade|out of 10/i);
   assert.ok(!serialized.includes(answer));
+});
+
+test('lesson progression wraps once and rejects invalid catalogue indexes', () => {
+  assert.equal(getNextLessonIndex(22, 24), 23);
+  assert.equal(getNextLessonIndex(23, 24), 0);
+  assert.equal(getNextLessonIndex(-1, 24), null);
+  assert.equal(getNextLessonIndex(24, 24), null);
+  assert.equal(getNextLessonIndex(0, 0), null);
 });
