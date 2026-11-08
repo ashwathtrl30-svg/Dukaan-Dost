@@ -11,6 +11,7 @@ import type { CoachBaselineObservation } from '../coach/coachAssessment';
 import { isCoachCloudAvailable, loadCoachBaseline, saveCoachBaseline } from '../coach/coachRepository';
 import { appendCoachTranscript, cancelCoachSpeech, isCoachSpeechSynthesisSupported, speakCoachText, useCoachVoiceInput } from '../coach/useCoachVoice';
 import type { CoachVoiceError } from '../coach/useCoachVoice';
+import type { CoachSessionFeedback } from '../coach/coachFeedback';
 import {
   ArrowLeft,
   ArrowRight,
@@ -104,11 +105,19 @@ const coachCopy = {
     finishPractice: 'End this practice',
     sessionStarting: 'Preparing your customer…',
     customerThinking: 'Customer is replying…',
-    practiceCompleted: 'This customer conversation is complete. Detailed feedback will be added in the feedback phase.',
+    practiceCompleted: 'This customer conversation is complete. You can now review feedback based on what you actually said.',
     practiceAbandoned: 'This practice was ended before completion. It will not produce completed-session feedback.',
     replyRequired: 'Write a reply before sending.',
     startFailed: 'The customer practice could not be started. Please try again.',
     replyFailed: 'Your reply could not be sent. It has not been added twice. Please retry.',
+    feedbackUnavailable: 'Live AI feedback is disabled in this isolated preview. No private Coach database or AI secret is connected, so no feedback was generated or saved.',
+    feedbackFailed: 'Feedback could not be generated from this completed conversation. Your transcript is unchanged. Please try again.',
+    feedbackLoading: 'Reviewing your conversation…',
+    getFeedback: 'Get feedback on this conversation',
+    feedbackRetry: 'Try feedback again',
+    feedbackExample: 'You could say:',
+    backToConversation: 'Back to conversation',
+    feedbackPrivacy: 'This feedback is based only on the saved practice conversation. It is not a score or a judgement of you as a person.',
     simulationDisclosure: 'You are speaking with an AI customer in a practice simulation. No real sales, expenses, stock or udhaar entries are created.',
     seeFeedback: 'See the feedback screen',
     feedbackTitle: 'Feedback that helps you improve',
@@ -204,11 +213,19 @@ const coachCopy = {
     finishPractice: 'अभ्यास समाप्त करें',
     sessionStarting: 'ग्राहक तैयार हो रहा है…',
     customerThinking: 'ग्राहक जवाब दे रहा है…',
-    practiceCompleted: 'यह ग्राहक बातचीत पूरी हो गई। विस्तृत फीडबैक अगले फीडबैक चरण में जुड़ेगा।',
+    practiceCompleted: 'यह ग्राहक बातचीत पूरी हो गई। अब आप अपने असली जवाबों पर आधारित फीडबैक देख सकते हैं।',
     practiceAbandoned: 'यह अभ्यास पूरा होने से पहले समाप्त किया गया। इससे पूरा सेशन वाला फीडबैक नहीं बनेगा।',
     replyRequired: 'भेजने से पहले अपना जवाब लिखें।',
     startFailed: 'ग्राहक अभ्यास शुरू नहीं हो पाया। फिर कोशिश करें।',
     replyFailed: 'आपका जवाब नहीं भेजा जा सका। इसे दोबारा सेव नहीं किया गया है। फिर कोशिश करें।',
+    feedbackUnavailable: 'इस अलग डेवलपमेंट डेमो में AI फीडबैक बंद है। Coach डेटाबेस या AI सीक्रेट जुड़ा नहीं है, इसलिए फीडबैक बनाया या सेव नहीं हुआ।',
+    feedbackFailed: 'इस पूरी बातचीत से फीडबैक नहीं बन पाया। आपकी बातचीत सुरक्षित है। कृपया फिर कोशिश करें।',
+    feedbackLoading: 'आपकी बातचीत को समझ रहे हैं…',
+    getFeedback: 'इस बातचीत का फीडबैक देखें',
+    feedbackRetry: 'फीडबैक फिर से बनाएँ',
+    feedbackExample: 'आप ऐसे कह सकते हैं:',
+    backToConversation: 'बातचीत पर वापस जाएँ',
+    feedbackPrivacy: 'यह फीडबैक केवल सेव की गई अभ्यास-बातचीत पर आधारित है। यह कोई स्कोर या आपके व्यक्तित्व पर फैसला नहीं है।',
     simulationDisclosure: 'आप एक AI ग्राहक से अभ्यास कर रहे हैं। इससे असली बिक्री, खर्च, स्टॉक या उधार की एंट्री नहीं बनेगी।',
     seeFeedback: 'फीडबैक की स्क्रीन देखें',
     feedbackTitle: 'ऐसी सलाह जो आपको बेहतर बनाए',
@@ -314,6 +331,9 @@ export function LearnScreen() {
   const [simulationError, setSimulationError] = useState('');
   const [simulationStatus, setSimulationStatus] = useState<'idle' | 'continue' | 'completed' | 'abandoned'>('idle');
   const [simulationOutcome, setSimulationOutcome] = useState<string | null>(null);
+  const [coachFeedback, setCoachFeedback] = useState<CoachSessionFeedback | null>(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
   const isDesignPreview = import.meta.env.VITE_SALES_COACH_UI_PREVIEW === 'true';
 
   const baselineVoice = useCoachVoiceInput({
@@ -471,6 +491,49 @@ export function LearnScreen() {
     return result as Record<string, any>;
   };
 
+  const callCoachFeedback = async (sessionId: string) => {
+    if (!supabase) throw new Error(copy.feedbackUnavailable);
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session?.access_token) throw new Error(copy.feedbackUnavailable);
+    const response = await fetch('/api/coach-feedback', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + data.session.access_token,
+      },
+      body: JSON.stringify({ sessionId }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const failure = new Error(typeof result?.error === 'string' ? result.error : copy.feedbackFailed) as Error & { code?: string };
+      failure.code = typeof result?.code === 'string' ? result.code : undefined;
+      throw failure;
+    }
+    return result as { sessionId: string; feedback: CoachSessionFeedback; createdAt?: string };
+  };
+
+  const openCoachFeedback = async () => {
+    if (!simulationSessionId) {
+      setFeedbackError(copy.feedbackFailed);
+      return;
+    }
+    if (coachFeedback) {
+      setScreen('feedback-preview');
+      return;
+    }
+    setFeedbackLoading(true);
+    setFeedbackError('');
+    try {
+      const result = await callCoachFeedback(simulationSessionId);
+      setCoachFeedback(result.feedback);
+      setScreen('feedback-preview');
+    } catch (error) {
+      setFeedbackError(error instanceof Error ? error.message : copy.feedbackFailed);
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
   const startCoachSimulation = async () => {
     simulationVoice.stop();
     cancelCoachSpeech();
@@ -482,6 +545,9 @@ export function LearnScreen() {
     setSimulationReply('');
     setSimulationStatus('idle');
     setSimulationOutcome(null);
+    setCoachFeedback(null);
+    setFeedbackError('');
+    setFeedbackLoading(false);
     try {
       let result: Record<string, any>;
       try {
@@ -971,6 +1037,12 @@ export function LearnScreen() {
                 <PreviewNotice>{copy.practiceAbandoned}</PreviewNotice>
               </div>
             )}
+
+            {feedbackError && (
+              <div className="mt-4">
+                <PreviewNotice>{feedbackError}</PreviewNotice>
+              </div>
+            )}
           </div>
 
           <div className="px-5 pt-3 pb-4 border-t border-border bg-bg space-y-2">
@@ -1030,11 +1102,17 @@ export function LearnScreen() {
               </>
             )}
 
-            {(simulationStatus === 'completed' || simulationStatus === 'abandoned') && (
-              <PrimaryAction onClick={() => setScreen('home')}>
-                {copy.backToLearn}
+            {simulationStatus === 'completed' && simulationSessionId && (
+              <PrimaryAction onClick={() => void openCoachFeedback()} disabled={feedbackLoading}>
+                {feedbackLoading ? copy.feedbackLoading : coachFeedback ? copy.seeFeedback : feedbackError ? copy.feedbackRetry : copy.getFeedback}
                 <ArrowRight size={18} />
               </PrimaryAction>
+            )}
+
+            {(simulationStatus === 'completed' || simulationStatus === 'abandoned') && (
+              <button type="button" onClick={() => setScreen('home')} className="btn-text w-full">
+                {copy.backToLearn}
+              </button>
             )}
           </div>
         </>
@@ -1046,45 +1124,60 @@ export function LearnScreen() {
           <div className="flex-1 min-h-0 scroll-area px-5 py-4">
             <div className="mb-4">
               <p className="text-sm text-text-secondary leading-relaxed">{copy.feedbackIntro}</p>
+              <p className="text-xs text-text-secondary leading-relaxed mt-2">{copy.feedbackPrivacy}</p>
             </div>
 
-            <div className="space-y-3">
-              <div className="card p-4 border-l-4 border-l-primary">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle2 size={18} className="text-primary" />
-                  <h2 className="text-body font-semibold text-text">{copy.currentFeedback}</h2>
-                </div>
-                <p className="text-sm text-text-secondary leading-relaxed">{copy.currentFeedbackDesc}</p>
-              </div>
-              <div className="card p-4 border-l-4 border-l-amber-500">
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles size={18} className="text-amber-600" />
-                  <h2 className="text-body font-semibold text-text">{copy.improveAreas}</h2>
-                </div>
-                <p className="text-sm text-text-secondary leading-relaxed">{copy.improveAreasDesc}</p>
-              </div>
-              <div className="card p-4 border-l-4 border-l-blue-500">
-                <div className="flex items-center gap-2 mb-2">
-                  <BookOpen size={18} className="text-blue-600" />
-                  <h2 className="text-body font-semibold text-text">{copy.howImprove}</h2>
-                </div>
-                <p className="text-sm text-text-secondary leading-relaxed">{copy.howImproveDesc}</p>
-                <div className="mt-3 pt-3 border-t border-border/70 flex items-center gap-2 text-xs text-text-secondary">
-                  <Volume2 size={15} />
-                  <span>{copy.readAloud}</span>
-                </div>
-              </div>
-            </div>
+            {coachFeedback ? (
+              <div className="space-y-3">
+                <section className="card p-4 border-l-4 border-l-primary" aria-labelledby="coach-feedback-current">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle2 size={18} className="text-primary" />
+                    <h2 id="coach-feedback-current" className="text-body font-semibold text-text">{copy.currentFeedback}</h2>
+                    <button type="button" onClick={() => speakCoachText(coachFeedback.currentFeedback, lang)} disabled={!isCoachSpeechSynthesisSupported()} className="ml-auto w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary disabled:opacity-40" aria-label={copy.readAloud} title={copy.readAloud}>
+                      <Volume2 size={16} />
+                    </button>
+                  </div>
+                  <p className="text-sm text-text-secondary leading-relaxed">{coachFeedback.currentFeedback}</p>
+                </section>
 
-            <div className="mt-4">
-              <PreviewNotice>{copy.feedbackNote}</PreviewNotice>
-            </div>
+                <section className="card p-4 border-l-4 border-l-amber-500" aria-labelledby="coach-feedback-improve">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles size={18} className="text-amber-600" />
+                    <h2 id="coach-feedback-improve" className="text-body font-semibold text-text">{copy.improveAreas}</h2>
+                    <button type="button" onClick={() => speakCoachText(coachFeedback.areasToImprove, lang)} disabled={!isCoachSpeechSynthesisSupported()} className="ml-auto w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary disabled:opacity-40" aria-label={copy.readAloud} title={copy.readAloud}>
+                      <Volume2 size={16} />
+                    </button>
+                  </div>
+                  <p className="text-sm text-text-secondary leading-relaxed">{coachFeedback.areasToImprove}</p>
+                </section>
+
+                <section className="card p-4 border-l-4 border-l-blue-500" aria-labelledby="coach-feedback-how">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen size={18} className="text-blue-600" />
+                    <h2 id="coach-feedback-how" className="text-body font-semibold text-text">{copy.howImprove}</h2>
+                    <button type="button" onClick={() => speakCoachText(coachFeedback.howToImprove + ' ' + coachFeedback.exampleSentence, lang)} disabled={!isCoachSpeechSynthesisSupported()} className="ml-auto w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary disabled:opacity-40" aria-label={copy.readAloud} title={copy.readAloud}>
+                      <Volume2 size={16} />
+                    </button>
+                  </div>
+                  <p className="text-sm text-text-secondary leading-relaxed">{coachFeedback.howToImprove}</p>
+                  <blockquote className="mt-3 border-l-2 border-primary/40 pl-3 text-sm text-text leading-relaxed">
+                    <span className="text-xs font-semibold text-text-secondary">{copy.feedbackExample}</span>
+                    <p className="mt-1">“{coachFeedback.exampleSentence}”</p>
+                  </blockquote>
+                </section>
+              </div>
+            ) : (
+              <PreviewNotice>{feedbackError || copy.feedbackFailed}</PreviewNotice>
+            )}
           </div>
-          <div className="px-5 pt-3 pb-4 border-t border-border bg-bg">
-            <PrimaryAction onClick={() => setScreen('milestone-preview')}>
-              {copy.seeMilestone}
+          <div className="px-5 pt-3 pb-4 border-t border-border bg-bg space-y-2">
+            <PrimaryAction onClick={() => setScreen('simulation-preview')}>
+              {copy.backToConversation}
               <ArrowRight size={18} />
             </PrimaryAction>
+            <button type="button" onClick={() => setScreen('home')} className="btn-text w-full">
+              {copy.backToLearn}
+            </button>
           </div>
         </>
       )}
