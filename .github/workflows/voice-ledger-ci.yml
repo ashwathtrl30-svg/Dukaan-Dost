@@ -40,13 +40,15 @@ jobs:
           src/types.ts src/supabaseClient.ts
           src/auth/AuthGate.tsx src/auth/AccountRecoveryPanel.tsx
           src/auth/authValidation.ts src/screens/Profile.tsx src/screens/Onboarding.tsx src/screens/Learn.tsx
-          src/coach/types.ts src/coach/coachData.ts src/coach/coachRepository.ts src/coach/coachKnowledge.ts src/coach/coachAssessment.ts src/coach/coachSimulation.ts src/coach/coachLearning.ts src/coach/useCoachVoice.ts src/coach/coachFeedback.ts api/coach-customer.ts api/coach-feedback.ts api/coach-milestone.ts
+          src/coach/types.ts src/coach/coachData.ts src/coach/coachRepository.ts src/coach/coachKnowledge.ts src/coach/coachAssessment.ts src/coach/coachSimulation.ts src/coach/coachLearning.ts src/coach/useCoachVoice.ts src/coach/coachFeedback.ts src/coach/coachRateLimit.ts api/coach-customer.ts api/coach-feedback.ts api/coach-milestone.ts
           src/backup/encryptedBackup.ts src/backup/BackupRestorePanel.tsx src/snapshotSync.ts
           src/backup/encryptedBackup.ts src/backup/BackupRestorePanel.tsx
       - name: Test Coach identity and persistence input validation
         run: npx --yes tsx --test src/coach/coachData.test.ts src/coach/coachSchema.test.ts
       - name: Test Coach speech input, text safety and locale helpers
         run: npx --yes tsx --test src/coach/useCoachVoice.test.ts
+      - name: Test shared Coach API rate limiting
+        run: npx --yes tsx --test src/coach/coachRateLimit.test.ts
       - name: Test Coach customer simulation API authentication and preview isolation
         run: npx --yes tsx --test tests/api/coach-customer.test.ts
       - name: Test Coach session feedback validation and API boundaries
