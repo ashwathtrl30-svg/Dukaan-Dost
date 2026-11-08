@@ -6,6 +6,7 @@ import type { VoiceInterpretation } from './voice/voiceInterpreter';
 import { getSaleCountCopy, getSaleItemCountFromQuantity, parseSaleQuantityInput } from './quantity';
 import { t } from './i18n';
 import { HomeScreen } from './screens/Home';
+import { SellBetterPreview } from './screens/SellBetterPreview';
 
 const LanguageScreen = lazy(() => import('./screens/Onboarding').then(module => ({ default: module.LanguageScreen })));
 const WelcomeScreen = lazy(() => import('./screens/Onboarding').then(module => ({ default: module.WelcomeScreen })));
@@ -598,7 +599,11 @@ function AppContent() {
           {activeTab === 'insights' && <InsightsScreen />}
           {activeTab === 'ask' && <AskScreen />}
           {activeTab === 'tools' && <ToolsScreen />}
-          {activeTab === 'learn' && <LearnScreen />}
+          {activeTab === 'learn' && (
+            import.meta.env.VITE_SALES_COACH_UI_PREVIEW === 'true'
+              ? <SellBetterPreview />
+              : <LearnScreen />
+          )}
         </Suspense>
       </div>
 
