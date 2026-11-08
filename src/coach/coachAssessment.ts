@@ -138,7 +138,7 @@ const SIGNALS: readonly CoachBaselineSignal[] = [
     id: 'reflective_learning',
     questionId: 'lost_sale',
     summary: {
-      en: 'learning from the lost sale',
+      en: 'learned from the lost sale',
       hi: 'न हुई बिक्री से सीखना',
     },
   },
