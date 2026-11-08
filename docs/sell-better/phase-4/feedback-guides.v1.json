@@ -1,0 +1,1084 @@
+{
+  "schemaVersion": 1,
+  "phase": 4,
+  "status": "draft_for_founder_shopkeeper_and_language_review",
+  "language": "en",
+  "note": "This guide supports transparent, phrase-based reflection. It is not a semantic judgement, grading rubric, or proof that an unrecognised idea was absent.",
+  "lessons": [
+    {
+      "lessonId": "UC-01",
+      "principle": "Understand the customer's intended use",
+      "signals": [
+        {
+          "label": "intended use",
+          "phrases": [
+            "daily use",
+            "everyday use",
+            "cooking",
+            "how they use",
+            "what they cook",
+            "family use"
+          ],
+          "why": "Knowing how the oil will be used helps narrow the options before discussing a premium product.",
+          "question": "What will the customer mainly use it for?"
+        },
+        {
+          "label": "budget and price range",
+          "phrases": [
+            "budget",
+            "price range",
+            "planned to spend",
+            "affordable",
+            "how much they want to spend"
+          ],
+          "why": "A suitable recommendation needs to fit the amount the customer is comfortable spending.",
+          "question": "Have you asked what price range feels comfortable?"
+        },
+        {
+          "label": "pack size or brand preference",
+          "phrases": [
+            "pack size",
+            "pack size",
+            "preferred brand",
+            "brand preference",
+            "usual brand",
+            "quantity"
+          ],
+          "why": "Pack size and a stated preference can matter as much as the product label.",
+          "question": "Would a different pack size or familiar brand suit them better?"
+        }
+      ]
+    },
+    {
+      "lessonId": "UC-02",
+      "principle": "Understand the occasion and practical requirement",
+      "signals": [
+        {
+          "label": "the occasion",
+          "phrases": [
+            "occasion",
+            "family function",
+            "wedding",
+            "celebration",
+            "event"
+          ],
+          "why": "The occasion helps clarify what the clothing needs to work for.",
+          "question": "What is the occasion, and when will they wear it?"
+        },
+        {
+          "label": "practical needs",
+          "phrases": [
+            "comfort",
+            "weather",
+            "daily wear",
+            "fabric",
+            "fit",
+            "colour preference",
+            "colour"
+          ],
+          "why": "Practical needs make the options relevant rather than simply attractive.",
+          "question": "Is there a particular comfort, fit or use requirement?"
+        },
+        {
+          "label": "the customer's budget",
+          "phrases": [
+            "budget",
+            "price range",
+            "spend",
+            "affordable",
+            "cost"
+          ],
+          "why": "A clear budget helps you show suitable options without assumptions.",
+          "question": "What spending range have they set?"
+        }
+      ]
+    },
+    {
+      "lessonId": "UC-03",
+      "principle": "Match the phone to everyday usage",
+      "signals": [
+        {
+          "label": "everyday phone use",
+          "phrases": [
+            "daily use",
+            "everyday use",
+            "work",
+            "digital payments",
+            "calls",
+            "photographs",
+            "photos"
+          ],
+          "why": "Understanding regular tasks helps separate useful features from specifications the customer may never use.",
+          "question": "Which tasks matter most in their normal day?"
+        },
+        {
+          "label": "essential features",
+          "phrases": [
+            "battery",
+            "camera",
+            "storage",
+            "screen",
+            "performance",
+            "memory",
+            "5g",
+            "features"
+          ],
+          "why": "Specific feature priorities help compare verified models accurately.",
+          "question": "Which feature would make the biggest practical difference?"
+        },
+        {
+          "label": "budget and priorities",
+          "phrases": [
+            "budget",
+            "price range",
+            "spend",
+            "affordable",
+            "priority",
+            "priorities"
+          ],
+          "why": "The right comparison balances needs and budget, not just the biggest specification list.",
+          "question": "Which needs are essential, and what is their comfortable budget?"
+        }
+      ]
+    },
+    {
+      "lessonId": "UC-04",
+      "principle": "Balance quantity, ripeness and timing",
+      "signals": [
+        {
+          "label": "how much the household can use",
+          "phrases": [
+            "quantity",
+            "how much",
+            "household",
+            "family size",
+            "for the week",
+            "number of people"
+          ],
+          "why": "Quantity is more useful when matched to how much the household can realistically consume.",
+          "question": "How much is likely to be used before the next purchase?"
+        },
+        {
+          "label": "ripeness and timing",
+          "phrases": [
+            "ripe",
+            "ripeness",
+            "ripen",
+            "ready to eat",
+            "when they will eat",
+            "timing",
+            "storage"
+          ],
+          "why": "Timing matters because fruit at different stages of ripeness may be used on different days.",
+          "question": "Which fruit should be ready first, and which can ripen later?"
+        },
+        {
+          "label": "avoiding waste and fitting the budget",
+          "phrases": [
+            "waste",
+            "spoil",
+            "spoiled",
+            "budget",
+            "cost",
+            "money"
+          ],
+          "why": "Thinking about waste and spending together can help the customer buy a practical amount.",
+          "question": "What quantity balances the customer's budget with the risk of spoilage?"
+        }
+      ]
+    },
+    {
+      "lessonId": "CO-01",
+      "principle": "Explain verified product differences",
+      "signals": [
+        {
+          "label": "a verified difference",
+          "phrases": [
+            "fabric",
+            "material",
+            "finish",
+            "weave",
+            "quality difference",
+            "care requirement"
+          ],
+          "why": "A specific, verified difference is more useful than a vague claim that one product is better.",
+          "question": "Which difference can you demonstrate or verify?"
+        },
+        {
+          "label": "why the difference matters to this customer",
+          "phrases": [
+            "use",
+            "comfort",
+            "durability",
+            "daily wear",
+            "occasion",
+            "maintenance"
+          ],
+          "why": "A difference becomes meaningful when connected to how the customer plans to use the shirt.",
+          "question": "Which of those differences matters for their intended use?"
+        },
+        {
+          "label": "care or limitations",
+          "phrases": [
+            "washing",
+            "wash",
+            "care",
+            "maintenance",
+            "shrink",
+            "colour fade"
+          ],
+          "why": "Care instructions and limitations help customers make an informed comparison.",
+          "question": "Is there a care requirement they should know before deciding?"
+        }
+      ]
+    },
+    {
+      "lessonId": "CO-02",
+      "principle": "Clarify and confirm the alteration",
+      "signals": [
+        {
+          "label": "the exact change requested",
+          "phrases": [
+            "length",
+            "waist",
+            "sleeve",
+            "shoulder",
+            "loose",
+            "tight",
+            "fit",
+            "where to alter"
+          ],
+          "why": "A specific requested change reduces the risk of completing work the customer did not ask for.",
+          "question": "Which part should be changed, and by how much?"
+        },
+        {
+          "label": "how the customer wants it to fit",
+          "phrases": [
+            "fit preference",
+            "how it should fit",
+            "comfortable",
+            "movement",
+            "try on",
+            "pin"
+          ],
+          "why": "The customer's preferred fit should be understood rather than guessed from a general request.",
+          "question": "Can you confirm the preferred fit with the garment or a fitting?"
+        },
+        {
+          "label": "agreement before work begins",
+          "phrases": [
+            "confirm",
+            "repeat back",
+            "before starting",
+            "price",
+            "delivery date",
+            "timeline",
+            "when it will be ready"
+          ],
+          "why": "Confirming the work, price and realistic timing creates a shared expectation.",
+          "question": "Have you repeated the agreed work and timing back to them?"
+        }
+      ]
+    },
+    {
+      "lessonId": "CO-03",
+      "principle": "Set realistic expectations for a salon service",
+      "signals": [
+        {
+          "label": "the customer's desired result",
+          "phrases": [
+            "desired result",
+            "what they want",
+            "reference photo",
+            "reference picture",
+            "look they want"
+          ],
+          "why": "Understanding the result the customer hopes for helps you discuss what is feasible.",
+          "question": "What part of the reference matters most to them?"
+        },
+        {
+          "label": "what is realistically possible",
+          "phrases": [
+            "possible",
+            "limitations",
+            "may differ",
+            "starting point",
+            "hair type",
+            "current condition"
+          ],
+          "why": "Explaining relevant limits avoids promising an identical result when starting conditions differ.",
+          "question": "What may differ from the reference in this case?"
+        },
+        {
+          "label": "agreement before starting",
+          "phrases": [
+            "discuss first",
+            "explain first",
+            "before starting",
+            "consent",
+            "confirm",
+            "price",
+            "process"
+          ],
+          "why": "A clear discussion of the process, price and expected result lets the customer decide comfortably.",
+          "question": "Have you explained the process and got agreement before beginning?"
+        }
+      ]
+    },
+    {
+      "lessonId": "CO-04",
+      "principle": "Verify measurements and compatibility",
+      "signals": [
+        {
+          "label": "measurements or exact dimensions",
+          "phrases": [
+            "measurement",
+            "measurements",
+            "size",
+            "diameter",
+            "length",
+            "thread",
+            "dimensions"
+          ],
+          "why": "A photo alone may not show the exact dimensions needed for a safe fit.",
+          "question": "Which measurement can you check before selecting the part?"
+        },
+        {
+          "label": "model or compatibility details",
+          "phrases": [
+            "model number",
+            "model",
+            "specification",
+            "specs",
+            "connector type",
+            "compatibility",
+            "part number"
+          ],
+          "why": "Exact model and connector details can prevent an unsuitable recommendation.",
+          "question": "Can the customer provide the exact model or part details?"
+        },
+        {
+          "label": "safety and fit verification",
+          "phrases": [
+            "safety",
+            "safe",
+            "fit",
+            "test fit",
+            "qualified",
+            "electrician",
+            "plumber"
+          ],
+          "why": "For repair parts, correct fit and safety matter more than making a quick sale.",
+          "question": "Does this need an in-person check or a qualified person's confirmation?"
+        }
+      ]
+    },
+    {
+      "lessonId": "PN-01",
+      "principle": "Check the economics before discounting",
+      "signals": [
+        {
+          "label": "actual cost and margin",
+          "phrases": [
+            "cost price",
+            "purchase cost",
+            "margin",
+            "profit margin",
+            "cost",
+            "margin"
+          ],
+          "why": "Checking actual item economics helps avoid agreeing to a price that is not sustainable.",
+          "question": "Have you checked the current cost and room available on these items?"
+        },
+        {
+          "label": "the exact items and offer conditions",
+          "phrases": [
+            "items",
+            "which items",
+            "quantity",
+            "offer",
+            "scheme",
+            "supplier offer",
+            "conditions"
+          ],
+          "why": "A discount should be based on the specific items, quantity and any real offer conditions.",
+          "question": "Which items and quantities are included in the request?"
+        },
+        {
+          "label": "the relationship without automatic discounting",
+          "phrases": [
+            "regular customer",
+            "loyal customer",
+            "relationship",
+            "repeat customer",
+            "other value"
+          ],
+          "why": "You can value a regular customer without making an unchecked discount automatic.",
+          "question": "How can you explain your price respectfully if a discount is not workable?"
+        }
+      ]
+    },
+    {
+      "lessonId": "PN-02",
+      "principle": "Compare the complete online and in-store offer",
+      "signals": [
+        {
+          "label": "the exact model or product",
+          "phrases": [
+            "exact model",
+            "model number",
+            "same model",
+            "variant",
+            "specification",
+            "specs"
+          ],
+          "why": "A fair comparison starts by checking that both listings are for the same model and variant.",
+          "question": "Are both products exactly the same model and specification?"
+        },
+        {
+          "label": "total price and terms",
+          "phrases": [
+            "delivery",
+            "shipping",
+            "warranty",
+            "return policy",
+            "replacement",
+            "included items",
+            "final price",
+            "total cost"
+          ],
+          "why": "The headline price may not include the same items, service or terms.",
+          "question": "What is included in the final price and what terms apply?"
+        },
+        {
+          "label": "genuine local-shop value",
+          "phrases": [
+            "after sales",
+            "after-sales",
+            "service",
+            "demonstration",
+            "support",
+            "convenience",
+            "local service"
+          ],
+          "why": "Explain only the support or convenience your shop genuinely provides.",
+          "question": "Which benefit can you actually provide and stand behind?"
+        }
+      ]
+    },
+    {
+      "lessonId": "PN-03",
+      "principle": "Evaluate a bulk order before negotiating",
+      "signals": [
+        {
+          "label": "ingredient and packaging costs",
+          "phrases": [
+            "ingredients",
+            "raw material",
+            "packaging",
+            "boxes",
+            "materials",
+            "cost"
+          ],
+          "why": "The full material and packaging cost matters when calculating whether the order is worthwhile.",
+          "question": "Have you counted all materials and packaging for this quantity?"
+        },
+        {
+          "label": "workload, time and capacity",
+          "phrases": [
+            "labour",
+            "workload",
+            "time",
+            "staff",
+            "capacity",
+            "preparation",
+            "extra work"
+          ],
+          "why": "A large order can use capacity needed for other work, so time and workload belong in the calculation.",
+          "question": "Can the shop complete the order on time without disrupting other commitments?"
+        },
+        {
+          "label": "delivery and payment terms",
+          "phrases": [
+            "delivery",
+            "advance",
+            "payment",
+            "deadline",
+            "collection",
+            "terms"
+          ],
+          "why": "Clear timing and payment terms reduce avoidable disputes on a large order.",
+          "question": "What timing and payment arrangement would make the order workable?"
+        }
+      ]
+    },
+    {
+      "lessonId": "PN-04",
+      "principle": "Keep bargaining respectful and sustainable",
+      "signals": [
+        {
+          "label": "a clear and consistent price",
+          "phrases": [
+            "fixed price",
+            "quoted price",
+            "same price",
+            "price is",
+            "price includes",
+            "clear price"
+          ],
+          "why": "A calm explanation of the genuine price is more useful than becoming defensive.",
+          "question": "Can you explain what the quoted price includes?"
+        },
+        {
+          "label": "the shop's viable limit",
+          "phrases": [
+            "margin",
+            "cost",
+            "cannot go lower",
+            "below cost",
+            "profit",
+            "viable"
+          ],
+          "why": "Knowing the shop's actual limit helps avoid agreeing to an unsustainable price.",
+          "question": "Have you checked the lowest workable price rather than guessing?"
+        },
+        {
+          "label": "a respectful choice",
+          "phrases": [
+            "understand",
+            "no pressure",
+            "take your time",
+            "choice",
+            "come back",
+            "decision"
+          ],
+          "why": "Respectful language keeps the conversation open even when the price does not change.",
+          "question": "How can you leave the decision with the customer respectfully?"
+        }
+      ]
+    },
+    {
+      "lessonId": "HO-01",
+      "principle": "Respect the customer's pause",
+      "signals": [
+        {
+          "label": "respect for the decision",
+          "phrases": [
+            "take your time",
+            "think about it",
+            "no pressure",
+            "your decision",
+            "decide later"
+          ],
+          "why": "Respecting the pause avoids turning a normal decision into a pressured sale.",
+          "question": "How can you make it clear that the customer can decide later?"
+        },
+        {
+          "label": "an optional question about uncertainty",
+          "phrases": [
+            "any question",
+            "anything unclear",
+            "concern",
+            "would you like",
+            "need more information"
+          ],
+          "why": "A gentle, optional question may reveal whether any information would help.",
+          "question": "Could you ask whether they want any detail clarified, without insisting?"
+        },
+        {
+          "label": "useful information for later",
+          "phrases": [
+            "details",
+            "model details",
+            "quotation",
+            "written details",
+            "contact",
+            "come back"
+          ],
+          "why": "A simple way to revisit the information can help without manufacturing urgency.",
+          "question": "What information could they take away to compare in their own time?"
+        }
+      ]
+    },
+    {
+      "lessonId": "HO-02",
+      "principle": "Support a family discussion without pressure",
+      "signals": [
+        {
+          "label": "respect for the family discussion",
+          "phrases": [
+            "discuss with family",
+            "ask my family",
+            "family opinion",
+            "consult",
+            "talk at home"
+          ],
+          "why": "Acknowledging that the customer wants another opinion respects their decision process.",
+          "question": "How can you acknowledge the request without trying to override it?"
+        },
+        {
+          "label": "clear information to share",
+          "phrases": [
+            "photo",
+            "details",
+            "price",
+            "size",
+            "measurements",
+            "product details"
+          ],
+          "why": "Accurate details can help the customer explain the option to their family.",
+          "question": "What relevant details could they take away or share?"
+        },
+        {
+          "label": "an open invitation to return",
+          "phrases": [
+            "come back",
+            "return",
+            "visit again",
+            "when convenient",
+            "no pressure"
+          ],
+          "why": "An easy, pressure-free return keeps the relationship open.",
+          "question": "How can you invite them back without implying the product will disappear?"
+        }
+      ]
+    },
+    {
+      "lessonId": "HO-03",
+      "principle": "Verify product-specific storage information",
+      "signals": [
+        {
+          "label": "checking the exact product or batch",
+          "phrases": [
+            "batch",
+            "label",
+            "packaging",
+            "product details",
+            "date",
+            "manufacturer"
+          ],
+          "why": "Storage guidance can differ by product and batch, so the exact information matters.",
+          "question": "What label or batch information can you check?"
+        },
+        {
+          "label": "verified storage instructions",
+          "phrases": [
+            "storage instructions",
+            "keep refrigerated",
+            "refrigeration",
+            "temperature",
+            "manufacturer guidance",
+            "label"
+          ],
+          "why": "The correct storage conditions should come from reliable product-specific guidance.",
+          "question": "Where can you verify the storage requirements for this product?"
+        },
+        {
+          "label": "avoiding an unsupported shelf-life promise",
+          "phrases": [
+            "not guess",
+            "cannot guarantee",
+            "shelf life",
+            "expiry",
+            "best before",
+            "not promise"
+          ],
+          "why": "Avoiding an unsupported guarantee protects the customer and the shop.",
+          "question": "How will you explain what is known without promising more than the label supports?"
+        }
+      ]
+    },
+    {
+      "lessonId": "HO-04",
+      "principle": "Understand the customer's concern about a service",
+      "signals": [
+        {
+          "label": "the specific concern",
+          "phrases": [
+            "concern",
+            "what worries",
+            "process",
+            "time",
+            "price",
+            "total price"
+          ],
+          "why": "Finding out whether the concern is about process, time or cost makes the explanation more relevant.",
+          "question": "Which part are they unsure about?"
+        },
+        {
+          "label": "what the service includes and its limits",
+          "phrases": [
+            "includes",
+            "not included",
+            "limits",
+            "steps",
+            "process",
+            "what happens"
+          ],
+          "why": "Clear scope helps the customer understand what they are paying for.",
+          "question": "Have you explained what is and is not included?"
+        },
+        {
+          "label": "freedom to choose",
+          "phrases": [
+            "their choice",
+            "customer decides",
+            "no pressure",
+            "can decline",
+            "take time"
+          ],
+          "why": "The customer should be able to decide whether the service is worthwhile for them.",
+          "question": "How can you leave the choice with them after explaining?"
+        }
+      ]
+    },
+    {
+      "lessonId": "CD-01",
+      "principle": "Listen, establish facts and resolve fairly",
+      "signals": [
+        {
+          "label": "acknowledging and listening",
+          "phrases": [
+            "listen",
+            "hear them out",
+            "acknowledge",
+            "sorry to hear",
+            "understand the concern"
+          ],
+          "why": "Acknowledging the concern helps the customer feel heard before facts are checked.",
+          "question": "Have you let them explain what happened without interruption?"
+        },
+        {
+          "label": "checking purchase and storage facts",
+          "phrases": [
+            "when bought",
+            "purchase date",
+            "stored",
+            "storage",
+            "condition",
+            "how it was kept"
+          ],
+          "why": "The timeline and storage details can help clarify what may have happened without assuming blame.",
+          "question": "What facts can you check with the customer?"
+        },
+        {
+          "label": "a fair next step within actual policy",
+          "phrases": [
+            "shop policy",
+            "policy",
+            "replace",
+            "refund",
+            "resolution",
+            "fair solution",
+            "next step"
+          ],
+          "why": "A resolution should follow the shop's real policy and the facts, not a promise made too early.",
+          "question": "What fair option is actually available under your policy?"
+        }
+      ]
+    },
+    {
+      "lessonId": "CD-02",
+      "principle": "Take responsibility for a delayed alteration",
+      "signals": [
+        {
+          "label": "honest acknowledgement and update",
+          "phrases": [
+            "incomplete",
+            "not ready",
+            "delay",
+            "late",
+            "apologise",
+            "apologize",
+            "update"
+          ],
+          "why": "A direct, honest update recognises that the customer relied on the date you gave.",
+          "question": "Have you clearly explained what is and is not finished?"
+        },
+        {
+          "label": "a realistic alternative",
+          "phrases": [
+            "realistic option",
+            "finish part",
+            "alternative",
+            "partial",
+            "another tailor",
+            "rework"
+          ],
+          "why": "A practical alternative is more useful than a rushed promise that may fail again.",
+          "question": "What option can genuinely be completed before the occasion?"
+        },
+        {
+          "label": "a confirmed feasible timeline",
+          "phrases": [
+            "realistic time",
+            "confirm time",
+            "new deadline",
+            "cannot promise",
+            "call when ready"
+          ],
+          "why": "A revised deadline should reflect actual capacity, not an attempt to end the conversation.",
+          "question": "What timing can you honestly commit to?"
+        }
+      ]
+    },
+    {
+      "lessonId": "CD-03",
+      "principle": "Investigate a compatibility complaint fairly",
+      "signals": [
+        {
+          "label": "the exact phone model",
+          "phrases": [
+            "phone model",
+            "model number",
+            "exact model",
+            "device model"
+          ],
+          "why": "Compatibility depends on the specific device, not only the brand name.",
+          "question": "Have you checked the customer's exact phone model?"
+        },
+        {
+          "label": "the accessory's specifications",
+          "phrases": [
+            "accessory model",
+            "connector",
+            "specification",
+            "specs",
+            "supported",
+            "compatibility"
+          ],
+          "why": "The accessory's exact model and supported specifications need to be compared with the phone.",
+          "question": "What product detail can confirm whether they are compatible?"
+        },
+        {
+          "label": "actual support or return terms",
+          "phrases": [
+            "warranty",
+            "replacement terms",
+            "return policy",
+            "shop policy",
+            "invoice",
+            "bill"
+          ],
+          "why": "The next step should follow the real terms that applied at purchase.",
+          "question": "Have you checked the bill and the actual support terms before promising a remedy?"
+        }
+      ]
+    },
+    {
+      "lessonId": "CD-04",
+      "principle": "Clarify the gap between expectation and result",
+      "signals": [
+        {
+          "label": "the customer's specific concern",
+          "phrases": [
+            "which part",
+            "what part",
+            "specific concern",
+            "show me",
+            "explain what"
+          ],
+          "why": "A specific description helps identify what the customer feels is different.",
+          "question": "Have you asked which part of the result concerns them?"
+        },
+        {
+          "label": "what was agreed beforehand",
+          "phrases": [
+            "reference",
+            "consultation",
+            "agreed",
+            "discussed before",
+            "expected result",
+            "what we discussed"
+          ],
+          "why": "Comparing the original discussion with the customer's experience helps clarify the gap.",
+          "question": "What had both of you agreed before the service?"
+        },
+        {
+          "label": "a feasible next step",
+          "phrases": [
+            "adjustment",
+            "possible correction",
+            "feasible",
+            "realistic option",
+            "next step"
+          ],
+          "why": "Any adjustment should be realistic and within the service provider's capabilities.",
+          "question": "What can genuinely be adjusted, and what needs to be explained?"
+        }
+      ]
+    },
+    {
+      "lessonId": "LR-01",
+      "principle": "Remember preferences but confirm today's need",
+      "signals": [
+        {
+          "label": "checking the current requirement",
+          "phrases": [
+            "today",
+            "this time",
+            "current need",
+            "changed",
+            "what they need now"
+          ],
+          "why": "A customer's needs can change, so today's request matters more than an old pattern.",
+          "question": "What is different about what they need today?"
+        },
+        {
+          "label": "using past preferences carefully",
+          "phrases": [
+            "usual preference",
+            "previous choice",
+            "last time",
+            "usually buy",
+            "remember"
+          ],
+          "why": "Past preferences can help start a conversation, but they should not replace asking.",
+          "question": "How can you mention the usual choice while checking whether it still suits them?"
+        },
+        {
+          "label": "respecting privacy and choice",
+          "phrases": [
+            "privacy",
+            "ask permission",
+            "their choice",
+            "without assuming",
+            "confirm"
+          ],
+          "why": "Remembering should make service easier, not expose private purchase details or create assumptions.",
+          "question": "How can you use the information discreetly and let the customer choose?"
+        }
+      ]
+    },
+    {
+      "lessonId": "LR-02",
+      "principle": "Set a respectful credit boundary",
+      "signals": [
+        {
+          "label": "checking the outstanding balance and terms",
+          "phrases": [
+            "outstanding balance",
+            "pending amount",
+            "previous payment",
+            "due date",
+            "ledger",
+            "account"
+          ],
+          "why": "Checking the actual balance and agreed terms avoids decisions based only on memory or pressure.",
+          "question": "Have you checked the exact pending amount and due date?"
+        },
+        {
+          "label": "a clear and consistent boundary",
+          "phrases": [
+            "credit limit",
+            "shop policy",
+            "cannot extend",
+            "boundary",
+            "terms",
+            "consistent"
+          ],
+          "why": "A clear, consistent boundary protects the shop without humiliating the customer.",
+          "question": "How can you explain the boundary calmly and consistently?"
+        },
+        {
+          "label": "a practical way to settle or review",
+          "phrases": [
+            "repayment",
+            "payment date",
+            "settle existing",
+            "pay part",
+            "review later"
+          ],
+          "why": "A realistic next step can keep the conversation constructive without extending credit automatically.",
+          "question": "Can you agree on a practical way to review or settle the existing amount?"
+        }
+      ]
+    },
+    {
+      "lessonId": "LR-03",
+      "principle": "Use contact details only for the agreed update",
+      "signals": [
+        {
+          "label": "the purpose the customer agreed to",
+          "phrases": [
+            "order update",
+            "repair update",
+            "service update",
+            "when ready",
+            "specific update"
+          ],
+          "why": "The customer agreed to a particular update, not every future message.",
+          "question": "What exactly did the customer ask to be notified about?"
+        },
+        {
+          "label": "the agreed contact method",
+          "phrases": [
+            "preferred channel",
+            "whatsapp",
+            "call",
+            "message",
+            "phone call",
+            "agreed method"
+          ],
+          "why": "Using the agreed channel keeps the update relevant and expected.",
+          "question": "Which contact method did they agree to use?"
+        },
+        {
+          "label": "separate permission for promotions",
+          "phrases": [
+            "permission",
+            "consent",
+            "ask first",
+            "promotional",
+            "marketing",
+            "opt in"
+          ],
+          "why": "Permission for a service update is not permission for promotional messages.",
+          "question": "Have you asked separately before sending any marketing?"
+        }
+      ]
+    },
+    {
+      "lessonId": "LR-04",
+      "principle": "Recommend only when it fits a current need",
+      "signals": [
+        {
+          "label": "checking the customer's current need",
+          "phrases": [
+            "need",
+            "what they need",
+            "looking for",
+            "use it for",
+            "current requirement"
+          ],
+          "why": "A previous good experience does not automatically mean the customer needs another product today.",
+          "question": "What are they looking for now?"
+        },
+        {
+          "label": "a relevant and useful recommendation",
+          "phrases": [
+            "relevant",
+            "suitable",
+            "useful",
+            "fits their need",
+            "recommend only"
+          ],
+          "why": "A recommendation should solve a current need rather than simply add another sale.",
+          "question": "How does the option connect to the need they have described?"
+        },
+        {
+          "label": "respecting the customer's choice",
+          "phrases": [
+            "their choice",
+            "no pressure",
+            "can decline",
+            "leave the choice",
+            "not necessary"
+          ],
+          "why": "Being comfortable with a customer declining helps preserve trust.",
+          "question": "How will you make it easy for them to say no?"
+        }
+      ]
+    }
+  ]
+}
