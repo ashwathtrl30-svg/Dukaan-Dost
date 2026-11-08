@@ -712,7 +712,7 @@ export function LearnScreen() {
 
   return (
     <div className="h-full min-h-0 flex flex-col bg-bg">
-      {screen === 'home' && (
+      {screen === 'home' && !isDesignPreview && (
         <>
           <div className="px-5 pt-5 pb-3">
             <div className="flex items-center gap-2 text-primary text-xs font-bold tracking-[0.16em]">
