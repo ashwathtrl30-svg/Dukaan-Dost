@@ -30,7 +30,7 @@ function normalizePhrase(value) {
 /** @param {string} response */
 function containsPrivateIdentifier(response) {
   const email = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
-  const indianMobile = /(?:^|\D)[6-9]\d{9}(?:\D|$)/;
+  const indianMobile = /(?:^|\D)(?:\+?91[\s-]?)?[6-9](?:[\s-]?\d){9}(?:\D|$)/;
   const upiId = /\b[\w.-]{2,}@(okaxis|okhdfcbank|oksbi|ybl|paytm|upi)\b/i;
   return email.test(response) || indianMobile.test(response) || upiId.test(response);
 }
@@ -99,9 +99,7 @@ export function buildLessonFeedback(lessonId, response, catalog) {
     .sort((a, b) => b.phrase.length - a.phrase.length)[0] || null;
 
   const remaining = guide.signals.find((signal) => !matches.some((match) => match.signal === signal));
-  const allKeyIdeasMentioned = !remaining;
-
-  const consideration = remaining
+const consideration = remaining
     ? {
         label: remaining.label,
         why: remaining.why,
