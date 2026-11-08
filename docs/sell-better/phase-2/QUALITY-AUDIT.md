@@ -37,16 +37,14 @@ These counts describe the draft library, not demand or market importance.
 
 ## 2. UX and interaction checks
 
-- [x] Home screen shows the product promise and Think → Respond → Discover → Apply learning loop.
-- [x] Six learning areas are visible, with four situations each.
-- [x] All 24 situations can be browsed.
-- [x] Area filter and text search are implemented.
-- [x] Search-empty state has a reset path.
-- [x] Situation detail displays one open-ended prompt at a time.
+- [x] Learn presents Sell Better, Save Better and Manage Stock Better.
+- [x] Sell Better is the only available path in this preview.
+- [x] Tapping Sell Better opens one lesson directly, without an intermediate recommendation screen or library.
+- [x] Save Better and Manage Stock Better are marked Coming soon.
+- [x] Lesson screen contains one situation, one open-ended prompt and one response field.
 - [x] Response field has an explicit label and a 1,500-character limit.
-- [x] Response is ephemeral component state and is cleared during navigation.
-- [x] Discover and Apply are described as future behaviour; no fabricated AI feedback is shown.
-- [x] Featured-situation back navigation was corrected to open the situation library.
+- [x] Response is ephemeral component state and is cleared when returning to Learn.
+- [x] The full situation catalogue remains internal and is not exposed to shopkeepers.
 
 ## 3. Technical and isolation checks
 
@@ -83,41 +81,19 @@ Final implementation commit:
 No curriculum item is marked shopkeeper-approved or field-validated. Do not use this preview as a production release.
 
 
-## 6. Founder UX feedback revision
+## 6. Founder-directed information architecture
 
-The first Phase 2 preview exposed a long situation library and six learning-area cards to the shopkeeper. Founder feedback identified this as too long and too much choice. The preview was revised to a two-state flow:
+Founder feedback established the final Learn structure:
+- **Sell Better** — available; tapping opens the current recommended draft lesson immediately.
+- **Save Better** — Coming soon.
+- **Manage Stock Better** — Coming soon.
 
-- **Next practice:** one compact recommendation and one Start practice action.
-- **Respond:** one situation, one open-ended question and one response field.
-
-The shopkeeper-facing library, search, category filters, six-area catalogue, multi-step process explainer and long Discover/Apply explainer were removed. The catalogue stays in the repository for internal curriculum review.
-
-The selector makes an exact category match only for shop categories explicitly represented in the revised draft. Unrepresented categories receive a generic cross-category fallback, not a false claim of tailored content.
-
-## 7. Compact UX revision checks
-
-- [x] No user-facing situation library or search UI remains.
-- [x] No six-area card catalogue is shown to shopkeepers.
-- [x] Home screen presents only one next practice.
-- [x] Practice view contains one situation, one prompt and one response field.
-- [x] One back action returns to the next-practice screen.
-- [x] Response remains ephemeral and is cleared on exit.
-- [x] Unsupported category matches are not presented as category-specific recommendations.
-- [ ] Shopkeeper usability validation and real-device review remain open.
-
-
-## 8. Final founder-directed information architecture
-
-The shopkeeper-facing Learn screen now offers exactly three top-level paths:
-- Sell Better — available and opens the current recommended draft lesson immediately.
-- Save Better — shown as Coming soon.
-- Manage Stock Better — shown as Coming soon.
-
-The previous Next Practice interstitial has been removed. The Sell Better card navigates directly to one situation with its open-ended prompt and response field. Back returns to the three-path Learn screen. The complete 24-situation catalogue remains internal and is not displayed as a library.
+The previous Next Practice interstitial, user-facing situation library, search and six-area catalogue were removed. The complete 24-situation curriculum remains internal. The direct lesson uses an explicit category match only when a lesson exists for that category; otherwise, it uses a broadly applicable draft scenario.
 
 - [x] Three top-level paths appear on Learn.
-- [x] Sell Better opens its lesson directly, with no extra start button or intermediate screen.
+- [x] Sell Better opens its lesson directly, with no extra Start practice action.
 - [x] Save Better and Manage Stock Better are visibly marked Coming soon.
-- [x] Lesson back navigation returns to the three-path Learn screen.
-- [x] Response remains ephemeral and is cleared on exit.
+- [x] Back returns from the lesson to the three-path Learn screen.
+- [x] Response is cleared on exit and is not saved or sent.
 - [ ] Save Better and Manage Stock Better curricula and experiences are future work.
+- [ ] Shopkeeper usability validation and real-device review remain open.
