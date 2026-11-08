@@ -97,7 +97,7 @@ function containsPrivateDetail(value: string): boolean {
  */
 export function validateCoachLearningEvidence(
   value: unknown,
-  transcript: readonly CoachLearningTranscriptMessage[],
+  transcript: readonly { speaker: string; content: string }[],
   testedDimensions: readonly string[],
 ): CoachLearningEvidence[] {
   if (!Array.isArray(value)) return [];
@@ -219,6 +219,7 @@ export function aggregateCoachLearningState(input: {
       dimension,
       observations: item.observations,
       opportunityRate: item.practiceOpportunities / item.observations,
+      practiceOpportunities: item.practiceOpportunities,
       strengthRate: item.strengths / item.observations,
     }));
 
