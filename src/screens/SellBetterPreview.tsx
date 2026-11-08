@@ -41,10 +41,6 @@ const shopTypeCategory: Record<string, string> = {
   hardware: 'hardware',
   mobile: 'mobile-phone-shops',
   vegetable: 'fruit-vegetable-vendors',
-  medical: 'small-retail',
-  tea: 'small-retail',
-  restaurant: 'small-retail',
-  other: 'small-retail',
 };
 
 function getRecommendedLesson(shopType: string | null): SellBetterLesson {
