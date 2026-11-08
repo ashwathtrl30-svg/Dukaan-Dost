@@ -1,0 +1,386 @@
+{
+  "schemaVersion": 2,
+  "product": "Dukaan Dost — Sell Better",
+  "phase": 2,
+  "status": "preview_draft_requires_founder_shopkeeper_and_expert_review",
+  "language": "en",
+  "note": "This is a UX-preview scenario set. It is not approved for customer release or a claim of field validation.",
+  "areas": [
+    {
+      "id": "understand-customer",
+      "name": "Understand the Customer",
+      "shortName": "Understand",
+      "description": "Find out what the customer actually needs before recommending.",
+      "lessonCount": 4
+    },
+    {
+      "id": "communicate-better",
+      "name": "Communicate Better",
+      "shortName": "Communicate",
+      "description": "Explain clearly, set expectations and make decisions easier.",
+      "lessonCount": 4
+    },
+    {
+      "id": "prices-negotiations",
+      "name": "Handle Prices and Negotiations",
+      "shortName": "Negotiate",
+      "description": "Protect a sensible margin while treating customers fairly.",
+      "lessonCount": 4
+    },
+    {
+      "id": "hesitation-objections",
+      "name": "Handle Hesitation and Objections",
+      "shortName": "Hesitation",
+      "description": "Understand what is holding a customer back without applying pressure.",
+      "lessonCount": 4
+    },
+    {
+      "id": "complaints-difficult-situations",
+      "name": "Handle Complaints and Difficult Situations",
+      "shortName": "Resolve",
+      "description": "Listen, check facts and work towards a realistic resolution.",
+      "lessonCount": 4
+    },
+    {
+      "id": "long-term-relationships",
+      "name": "Build Long-Term Customer Relationships",
+      "shortName": "Relationships",
+      "description": "Earn repeat business through trust, consistency and respect.",
+      "lessonCount": 4
+    }
+  ],
+  "categories": [
+    {
+      "id": "kirana-grocery",
+      "label": "Kirana & grocery"
+    },
+    {
+      "id": "clothing-apparel",
+      "label": "Clothing & apparel"
+    },
+    {
+      "id": "mobile-phone-shops",
+      "label": "Mobile shops"
+    },
+    {
+      "id": "fruit-vegetable-vendors",
+      "label": "Fruit & vegetable shops"
+    },
+    {
+      "id": "tailoring",
+      "label": "Tailoring"
+    },
+    {
+      "id": "salons",
+      "label": "Salons"
+    },
+    {
+      "id": "hardware",
+      "label": "Hardware"
+    },
+    {
+      "id": "bakery-sweet-shop",
+      "label": "Bakery & sweet shops"
+    },
+    {
+      "id": "small-retail",
+      "label": "Small retail"
+    }
+  ],
+  "lessons": [
+    {
+      "id": "UC-01",
+      "areaId": "understand-customer",
+      "title": "Give Me the Best One",
+      "categories": [
+        "kirana-grocery"
+      ],
+      "situation": "A customer asks for cooking oil and says, “Give me the best one.” You show a premium option, but they hesitate and say it is more than they planned to spend. You still do not know what matters most to them: everyday use, pack size, brand preference or budget.",
+      "prompt": "How would you understand what this customer actually needs before recommending an option?",
+      "objective": "Clarify intended use and stated preferences before recommending.",
+      "takeaway": "Understand the need before naming the product."
+    },
+    {
+      "id": "UC-02",
+      "areaId": "understand-customer",
+      "title": "Buying for an Occasion",
+      "categories": [
+        "clothing-apparel"
+      ],
+      "situation": "A customer is choosing clothes for a family function. They look at several options, mention that they do not want to make the wrong choice, and seem unsure how much to spend. You have options at different prices, but you do not yet know what matters most for the occasion.",
+      "prompt": "How would you help the customer explain what they need before showing suitable options?",
+      "objective": "Understand the occasion, practical requirement and budget without making assumptions.",
+      "takeaway": "Ask what the purchase needs to work for."
+    },
+    {
+      "id": "UC-03",
+      "areaId": "understand-customer",
+      "title": "The Phone Must Fit Their Daily Life",
+      "categories": [
+        "mobile-phone-shops"
+      ],
+      "situation": "A customer asks which phone is best. They mention using it for work, digital payments, calls and photographs, but are unsure which specifications matter. They are worried about spending on features they may never use.",
+      "prompt": "What would you ask to understand how the customer will use the phone every day?",
+      "objective": "Match verified features to the customer's actual use rather than selling the most expensive model.",
+      "takeaway": "Recommend for the customer's use, not the biggest specification list."
+    },
+    {
+      "id": "UC-04",
+      "areaId": "understand-customer",
+      "title": "The Right Quantity for the Week",
+      "categories": [
+        "fruit-vegetable-vendors"
+      ],
+      "situation": "A customer is buying fruit for the coming week. Some of the available fruit is already ripe, while other fruit will take longer to ripen. The customer wants enough for the household but does not want to waste money on fruit that may spoil before it is eaten.",
+      "prompt": "How would you help the customer think through quantity, ripeness and when the fruit will be used?",
+      "objective": "Consider timing and practical use before recommending quantity.",
+      "takeaway": "Help the customer buy what they can use in time."
+    },
+    {
+      "id": "CO-01",
+      "areaId": "communicate-better",
+      "title": "Two Products That Look the Same",
+      "categories": [
+        "clothing-apparel"
+      ],
+      "situation": "A customer compares two shirts that look almost identical. You know there are differences in the fabric, finish or care requirements, but the customer cannot see why one costs more. They say, “Dono toh same hi lag rahe hain.”",
+      "prompt": "How would you explain the verified differences in simple language without overwhelming the customer?",
+      "objective": "Explain relevant product differences clearly and accurately.",
+      "takeaway": "Make the difference meaningful, not complicated."
+    },
+    {
+      "id": "CO-02",
+      "areaId": "communicate-better",
+      "title": "“Bas Fitting Achhi Kar Dena”",
+      "categories": [
+        "tailoring"
+      ],
+      "situation": "A customer brings a garment for alteration and says, “Bas fitting achhi kar dena.” They have not explained exactly what should change. You know that starting without clarifying the request could lead to disappointment when they collect it.",
+      "prompt": "What would you ask and confirm with the customer before accepting the alteration?",
+      "objective": "Clarify and confirm the requested work before promising a result.",
+      "takeaway": "Agree on the work before starting the work."
+    },
+    {
+      "id": "CO-03",
+      "areaId": "communicate-better",
+      "title": "The Reference Photo Is Not a Guarantee",
+      "categories": [
+        "salons"
+      ],
+      "situation": "A customer shows a reference photo for a salon service and asks whether the result will look exactly the same. Their current starting point appears different from the photo. You want to understand their preference without promising an outcome you cannot guarantee.",
+      "prompt": "How would you explain what may be possible, what could differ and what should be discussed before starting?",
+      "objective": "Set realistic expectations and explain the limits of a service.",
+      "takeaway": "Set expectations before starting the service."
+    },
+    {
+      "id": "CO-04",
+      "areaId": "communicate-better",
+      "title": "Check the Fit Before Selling the Part",
+      "categories": [
+        "hardware"
+      ],
+      "situation": "A customer needs a fitting or connector for a home repair. They have brought a photo but not the old part or exact measurements. The customer wants to buy something immediately, but a visual guess may lead to a part that does not fit.",
+      "prompt": "How would you explain what needs to be checked before recommending a part?",
+      "objective": "Explain why measurements or model details matter and avoid guessing compatibility.",
+      "takeaway": "Check fit and safety before recommending."
+    },
+    {
+      "id": "PN-01",
+      "areaId": "prices-negotiations",
+      "title": "“Thoda Discount Mil Sakta Hai?”",
+      "categories": [
+        "kirana-grocery"
+      ],
+      "situation": "A regular customer asks for a lower price on a few grocery items. You value the relationship, but you have not checked the current cost, margin or any applicable offer for those items. The customer is waiting for an answer.",
+      "prompt": "What would you consider before deciding whether a discount is possible?",
+      "objective": "Check actual item economics and the request before agreeing to a discount.",
+      "takeaway": "Check the numbers before agreeing to a discount."
+    },
+    {
+      "id": "PN-02",
+      "areaId": "prices-negotiations",
+      "title": "“Online Pe Sasta Mil Raha Hai”",
+      "categories": [
+        "mobile-phone-shops"
+      ],
+      "situation": "A customer shows you an online listing that appears cheaper than the product in your shop. They ask why they should buy from you. You know that the exact model, included items, seller, service and terms may need to be compared before drawing a conclusion.",
+      "prompt": "How would you respond and explain the value of buying from your shop without making unfair claims about the online seller?",
+      "objective": "Compare like-for-like offers and communicate genuine local-shop value.",
+      "takeaway": "Compare the complete offer, not just the headline price."
+    },
+    {
+      "id": "PN-03",
+      "areaId": "prices-negotiations",
+      "title": "The Big Order With a Small Margin",
+      "categories": [
+        "bakery-sweet-shop"
+      ],
+      "situation": "A customer is considering a large order for a family function and asks for a substantial discount because of the quantity. The order could bring in more business, but extra ingredients, preparation, packaging and time may leave very little profit at the price requested.",
+      "prompt": "How would you evaluate the order and negotiate terms that are workable for both sides?",
+      "objective": "Consider total costs, workload, timing and margin before accepting a bulk order.",
+      "takeaway": "A large order is only valuable when the numbers work."
+    },
+    {
+      "id": "PN-04",
+      "areaId": "prices-negotiations",
+      "title": "The Customer Keeps Bargaining",
+      "categories": [
+        "clothing-apparel"
+      ],
+      "situation": "A customer likes a garment and repeatedly asks you to reduce the quoted price. You have already offered the price you believe is reasonable, and reducing it further would affect your margin. The customer says another shop may offer a better deal.",
+      "prompt": "How would you handle the negotiation confidently while keeping the conversation respectful and your pricing sustainable?",
+      "objective": "State a fair price calmly and avoid discounting below a viable level.",
+      "takeaway": "Be clear about your price without becoming defensive."
+    },
+    {
+      "id": "HO-01",
+      "areaId": "hesitation-objections",
+      "title": "“I'll Think About It”",
+      "categories": [
+        "mobile-phone-shops"
+      ],
+      "situation": "A customer has compared two phones and says they want time to think. They have not asked for more details or said what is troubling them. You want to keep the door open without making them feel pressured to decide now.",
+      "prompt": "How would you respond while respecting the customer's decision and leaving a useful next step?",
+      "objective": "Respect a pause and offer help without treating hesitation as something to defeat.",
+      "takeaway": "Offer information; leave the decision with the customer."
+    },
+    {
+      "id": "HO-02",
+      "areaId": "hesitation-objections",
+      "title": "“I Need to Ask My Family”",
+      "categories": [
+        "clothing-apparel"
+      ],
+      "situation": "A customer likes an outfit but says they want to discuss it with a family member before deciding. They seem genuinely interested in another opinion. You are tempted to close the sale immediately, but pushing may make them uncomfortable.",
+      "prompt": "What could you say that supports their decision and makes it easy to return?",
+      "objective": "Support a considered decision without pressure or invented urgency.",
+      "takeaway": "Make it easy to return; do not force a decision."
+    },
+    {
+      "id": "HO-03",
+      "areaId": "hesitation-objections",
+      "title": "A Concern About Freshness and Storage",
+      "categories": [
+        "bakery-sweet-shop"
+      ],
+      "situation": "A customer is considering sweets for an event but asks how long they will remain suitable and how they should be stored. You do not want to guess or give a shelf-life promise that has not been verified for that product and batch.",
+      "prompt": "How would you address the concern and check the product-specific information before advising?",
+      "objective": "Verify storage and freshness information instead of making unsupported claims.",
+      "takeaway": "Check product-specific guidance before making a promise."
+    },
+    {
+      "id": "HO-04",
+      "areaId": "hesitation-objections",
+      "title": "The Customer Is Unsure About the Service",
+      "categories": [
+        "salons"
+      ],
+      "situation": "A customer is interested in a salon service but hesitates after hearing what it involves. They ask about the process, time and total price, and say they are not sure whether it is worth it for them.",
+      "prompt": "How would you understand their concern and explain the service, limits and price clearly?",
+      "objective": "Address uncertainty with clear information and realistic expectations.",
+      "takeaway": "Explain the process and limits; let the customer choose."
+    },
+    {
+      "id": "CD-01",
+      "areaId": "complaints-difficult-situations",
+      "title": "The Produce Was Not as Expected",
+      "categories": [
+        "fruit-vegetable-vendors",
+        "kirana-grocery"
+      ],
+      "situation": "A customer returns with produce they bought earlier and says it was not as fresh as they expected. You do not yet know how it was stored after purchase or whether the item was already affected when sold. The customer wants you to take the complaint seriously.",
+      "prompt": "How would you listen, check the facts and discuss a fair next step without becoming defensive?",
+      "objective": "Acknowledge the concern and establish what happened before deciding on a resolution.",
+      "takeaway": "Listen first, check the facts, then resolve fairly."
+    },
+    {
+      "id": "CD-02",
+      "areaId": "complaints-difficult-situations",
+      "title": "The Alteration Is Late",
+      "categories": [
+        "tailoring"
+      ],
+      "situation": "A customer arrives to collect an outfit that was expected today, but the alteration is incomplete. They need it for an important occasion tomorrow and are upset because they planned around the date you gave them.",
+      "prompt": "How would you take responsibility, explain the actual situation and offer a realistic next step?",
+      "objective": "Communicate delays honestly and agree on a feasible resolution.",
+      "takeaway": "Own the update; never promise a deadline you cannot meet."
+    },
+    {
+      "id": "CD-03",
+      "areaId": "complaints-difficult-situations",
+      "title": "The Accessory Does Not Work as Expected",
+      "categories": [
+        "mobile-phone-shops"
+      ],
+      "situation": "A customer returns with an accessory that does not work as expected with their phone. They believe it was recommended incorrectly. You need to check the exact phone model, accessory details and the shop's actual support terms before deciding what happened.",
+      "prompt": "How would you handle the complaint and investigate the compatibility issue fairly?",
+      "objective": "Check facts and applicable terms before assigning blame or promising a remedy.",
+      "takeaway": "Verify the model, product and terms before deciding."
+    },
+    {
+      "id": "CD-04",
+      "areaId": "complaints-difficult-situations",
+      "title": "The Customer Is Unhappy With the Result",
+      "categories": [
+        "salons"
+      ],
+      "situation": "After a salon service, a customer says the result is not what they expected. You have not yet asked which part feels different from what was discussed beforehand. You want to understand the concern before suggesting an adjustment.",
+      "prompt": "How would you understand the gap between the agreed request and the customer's experience before suggesting a next step?",
+      "objective": "Clarify the concern and assess feasible options before offering a fix.",
+      "takeaway": "Understand the gap before offering a fix."
+    },
+    {
+      "id": "LR-01",
+      "areaId": "long-term-relationships",
+      "title": "The Regular Customer's Needs Have Changed",
+      "categories": [
+        "kirana-grocery"
+      ],
+      "situation": "A regular customer usually buys the same products from your shop. Today, they mention that their requirements have changed. You remember their past preferences, but assuming that everything is still the same could lead to an unsuitable recommendation.",
+      "prompt": "How would you use what you remember while checking what the customer needs today?",
+      "objective": "Use customer knowledge respectfully while confirming current needs.",
+      "takeaway": "Remember preferences, but check what is needed today."
+    },
+    {
+      "id": "LR-02",
+      "areaId": "long-term-relationships",
+      "title": "Loyalty and the Credit Boundary",
+      "categories": [
+        "kirana-grocery",
+        "small-retail"
+      ],
+      "situation": "A long-standing customer asks to buy more goods on credit. You value the relationship, but some earlier payments are still pending. Extending more credit may create a problem for the shop, while a blunt refusal could strain the relationship.",
+      "prompt": "How would you respond respectfully while protecting both the relationship and your shop's financial boundary?",
+      "objective": "Communicate clear, consistent credit boundaries without humiliation or unsupported legal claims.",
+      "takeaway": "A respectful boundary protects the relationship too."
+    },
+    {
+      "id": "LR-03",
+      "areaId": "long-term-relationships",
+      "title": "Follow Up Only When It Is Welcome",
+      "categories": [
+        "tailoring",
+        "mobile-phone-shops",
+        "salons"
+      ],
+      "situation": "A customer previously asked you to contact them when a specific order, repair or service update was ready. You now have an update. You could also send promotions, but the customer did not ask for those.",
+      "prompt": "How would you contact the customer about the agreed update while respecting the purpose they gave you their details for?",
+      "objective": "Use contact details only for the agreed and useful purpose; avoid intrusive follow-ups.",
+      "takeaway": "Follow up for the reason the customer agreed to."
+    },
+    {
+      "id": "LR-04",
+      "areaId": "long-term-relationships",
+      "title": "A Customer Returns Because You Helped Before",
+      "categories": [
+        "clothing-apparel",
+        "bakery-sweet-shop",
+        "small-retail"
+      ],
+      "situation": "A customer returns because a product or service they bought earlier worked well for their needs. They ask what else you would recommend. You could make another sale, but suggesting something unnecessary may weaken the trust they have placed in your shop.",
+      "prompt": "How would you build on that trust and find out whether there is genuinely something else that would help?",
+      "objective": "Make relevant recommendations only when they fit a current customer need.",
+      "takeaway": "Let trust guide recommendations, not the urge to add another sale."
+    }
+  ]
+}
