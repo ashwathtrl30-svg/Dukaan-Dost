@@ -1,7 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { buildCoachFeedbackPrompt, validateCoachSessionFeedback } from '../src/coach/coachFeedback.js';
 import type { CoachSessionFeedback } from '../src/coach/coachFeedback.js';
+import {
+  getCoachArchetypeDimensionsFromScenario,
+} from '../src/coach/coachSimulation.js';
 import type { CoachTranscriptMessage } from '../src/coach/coachSimulation.js';
+import {
+  aggregateCoachLearningState,
+  validateCoachLearningEvidence,
+} from '../src/coach/coachLearning.js';
 
 function env(name: string): string | undefined {
   const runtime = globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } };
@@ -63,8 +70,14 @@ async function getSaved(client: any, userId: string, sessionId: string) {
   if (validated.ok === false) throw new Error('Saved Coach feedback could not be validated.');
   return { feedback: validated.value, createdAt: data.created_at, reused: true };
 }
-async function generateFeedback(apiKey: string, language: 'en' | 'hi', shopType: string | null, transcript: readonly CoachTranscriptMessage[]): Promise<CoachSessionFeedback> {
-  const prompt = buildCoachFeedbackPrompt(language, shopType, transcript);
+async function generateFeedback(
+  apiKey: string,
+  language: 'en' | 'hi',
+  shopType: string | null,
+  transcript: readonly CoachTranscriptMessage[],
+  testedDimensions: readonly string[],
+): Promise<{ feedback: CoachSessionFeedback; learningEvidence: ReturnType<typeof validateCoachLearningEvidence> }> {
+  const prompt = buildCoachFeedbackPrompt(language, shopType, transcript, testedDimensions);
   const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
@@ -83,12 +96,81 @@ async function generateFeedback(apiKey: string, language: 'en' | 'hi', shopType:
   try { parsed = JSON.parse(output); } catch { throw new Error('Feedback generation returned invalid JSON.'); }
   const validated = validateCoachSessionFeedback(parsed);
   if (validated.ok === false) throw new Error('Feedback did not meet its quality and privacy contract.');
-  return validated.value;
+  return {
+    feedback: validated.value,
+    learningEvidence: validateCoachLearningEvidence(parsed && typeof parsed === 'object'
+      ? (parsed as Record<string, unknown>).learningEvidence
+      : null, transcript, testedDimensions),
+  };
+}
+
+async function rebuildLearningProfile(client: any, userId: string, workspaceId: string) {
+  const sessionResult = await client.from('coach_sessions')
+    .select('id, scenario_code, completed_at', { count: 'exact' })
+    .eq('user_id', userId).eq('status', 'completed')
+    .order('completed_at', { ascending: false }).limit(50);
+  if (sessionResult.error) throw sessionResult.error;
+  const sessions = Array.isArray(sessionResult.data) ? [...sessionResult.data].reverse() : [];
+  if (!sessions.length) return;
+
+  const ids = sessions.map((item: any) => item.id);
+  const [assessmentsResult, messagesResult] = await Promise.all([
+    client.from('coach_assessments').select('session_id, assessment_data')
+      .eq('user_id', userId).eq('assessment_type', 'session_feedback').in('session_id', ids),
+    client.from('coach_messages').select('session_id, speaker, content')
+      .eq('user_id', userId).in('session_id', ids).order('message_index', { ascending: true }),
+  ]);
+  if (assessmentsResult.error) throw assessmentsResult.error;
+  if (messagesResult.error) throw messagesResult.error;
+
+  const evidenceBySession = new Map<string, unknown>();
+  for (const row of (assessmentsResult.data || []) as any[]) {
+    evidenceBySession.set(row.session_id, row.assessment_data?.learningEvidence);
+  }
+  const messagesBySession = new Map<string, CoachTranscriptMessage[]>();
+  for (const row of (messagesResult.data || []) as any[]) {
+    const list = messagesBySession.get(row.session_id) ?? [];
+    if (row.speaker === 'customer' || row.speaker === 'shopkeeper') {
+      list.push({ speaker: row.speaker, content: cleanTranscriptText(row.content) });
+    }
+    messagesBySession.set(row.session_id, list);
+  }
+
+  const learningSessions = sessions.map((session: any) => {
+    const testedDimensions = getCoachArchetypeDimensionsFromScenario(session.scenario_code);
+    const transcript = messagesBySession.get(session.id) ?? [];
+    const evidence = validateCoachLearningEvidence(
+      evidenceBySession.get(session.id),
+      transcript,
+      testedDimensions,
+    );
+    return {
+      scenarioCode: session.scenario_code,
+      completedAt: session.completed_at,
+      testedDimensions,
+      evidence,
+    };
+  });
+
+  const learningState = aggregateCoachLearningState({
+    sessions: learningSessions,
+    completedSessions: sessionResult.count ?? sessions.length,
+  });
+  const { error } = await client.from('coach_learning_profiles').upsert({
+    user_id: userId,
+    workspace_id: workspaceId,
+    learning_state: learningState,
+  }, { onConflict: 'user_id' });
+  if (error) throw error;
 }
 
 async function createFeedback(client: any, userId: string, apiKey: string, session: any, res: any) {
   const saved = await getSaved(client, userId, session.id);
-  if (saved) return send(res, 200, { sessionId: session.id, ...saved });
+  if (saved) {
+    try { await rebuildLearningProfile(client, userId, session.workspace_id); }
+    catch (error) { console.error('Coach learning profile refresh failed.', error instanceof Error ? error.message : 'Unknown error'); }
+    return send(res, 200, { sessionId: session.id, ...saved });
+  }
 
   const { data, error } = await client.from('coach_messages')
     .select('message_index, speaker, content')
@@ -112,7 +194,14 @@ async function createFeedback(client: any, userId: string, apiKey: string, sessi
   }
 
   // Notice that session.outcome is never read or supplied to the feedback model.
-  const feedback = await generateFeedback(apiKey, session.language === 'hi' ? 'hi' : 'en', session.shop_type, transcript);
+  const testedDimensions = getCoachArchetypeDimensionsFromScenario(session.scenario_code);
+  const generated = await generateFeedback(
+    apiKey,
+    session.language === 'hi' ? 'hi' : 'en',
+    session.shop_type,
+    transcript,
+    testedDimensions,
+  );
   const createdAt = new Date().toISOString();
   const inserted = await client.from('coach_assessments').insert({
     user_id: userId,
@@ -121,17 +210,34 @@ async function createFeedback(client: any, userId: string, apiKey: string, sessi
     assessment_type: 'session_feedback',
     assessment_key: 'session-feedback:' + session.id,
     milestone_number: null,
-    assessment_data: { version: 1, feedback, source: 'completed_transcript', generatedAt: createdAt },
+    assessment_data: {
+      version: 2,
+      feedback: generated.feedback,
+      learningEvidence: generated.learningEvidence,
+      source: 'completed_transcript',
+      generatedAt: createdAt,
+    },
   }).select('created_at').single();
 
   if (inserted.error) {
     if (inserted.error.code === '23505') {
       const raced = await getSaved(client, userId, session.id);
-      if (raced) return send(res, 200, { sessionId: session.id, ...raced });
+      if (raced) {
+        try { await rebuildLearningProfile(client, userId, session.workspace_id); }
+        catch (refreshError) { console.error('Coach learning profile refresh failed.', refreshError instanceof Error ? refreshError.message : 'Unknown error'); }
+        return send(res, 200, { sessionId: session.id, ...raced });
+      }
     }
     throw inserted.error;
   }
-  return send(res, 200, { sessionId: session.id, feedback, createdAt: inserted.data?.created_at ?? createdAt, reused: false });
+  try { await rebuildLearningProfile(client, userId, session.workspace_id); }
+  catch (error) { console.error('Coach learning profile refresh failed.', error instanceof Error ? error.message : 'Unknown error'); }
+  return send(res, 200, {
+    sessionId: session.id,
+    feedback: generated.feedback,
+    createdAt: inserted.data?.created_at ?? createdAt,
+    reused: false,
+  });
 }
 
 export default async function handler(req: any, res: any) {
@@ -162,7 +268,7 @@ export default async function handler(req: any, res: any) {
     if (limited(userId)) return send(res, 429, { error: 'Too many feedback requests. Please wait a minute.' });
 
     const result = await client.from('coach_sessions')
-      .select('id, workspace_id, shop_type, language, status')
+      .select('id, workspace_id, shop_type, language, scenario_code, status')
       .eq('id', body.sessionId).eq('user_id', userId).maybeSingle();
     if (result.error) throw result.error;
     const session = result.data;

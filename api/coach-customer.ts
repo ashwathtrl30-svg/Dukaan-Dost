@@ -46,10 +46,11 @@ function safeMessage(value: unknown): string | null {
 }
 
 function getArchetype(code: string): string | null {
-  const value = code.split('_').pop() || '';
   const allowed = ['bargainer', 'price-comparer', 'quality-conscious', 'brand-conscious',
     'guidance-seeking', 'hesitant', 'loyal-regular', 'urgent', 'impulse', 'dissatisfied'];
-  return allowed.includes(value) ? value : null;
+  return allowed.find((value) =>
+    code.includes('_' + value + '_focus-') || code.endsWith('_' + value)
+  ) ?? null;
 }
 
 function getSessionNumber(code: string): number {
@@ -174,6 +175,7 @@ async function startSession(client: any, userId: string, apiKey: string, res: an
     focusAreas: learning && Array.isArray(learning.focusAreas) ? learning.focusAreas : [],
     dimensionSignals: learning && learning.dimensionSignals && typeof learning.dimensionSignals === 'object'
       ? learning.dimensionSignals : {},
+    teachingAdjustment: learning && typeof learning === 'object' ? learning.teachingAdjustment ?? null : null,
     recentPatternIds,
     baselineSignalIds,
   });
@@ -350,6 +352,7 @@ async function replyToCustomer(
     focusAreas: learning && Array.isArray(learning.focusAreas) ? learning.focusAreas : [],
     dimensionSignals: learning && learning.dimensionSignals && typeof learning.dimensionSignals === 'object'
       ? learning.dimensionSignals : {},
+    teachingAdjustment: learning && typeof learning === 'object' ? learning.teachingAdjustment ?? null : null,
     archetypeOverride: archetype as any,
     baselineSignalIds,
   });

@@ -198,6 +198,20 @@ test('falls back safely when a saved observation is malformed and rejects invali
   assert.equal(invalid.ok, false);
 });
 
+
+test('Hindi negation before or after a matched phrase is not counted as positive evidence', () => {
+  const result = analyseCoachBaseline([
+    { questionId: 'price_objection', answer: 'मैं ग्राहक की ज़रूरत नहीं पूछूँगा और क्वालिटी नहीं समझाऊँगा।' },
+    { questionId: 'customer_complaint', answer: 'मैं ग्राहक की बात नहीं सुनूँगा और बिल की जाँच नहीं करूँगा।' },
+    { questionId: 'lost_sale', answer: 'मैं कारण नहीं समझूँगा और ग्राहक को दबाव डालूँगा।' },
+  ], 'hi');
+  assert.equal(result.ok, true);
+  if (result.ok) {
+    assert.equal(result.value.evidenceCount, 0);
+    assert.match(result.value.text, /कोई पक्का निष्कर्ष/);
+  }
+});
+
 test('brief observation samples evidence across multiple baseline questions', () => {
   const result = analyseCoachBaseline(completeAnswers, 'en');
   assert.equal(result.ok, true);

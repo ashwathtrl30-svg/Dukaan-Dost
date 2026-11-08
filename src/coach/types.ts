@@ -74,12 +74,25 @@ export interface CoachAssessmentRecord {
   created_at: string;
 }
 
+export interface CoachTeachingAdjustment {
+  mode: 'focused_micro_practice';
+  dimension: string;
+  opportunityStreak: number;
+}
+
 export interface CoachLearningState {
   completedSessions: number;
   dimensionSignals: Record<string, number>;
   focusAreas: string[];
   strengths: string[];
   recentPatternIds: string[];
+  dimensionEvidence?: Record<string, {
+    observations: number;
+    strengths: number;
+    practiceOpportunities: number;
+  }>;
+  opportunityStreaks?: Record<string, number>;
+  teachingAdjustment?: CoachTeachingAdjustment | null;
   updatedAt: string | null;
 }
 

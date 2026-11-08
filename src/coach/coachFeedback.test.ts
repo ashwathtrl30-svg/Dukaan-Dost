@@ -32,11 +32,14 @@ test('prompt requests exactly three sections and excludes purchase outcome as a 
   const prompt = buildCoachFeedbackPrompt('en', 'kirana', [
     { speaker: 'customer', content: 'This is expensive.' },
     { speaker: 'shopkeeper', content: 'I can explain the quality difference.' },
-  ]);
+  ], ['margin_awareness', 'value_explanation']);
   assert.match(prompt, /exactly three short feedback sections/i);
   assert.match(prompt, /customer outcome is deliberately not supplied/i);
   assert.match(prompt, /Do not assign any score/i);
   assert.match(prompt, /untrusted conversation data/i);
+  assert.match(prompt, /PRIVATE LEARNING EVIDENCE/i);
+  assert.match(prompt, /exact short span copied from a shopkeeper message/i);
+  assert.match(prompt, /Allowed dimensions for this scenario: margin_awareness, value_explanation/);
   assert.match(prompt, /kirana/);
   assert.ok(!prompt.includes('purchased'));
 });

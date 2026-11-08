@@ -8,6 +8,7 @@ import {
   classifyCoachShopkeeperTurn,
   countCoachShopkeeperTurns,
   getCoachFirstTenArchetypeOrder,
+  getCoachArchetypeDimensionsFromScenario,
   selectCoachSimulationPlan,
   validateCoachGeneratedTurn,
 } from './coachSimulation';
@@ -290,6 +291,46 @@ test('plan difficulty and archetype labels remain internal to the customer promp
   assert.ok(plan.hiddenCustomerObjective.length > 0);
   assert.ok(plan.customerBehaviourNotes.length > 0);
   assert.ok(plan.characterBoundaries.length > 0);
+});
+
+
+test('five consecutive evidence-backed opportunities trigger a focused, approachable practice', () => {
+  const adjustment = {
+    mode: 'focused_micro_practice' as const,
+    dimension: 'negotiation',
+    opportunityStreak: 5,
+  };
+  const plan = selectCoachSimulationPlan({
+    completedSessions: 15,
+    shopType: 'kirana',
+    dimensionSignals: { negotiation: 0, margin_awareness: 25 },
+    focusAreas: ['negotiation'],
+    recentPatternIds: ['bargainer', 'dissatisfied'],
+    teachingAdjustment: adjustment,
+  });
+  assert.equal(plan.teachingAdjustment?.dimension, 'negotiation');
+  assert.match(plan.scenarioCode, /_focus-negotiation$/);
+  assert.deepEqual(getCoachArchetypeDimensionsFromScenario(plan.scenarioCode), ['negotiation']);
+  assert.equal(plan.difficulty, 'approachable');
+  assert.deepEqual(plan.selectedDimensions, ['negotiation']);
+  const prompt = buildCoachSimulationSystemPrompt(plan);
+  assert.match(prompt, /FOCUSED MICRO-PRACTICE/);
+  assert.match(prompt, /one clear, approachable opportunity/i);
+  assert.match(prompt, /Never explain the target dimension, give hints, coach/i);
+});
+
+test('teaching adjustments are ignored until after the first ten completed practices', () => {
+  const plan = selectCoachSimulationPlan({
+    completedSessions: 3,
+    shopType: 'kirana',
+    teachingAdjustment: {
+      mode: 'focused_micro_practice',
+      dimension: 'negotiation',
+      opportunityStreak: 8,
+    },
+  });
+  assert.equal(plan.archetypeId, 'brand-conscious');
+  assert.equal(plan.teachingAdjustment, null);
 });
 
 test('baseline signals can inform the private prompt without becoming fixed skill labels', () => {

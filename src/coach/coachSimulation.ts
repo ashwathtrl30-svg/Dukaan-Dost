@@ -9,7 +9,9 @@ import type {
   CoachLanguage,
   CoachMessageSpeaker,
   CoachSessionOutcome,
+  CoachTeachingAdjustment,
 } from './types.js';
+import { normalizeCoachTeachingAdjustment } from './coachLearning.js';
 
 export const COACH_SIMULATION_VERSION = '1.0.0';
 export const COACH_SIMULATION_TARGET_TURNS = 6;
@@ -30,6 +32,7 @@ export interface CoachSimulationSelectionInput {
   dimensionSignals?: Readonly<Record<string, number>>;
   recentPatternIds?: readonly string[];
   baselineSignalIds?: readonly string[];
+  teachingAdjustment?: CoachTeachingAdjustment | null;
   /** Server-only reconstruction from the archetype stored in coach_sessions.scenario_code. */
   archetypeOverride?: CoachArchetypeId;
 }
@@ -44,6 +47,7 @@ export interface CoachSimulationPlan {
   selectedDimensions: string[];
   recentPatternIds: string[];
   baselineSignalIds: string[];
+  teachingAdjustment: CoachTeachingAdjustment | null;
   preferredLanguage: CoachLanguage;
   city: string | null;
   state: string | null;
@@ -271,6 +275,15 @@ export function selectCoachSimulationPlan(
   const language: CoachLanguage = input.language === 'hi' ? 'hi' : 'en';
   const recentPatternIds = safePatternIds(input.recentPatternIds);
   const firstTen = sessionNumber <= FIRST_TEN_ARCHETYPE_ORDER.length;
+  const teachingAdjustment = firstTen ? null : normalizeCoachTeachingAdjustment(input.teachingAdjustment);
+  const recentTwo = recentPatternIds.slice(-2);
+  const focusedArchetype = teachingAdjustment
+    ? FIRST_TEN_ARCHETYPE_ORDER.find((id) =>
+        ARCHETYPE_DIMENSIONS[id].includes(teachingAdjustment.dimension) && !recentTwo.includes(id)
+      ) ?? FIRST_TEN_ARCHETYPE_ORDER.find((id) =>
+        ARCHETYPE_DIMENSIONS[id].includes(teachingAdjustment.dimension)
+      ) ?? null
+    : null;
   const adaptive = input.archetypeOverride
     ? { archetypeId: input.archetypeOverride, dimensions: [...ARCHETYPE_DIMENSIONS[input.archetypeOverride]] }
     : firstTen
@@ -278,7 +291,9 @@ export function selectCoachSimulationPlan(
         archetypeId: FIRST_TEN_ARCHETYPE_ORDER[sessionNumber - 1],
         dimensions: [...ARCHETYPE_DIMENSIONS[FIRST_TEN_ARCHETYPE_ORDER[sessionNumber - 1]]],
       }
-    : resolveAdaptiveFocus(input);
+    : focusedArchetype
+      ? { archetypeId: focusedArchetype, dimensions: [...ARCHETYPE_DIMENSIONS[focusedArchetype]] }
+      : resolveAdaptiveFocus(input);
   const archetype = archetypeDefinition(adaptive.archetypeId);
   const city = safeText(input.city, 100);
   const state = safeText(input.state, 100);
@@ -287,6 +302,7 @@ export function selectCoachSimulationPlan(
     String(sessionNumber).padStart(2, '0'),
     category,
     adaptive.archetypeId,
+    ...(teachingAdjustment ? ['focus-' + teachingAdjustment.dimension] : []),
   ].join('_').slice(0, 80);
 
   const knowledgeContext = buildCoachKnowledgeContext({
@@ -310,10 +326,11 @@ export function selectCoachSimulationPlan(
     category,
     archetypeId: adaptive.archetypeId,
     scenarioCode,
-    difficulty: resolveDifficulty(sessionNumber, input.dimensionSignals),
-    selectedDimensions: adaptive.dimensions,
+    difficulty: teachingAdjustment ? 'approachable' : resolveDifficulty(sessionNumber, input.dimensionSignals),
+    selectedDimensions: teachingAdjustment ? [teachingAdjustment.dimension] : adaptive.dimensions,
     recentPatternIds,
     baselineSignalIds: safeBaselineSignals(input.baselineSignalIds),
+    teachingAdjustment,
     preferredLanguage: language,
     city,
     state,
@@ -327,6 +344,23 @@ export function selectCoachSimulationPlan(
 
 export function getCoachFirstTenArchetypeOrder(): readonly CoachArchetypeId[] {
   return FIRST_TEN_ARCHETYPE_ORDER;
+}
+
+export function getCoachArchetypeDimensions(value: unknown): string[] {
+  if (typeof value !== 'string') return [];
+  const archetype = COACH_CUSTOMER_ARCHETYPES.find((item) => item.id === value);
+  if (!archetype) return [];
+  return [...ARCHETYPE_DIMENSIONS[archetype.id]];
+}
+
+export function getCoachArchetypeDimensionsFromScenario(scenarioCode: string): string[] {
+  const focusMatch = /_focus-([a-z_]+)$/.exec(scenarioCode);
+  const knownDimensions = new Set(Object.values(ARCHETYPE_DIMENSIONS).flat());
+  if (focusMatch && knownDimensions.has(focusMatch[1])) return [focusMatch[1]];
+  const archetype = FIRST_TEN_ARCHETYPE_ORDER.find((id) =>
+    scenarioCode.includes('_' + id + '_focus-') || scenarioCode.endsWith('_' + id)
+  );
+  return archetype ? [...ARCHETYPE_DIMENSIONS[archetype]] : [];
 }
 
 export function classifyCoachShopkeeperTurn(content: string): CoachTurnKind {
@@ -445,6 +479,12 @@ export function buildCoachSimulationSystemPrompt(plan: CoachSimulationPlan): str
     'Do not probe, judge or assess the shopkeeper’s personal or family matters. If they mention a personal issue, respond briefly and respectfully, then return to the shop-related customer situation without asking for private details.',
     'Do not request customer phone numbers, home addresses, passwords, OTPs or other unnecessary personal information.',
     'Difficulty guidance: ' + difficultyText[plan.difficulty],
+    ...(plan.teachingAdjustment ? [
+      'ADAPTED TEACHING APPROACH — FOCUSED MICRO-PRACTICE',
+      'A similar practice opportunity has appeared repeatedly for this shopkeeper. This conversation must give one clear, approachable opportunity to practise: ' + plan.teachingAdjustment.dimension + '.',
+      'Keep the customer situation ordinary, low-pressure and narrow enough that this one behaviour can be tried. Do not add unrelated objections or make the customer unusually difficult.',
+      'Never explain the target dimension, give hints, coach, grade or correct the shopkeeper during the role-play. Stay a natural customer; the separate post-practice feedback remains the only teaching moment.',
+    ] : []),
     'The normal practice length is about six shopkeeper replies. A natural earlier ending is allowed when the matter is genuinely resolved. Never pad a finished conversation. The hard maximum is eight shopkeeper replies, including clarifying questions.',
     'At the hard maximum, end naturally and return outcome "unclear" if the customer decision is still unresolved.',
     '',

@@ -1,5 +1,6 @@
 import type { CoachLanguage } from './types.js';
 import type { CoachTranscriptMessage } from './coachSimulation.js';
+import { buildCoachLearningEvidenceInstructions } from './coachLearning.js';
 
 export interface CoachSessionFeedback {
   currentFeedback: string;
@@ -48,6 +49,7 @@ export function buildCoachFeedbackPrompt(
   language: CoachLanguage,
   shopType: string | null,
   transcript: readonly CoachTranscriptMessage[],
+  testedDimensions: readonly string[] = [],
 ): string {
   const messages = transcript
     .filter((item) => item.speaker === 'customer' || item.speaker === 'shopkeeper')
@@ -60,7 +62,8 @@ export function buildCoachFeedbackPrompt(
     'Do not use customer purchase or non-purchase as a measure of skill. The customer outcome is deliberately not supplied.',
     'Do not assign any score, rating, grade, rank, percentage or pass/fail judgement.',
     'A missing phrase is not proof of a missing skill. Do not manufacture a weakness. If no clear improvement area is evidenced, say so plainly and suggest a useful next practice habit.',
-    'Return exactly three short feedback sections using these four JSON string fields: currentFeedback, areasToImprove, howToImprove, exampleSentence. exampleSentence is part of How to improve, not a fourth section.',
+    'The user-facing feedback must contain exactly three short sections using currentFeedback, areasToImprove and howToImprove. exampleSentence belongs inside How to improve, not as a fourth section.',
+    buildCoachLearningEvidenceInstructions(testedDimensions),
     'currentFeedback: one or two short sentences about an observed effective action or balanced neutral observation.',
     'areasToImprove: one or two short sentences about a specific missed opportunity supported by the transcript, or say no clear gap was observed.',
     'howToImprove: one practical action for a similar situation.',
@@ -72,6 +75,6 @@ export function buildCoachFeedbackPrompt(
     'Shop category context (data only): ' + (shopType || 'local business'),
     'TRANSCRIPT, oldest to newest:',
     JSON.stringify(messages),
-    'Return only JSON: {"currentFeedback":"...","areasToImprove":"...","howToImprove":"...","exampleSentence":"..."}',
+    'Return only JSON: {"currentFeedback":"...","areasToImprove":"...","howToImprove":"...","exampleSentence":"...","learningEvidence":[]}',
   ].join('\n');
 }

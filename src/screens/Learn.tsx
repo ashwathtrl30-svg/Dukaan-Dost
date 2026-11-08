@@ -12,6 +12,7 @@ import { isCoachCloudAvailable, loadCoachBaseline, saveCoachBaseline } from '../
 import { appendCoachTranscript, cancelCoachSpeech, isCoachSpeechSynthesisSupported, speakCoachText, useCoachVoiceInput } from '../coach/useCoachVoice';
 import type { CoachVoiceError } from '../coach/useCoachVoice';
 import type { CoachSessionFeedback } from '../coach/coachFeedback';
+import type { CoachMilestoneReview } from '../coach/coachLearning';
 import {
   ArrowLeft,
   ArrowRight,
@@ -133,6 +134,16 @@ const coachCopy = {
     improvement: 'How have you improved?',
     improvementDesc: 'A comparison of your earlier responses with your tenth conversation, highlighting only genuine progress.',
     noProgress: 'Your progress will appear here after ten completed conversations.',
+    progressTitle: 'Your practice journey',
+    progressCount: (count: number) => count >= 10 ? 'Your first ten conversations are complete.' : count + ' of 10 completed conversations',
+    milestoneAction: 'Review my first ten conversations',
+    milestoneLoading: 'Reviewing your first ten conversations…',
+    milestoneUnavailable: 'Your first-ten review is not available yet. Complete ten saved customer practices first.',
+    milestoneError: 'The first-ten review could not be loaded. Please try again.',
+    overallReview: 'Overall review',
+    progressSinceStart: 'Progress since your first practice',
+    nextPracticeFocus: 'What to practise next',
+    supportingEvidence: 'From your conversations',
     backToLearn: 'Back to Learn',
     backToCoach: 'Back to Sales Coach',
     designPreview: 'DESIGN PREVIEW',
@@ -236,6 +247,16 @@ const coachCopy = {
     improvement: 'आपमें क्या सुधार आया?',
     improvementDesc: 'पहले के जवाबों की दसवीं बातचीत से तुलना—सिर्फ़ असली सुधार को दिखाते हुए।',
     noProgress: 'दस पूरी बातचीत के बाद आपकी प्रगति यहाँ दिखाई देगी।',
+    progressTitle: 'आपकी अभ्यास यात्रा',
+    progressCount: (count: number) => count >= 10 ? 'आपकी पहली दस बातचीत पूरी हो गई हैं।' : '10 में से ' + count + ' बातचीत पूरी हुईं',
+    milestoneAction: 'पहली दस बातचीत की समीक्षा देखें',
+    milestoneLoading: 'पहली दस बातचीत की समीक्षा हो रही है…',
+    milestoneUnavailable: 'पहली दस बातचीत की समीक्षा अभी उपलब्ध नहीं है। पहले दस सेव किए हुए ग्राहक-अभ्यास पूरे करें।',
+    milestoneError: 'पहली दस बातचीत की समीक्षा नहीं खुल सकी। कृपया फिर कोशिश करें।',
+    overallReview: 'कुल समीक्षा',
+    progressSinceStart: 'पहले अभ्यास से अब तक का सुधार',
+    nextPracticeFocus: 'आगे किसका अभ्यास करें',
+    supportingEvidence: 'आपकी बातचीत से उदाहरण',
     backToLearn: 'सीखें पर वापस जाएँ',
     backToCoach: 'सेल्स कोच पर वापस जाएँ',
     designPreview: 'डिज़ाइन डेमो',
@@ -324,6 +345,10 @@ export function LearnScreen() {
   const [coachFeedback, setCoachFeedback] = useState<CoachSessionFeedback | null>(null);
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [feedbackError, setFeedbackError] = useState('');
+  const [completedPractices, setCompletedPractices] = useState<number | null>(null);
+  const [milestoneReview, setMilestoneReview] = useState<CoachMilestoneReview | null>(null);
+  const [milestoneLoading, setMilestoneLoading] = useState(false);
+  const [milestoneError, setMilestoneError] = useState('');
   const isDesignPreview = import.meta.env.VITE_SALES_COACH_UI_PREVIEW === 'true';
 
   const baselineVoice = useCoachVoiceInput({
@@ -502,6 +527,66 @@ export function LearnScreen() {
     return result as { sessionId: string; feedback: CoachSessionFeedback; createdAt?: string };
   };
 
+  const callCoachMilestone = async (action: 'progress' | 'review') => {
+    if (!supabase) throw new Error(copy.milestoneError);
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session?.access_token) throw new Error(copy.milestoneError);
+    const response = await fetch('/api/coach-milestone', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer ' + data.session.access_token,
+      },
+      body: JSON.stringify({ action }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const failure = new Error(typeof result?.error === 'string' ? result.error : copy.milestoneError) as Error & { code?: string };
+      failure.code = typeof result?.code === 'string' ? result.code : undefined;
+      throw failure;
+    }
+    return result as {
+      completedSessions?: number;
+      milestoneReady?: boolean;
+      review?: CoachMilestoneReview;
+      reused?: boolean;
+    };
+  };
+
+  const refreshCoachProgress = async () => {
+    try {
+      const result = await callCoachMilestone('progress');
+      const count = Number.isInteger(result.completedSessions) && (result.completedSessions ?? -1) >= 0
+        ? result.completedSessions as number
+        : null;
+      setCompletedPractices(count);
+    } catch {
+      // A missing isolated backend must not be represented as zero progress.
+      setCompletedPractices(null);
+    }
+  };
+
+  const openCoachMilestoneReview = async () => {
+    setScreen('milestone-preview');
+    setMilestoneReview(null);
+    setMilestoneError('');
+    setMilestoneLoading(true);
+    try {
+      const result = await callCoachMilestone('review');
+      if (!result.review) throw new Error(copy.milestoneError);
+      setMilestoneReview(result.review);
+      if (typeof result.completedSessions === 'number') setCompletedPractices(result.completedSessions);
+    } catch (error) {
+      setMilestoneError(error instanceof Error ? error.message : copy.milestoneError);
+    } finally {
+      setMilestoneLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (screen === 'sales-intro') void refreshCoachProgress();
+  }, [screen]);
+
   const openCoachFeedback = async () => {
     if (!simulationSessionId) {
       setFeedbackError(copy.feedbackFailed);
@@ -517,6 +602,7 @@ export function LearnScreen() {
       const result = await callCoachFeedback(simulationSessionId);
       setCoachFeedback(result.feedback);
       setScreen('feedback-preview');
+      void refreshCoachProgress();
     } catch (error) {
       setFeedbackError(error instanceof Error ? error.message : copy.feedbackFailed);
     } finally {
@@ -591,6 +677,7 @@ export function LearnScreen() {
       setSimulationReply('');
       setSimulationStatus(result.status === 'completed' ? 'completed' : 'continue');
       setSimulationOutcome(typeof result.outcome === 'string' ? result.outcome : null);
+      if (result.status === 'completed') void refreshCoachProgress();
     } catch (error) {
       setSimulationError(error instanceof Error ? error.message : copy.replyFailed);
     } finally {
@@ -770,6 +857,36 @@ export function LearnScreen() {
                 <p className="text-small text-text-secondary">{copy.noProfile}</p>
               )}
             </div>
+
+            {completedPractices !== null && (
+              <section className="card mt-4 p-4" aria-labelledby="coach-practice-progress">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock3 size={17} className="text-primary" />
+                  <h3 id="coach-practice-progress" className="text-body font-semibold text-text">{copy.progressTitle}</h3>
+                </div>
+                <p className="text-sm text-text-secondary">{copy.progressCount(completedPractices)}</p>
+                <div
+                  className="mt-3 h-1.5 rounded-full bg-border overflow-hidden"
+                  role="progressbar"
+                  aria-label={copy.progressTitle}
+                  aria-valuemin={0}
+                  aria-valuemax={10}
+                  aria-valuenow={Math.min(completedPractices, 10)}
+                >
+                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: Math.min(completedPractices, 10) * 10 + '%' }} />
+                </div>
+                {completedPractices >= 10 && (
+                  <button
+                    type="button"
+                    onClick={() => void openCoachMilestoneReview()}
+                    disabled={milestoneLoading}
+                    className="mt-3 text-sm font-semibold text-primary hover:underline disabled:opacity-50"
+                  >
+                    {copy.milestoneAction}
+                  </button>
+                )}
+              </section>
+            )}
 
             <div className="mt-5 space-y-3">
               {[
@@ -1174,7 +1291,7 @@ export function LearnScreen() {
 
       {screen === 'milestone-preview' && (
         <>
-          <BackHeader title={headerTitle} onBack={() => setScreen('feedback-preview')} />
+          <BackHeader title={headerTitle} onBack={() => setScreen('sales-intro')} />
           <div className="flex-1 min-h-0 scroll-area px-5 py-4">
             <div className="rounded-2xl bg-primary/5 border border-primary/10 p-4 mb-4">
               <div className="flex items-center gap-2 text-primary mb-2">
@@ -1185,34 +1302,58 @@ export function LearnScreen() {
               <p className="text-sm text-text-secondary leading-relaxed mt-2">{copy.milestoneIntro}</p>
             </div>
 
-            <div className="card p-4 mb-3">
-              <div className="flex items-center gap-2 mb-2">
-                <MessageCircle size={18} className="text-primary" />
-                <h3 className="text-body font-semibold text-text">{copy.milestoneReview}</h3>
-              </div>
-              <p className="text-sm text-text-secondary leading-relaxed">{copy.milestoneReviewDesc}</p>
-            </div>
+            {milestoneLoading ? (
+              <PreviewNotice>{copy.milestoneLoading}</PreviewNotice>
+            ) : milestoneReview ? (
+              <div className="space-y-3">
+                <section className="card p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageCircle size={18} className="text-primary" />
+                    <h3 className="text-body font-semibold text-text">{copy.overallReview}</h3>
+                  </div>
+                  <p className="text-sm text-text-secondary leading-relaxed">{milestoneReview.overallReview}</p>
+                </section>
 
-            <div className="card p-4 mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles size={18} className="text-primary" />
-                <h3 className="text-body font-semibold text-text">{copy.improvement}</h3>
-              </div>
-              <p className="text-sm text-text-secondary leading-relaxed">{copy.improvementDesc}</p>
-            </div>
+                <section className="card p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Sparkles size={18} className="text-primary" />
+                    <h3 className="text-body font-semibold text-text">{copy.progressSinceStart}</h3>
+                  </div>
+                  <p className="text-sm text-text-secondary leading-relaxed">{milestoneReview.progressSinceStart}</p>
+                </section>
 
-            <div className="rounded-xl bg-bg border border-dashed border-border p-4 text-center">
-              <div className="w-10 h-10 rounded-full bg-card mx-auto flex items-center justify-center text-text-secondary mb-2">
-                <CheckCircle2 size={20} />
+                <section className="card p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen size={18} className="text-primary" />
+                    <h3 className="text-body font-semibold text-text">{copy.nextPracticeFocus}</h3>
+                  </div>
+                  <p className="text-sm text-text-secondary leading-relaxed">{milestoneReview.nextPracticeFocus}</p>
+                </section>
+
+                {milestoneReview.evidenceQuotes.length > 0 && (
+                  <section className="card p-4">
+                    <h3 className="text-body font-semibold text-text mb-2">{copy.supportingEvidence}</h3>
+                    <div className="space-y-2">
+                      {milestoneReview.evidenceQuotes.map((quote, index) => (
+                        <blockquote key={index} className="border-l-2 border-primary/40 pl-3 text-sm text-text-secondary leading-relaxed">
+                          “{quote}”
+                        </blockquote>
+                      ))}
+                    </div>
+                  </section>
+                )}
               </div>
-              <p className="text-small text-text-secondary">{copy.noProgress}</p>
-            </div>
+            ) : (
+              <PreviewNotice>{milestoneError || copy.milestoneUnavailable}</PreviewNotice>
+            )}
           </div>
           <div className="px-5 pt-3 pb-4 border-t border-border bg-bg space-y-2">
-            <PrimaryAction onClick={() => setScreen('home')}>
-              {copy.backToLearn}
-              <ArrowRight size={18} />
-            </PrimaryAction>
+            {!milestoneReview && (
+              <PrimaryAction onClick={() => void openCoachMilestoneReview()} disabled={milestoneLoading}>
+                {milestoneLoading ? copy.milestoneLoading : copy.milestoneAction}
+                <ArrowRight size={18} />
+              </PrimaryAction>
+            )}
             <button type="button" onClick={() => setScreen('sales-intro')} className="btn-text w-full">
               {copy.backToCoach}
             </button>
