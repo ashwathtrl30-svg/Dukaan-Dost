@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen } from 'lucide-react';
+import { ArrowLeft, BookOpen, Boxes, ChevronRight, PiggyBank, TrendingUp } from 'lucide-react';
 import { useStore } from '../store';
 import catalogJson from '../../docs/sell-better/phase-2/lesson-catalog.preview.v2.json';
 
@@ -54,36 +54,36 @@ function getRecommendedLesson(shopType: string | null): SellBetterLesson {
 
 export function SellBetterPreview() {
   const { state } = useStore();
-  const [active, setActive] = useState(false);
+  const [activePath, setActivePath] = useState<'learn' | 'sell-better'>('learn');
   const [response, setResponse] = useState('');
   const lesson = getRecommendedLesson(state.shopProfile.shopType);
   const area = catalog.areas.find((item) => item.id === lesson.areaId);
 
-  const startPractice = () => {
+  const openSellBetter = () => {
     setResponse('');
-    setActive(true);
+    setActivePath('sell-better');
   };
 
-  const leavePractice = () => {
+  const backToLearn = () => {
     setResponse('');
-    setActive(false);
+    setActivePath('learn');
   };
 
   return (
     <div className="h-full min-h-0 overflow-y-auto bg-bg text-text">
       <div className="mx-auto flex min-h-full w-full max-w-xl flex-col px-4 pb-5 pt-4 sm:px-6 sm:pt-6">
-        {active ? (
+        {activePath === 'sell-better' ? (
           <main className="flex flex-1 flex-col">
             <button
               type="button"
-              onClick={leavePractice}
+              onClick={backToLearn}
               className="mb-4 inline-flex min-h-10 w-fit items-center gap-2 rounded-lg px-2 text-sm font-semibold text-primary hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
-              <ArrowLeft size={17} /> Back
+              <ArrowLeft size={17} /> Learn
             </button>
 
             <div className="mb-3 flex items-center gap-2 text-xs font-bold tracking-[0.14em] text-primary">
-              <BookOpen size={15} /> {area?.name.toUpperCase() || 'SELL BETTER'}
+              <TrendingUp size={15} /> SELL BETTER
             </div>
             <h1 className="mb-4 text-2xl font-bold leading-tight sm:text-3xl">{lesson.title}</h1>
 
@@ -93,13 +93,13 @@ export function SellBetterPreview() {
             </section>
 
             <section className="mb-4 rounded-2xl border border-primary/25 bg-primary/5 p-4">
-              <p className="mb-2 text-[11px] font-bold tracking-[0.13em] text-primary">WHAT WOULD YOU DO?</p>
+              <p className="mb-2 text-[11px] font-bold tracking-[0.13em] text-primary">THINK IT THROUGH</p>
               <h2 className="text-base font-semibold leading-6">{lesson.prompt}</h2>
             </section>
 
             <div className="mb-3">
               <label htmlFor="sell-better-response" className="mb-2 block text-sm font-semibold">
-                Your response
+                What would you say or do?
               </label>
               <textarea
                 id="sell-better-response"
@@ -119,34 +119,57 @@ export function SellBetterPreview() {
         ) : (
           <main className="flex flex-1 flex-col">
             <div className="mb-5 flex items-center gap-2 text-xs font-bold tracking-[0.16em] text-primary">
-              <BookOpen size={15} /> LEARN · SELL BETTER
+              <BookOpen size={15} /> LEARN
             </div>
 
-            <h1 className="max-w-lg text-[28px] font-bold leading-tight tracking-tight sm:text-3xl">
-              Understand people. Build trust. Grow your dukaan.
+            <h1 className="mb-2 text-2xl font-bold leading-tight sm:text-3xl">
+              What would you like to get better at?
             </h1>
-            <p className="mt-2 text-sm leading-6 text-text-secondary">
-              One practical customer situation at a time.
+            <p className="mb-5 text-sm leading-6 text-text-secondary">
+              Build practical skills to run your dukaan better.
             </p>
 
-            <section className="mt-7 rounded-3xl border border-border bg-card p-5 shadow-sm sm:p-6">
-              <p className="mb-2 text-[11px] font-bold tracking-[0.15em] text-primary">YOUR NEXT PRACTICE</p>
-              <h2 className="text-xl font-bold leading-snug">{lesson.title}</h2>
-              <p className="mt-3 text-sm leading-6 text-text-secondary">{lesson.situation}</p>
+            <div className="space-y-3">
               <button
                 type="button"
-                onClick={startPractice}
-                className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-white transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                onClick={openSellBetter}
+                className="group flex min-h-[92px] w-full items-center gap-4 rounded-2xl border border-border bg-card p-4 text-left shadow-sm transition hover:border-primary/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
-                Start practice <ArrowRight size={17} />
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <TrendingUp size={23} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-base font-bold">Sell Better</span>
+                  <span className="mt-1 block text-xs leading-relaxed text-text-secondary">Understand customers. Build trust. Grow sales.</span>
+                </span>
+                <ChevronRight size={19} className="shrink-0 text-text-secondary transition group-hover:translate-x-0.5" />
               </button>
-            </section>
 
-            <p className="mt-4 text-center text-xs text-text-secondary">
-              A few minutes · No tests · No marks
-            </p>
+              <div className="flex min-h-[92px] items-center gap-4 rounded-2xl border border-border bg-card/70 p-4 opacity-75">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-bg text-text-secondary">
+                  <PiggyBank size={23} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-base font-bold">Save Better</span>
+                  <span className="mt-1 block text-xs leading-relaxed text-text-secondary">Make smarter money and cost decisions.</span>
+                </span>
+                <span className="shrink-0 rounded-full bg-bg px-2.5 py-1 text-[10px] font-semibold text-text-secondary">Coming soon</span>
+              </div>
+
+              <div className="flex min-h-[92px] items-center gap-4 rounded-2xl border border-border bg-card/70 p-4 opacity-75">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-bg text-text-secondary">
+                  <Boxes size={23} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-base font-bold">Manage Stock Better</span>
+                  <span className="mt-1 block text-xs leading-relaxed text-text-secondary">Make better stock and replenishment decisions.</span>
+                </span>
+                <span className="shrink-0 rounded-full bg-bg px-2.5 py-1 text-[10px] font-semibold text-text-secondary">Coming soon</span>
+              </div>
+            </div>
+
             <p className="mt-auto pt-8 text-center text-[11px] text-text-secondary">
-              Founder preview · Draft situations · English only
+              Founder preview · Sell Better situations are still drafts.
             </p>
           </main>
         )}
