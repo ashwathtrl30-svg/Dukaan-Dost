@@ -66,8 +66,19 @@ This phase is a UX prototype. It does not implement personalised AI feedback, us
 - [x] Discover/Apply are shown as future design steps, not fake AI feedback.
 - [x] Preview route is gated and the non-preview Learn route is preserved.
 - [ ] Shopkeeper usability review and native-language review are still required.
-- [ ] Build/deployment validation must be completed before declaring the preview ready.
+- [x] Vercel preview build completed successfully; final preview page and JavaScript bundle returned HTTP 200.
 
 ## 7. Explicitly deferred
 
 Phase 3 will implement the core lesson engine without AI. Response-aware feedback, long-term learning memory and AI personalisation belong to later phases and require their own quality, privacy, safety, cost and reliability checks.
+
+
+## 8. Implementation validation note
+
+The Phase 2 UI preview was deployed successfully from the development branch. A source-level audit confirmed 24 unique situation IDs, six declared learning areas with four situations each, valid category references, and complete title/situation/open-ended-prompt/objective/takeaway fields. The flagged preview route selects the new screen while the non-preview route retains the existing Learn screen.
+
+The response field is component state only. Navigation clears its contents; there is no API call, browser storage write, Supabase use or AI-feedback request in the preview component. The all-situations library, area filtering, search and detail/back navigation paths were checked in source. A navigation edge case for returning from the featured situation was found and fixed before the final deployment.
+
+Vercel reported the final development-branch deployment as `READY`. Its page and compiled JavaScript bundle returned HTTP 200, and the served bundle included the Sell Better headline, revised situation copy and preview disclaimers. The final deployment is linked below in the handoff.
+
+**Validation limitation:** This was a source, build, deployment and served-bundle smoke audit. It was not a full device/browser automation run or a shopkeeper usability test. Check the UI on an Android phone and desktop before treating the layout as accepted. The curriculum remains draft content pending founder, shopkeeper and language/expert review.
