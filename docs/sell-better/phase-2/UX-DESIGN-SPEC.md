@@ -10,27 +10,23 @@ Turn the Sell Better product foundation into a clear, mobile-first experience th
 
 This phase is a UX prototype. It does not implement personalised AI feedback, user accounts, cloud history, speech recognition, read-aloud, scoring, progress analytics or production publishing.
 
-## 2. Experience structure
+## 2. Experience structure — deliberately compact
 
-### Home
-- Product promise: **Understand people. Build trust. Grow your dukaan.**
-- Four-step learning loop: Think, Respond, Discover, Apply.
-- Six learning-area cards with a four-situation count each.
-- A prominent route into all 24 draft situations.
-- Category coverage is available while browsing.
+### Shopkeeper home
+- Show the Sell Better promise in a short headline and one supporting line.
+- Show a single **Your next practice** card, selected from the shop category when a reviewed category match exists.
+- One clear action opens that practice.
+- Do not display a situation library, search, six-area catalogue, lesson counts, or a long explanation of the learning method.
+- Do not claim category-personalised recommendations for categories that do not yet have a specific lesson. They receive a general cross-category practice.
 
-### Situation library
-- Browse all situations or filter by one learning area.
-- Search by situation title, prompt and category.
-- Every card shows its stable lesson ID, learning area and applicable shop categories.
-- Results remain in their authored order and do not imply ranking or importance.
+### Practice screen
+- One compact title, one short situation, one open-ended question, and one response field.
+- A simple back action returns to the home screen.
+- No large instructional panel, process explainer, progress meter, score, or artificial next-step action.
+- The preview response remains in component memory and is cleared on exit. It is not sent to an API or written to local/cloud storage.
+- The screen identifies this as a prototype and does not pretend to provide response-aware feedback.
 
-### Situation detail
-- One situation and one open-ended prompt at a time.
-- A response field demonstrates the intended “Respond” interaction.
-- The response stays in component memory only and is discarded when the user leaves the situation. It is not sent to an API or written to local/cloud storage.
-- The screen explicitly distinguishes the prototype from the future response-aware learning and feedback stages.
-- The planned Discover and Apply steps are shown as design intent, not simulated AI output.
+The user-facing preview therefore has only two states: **Next practice** and **Respond**. The six learning areas and full 24-situation catalogue remain internal curriculum structure, not a shopkeeper-facing menu.
 
 ## 3. Content handling
 
@@ -58,12 +54,12 @@ This phase is a UX prototype. It does not implement personalised AI feedback, us
 
 ## 6. Phase 2 exit checks
 
-- [x] Six areas are visible and each shows four situations.
-- [x] Exactly 24 unique lesson IDs exist.
-- [x] Every lesson has one area, at least one category, a situation and one open-ended prompt.
-- [x] Search, area filter, detail navigation and back navigation are implemented.
+- [x] A compact home screen shows one next practice.
+- [x] The recommended practice uses a shop-category match only where a specific category lesson exists; otherwise it uses a general cross-category lesson.
+- [x] The full 24-situation catalogue stays internal and is not exposed as a user-facing library.
+- [x] The practice screen shows one situation, one open-ended question and one response field.
 - [x] Answer text is ephemeral and no submit action sends or saves it.
-- [x] Discover/Apply are shown as future design steps, not fake AI feedback.
+- [x] No fake AI feedback, scoring, progress meter or extra lesson-selection actions are shown.
 - [x] Preview route is gated and the non-preview Learn route is preserved.
 - [ ] Shopkeeper usability review and native-language review are still required.
 - [x] Vercel preview build completed successfully; final preview page and JavaScript bundle returned HTTP 200.
@@ -82,3 +78,16 @@ The response field is component state only. Navigation clears its contents; ther
 Vercel reported the final development-branch deployment as `READY`. Its page and compiled JavaScript bundle returned HTTP 200, and the served bundle included the Sell Better headline, revised situation copy and preview disclaimers. The final deployment is linked below in the handoff.
 
 **Validation limitation:** This was a source, build, deployment and served-bundle smoke audit. It was not a full device/browser automation run or a shopkeeper usability test. Check the UI on an Android phone and desktop before treating the layout as accepted. The curriculum remains draft content pending founder, shopkeeper and language/expert review.
+
+
+## 9. Compact UX revision
+
+After founder review, the original Phase 2 preview was judged too long and too catalogue-driven. It has been simplified to two user-facing states:
+1. **Next practice:** product promise, one supporting line, one recommended practice and one Start practice action.
+2. **Respond:** situation, open-ended prompt and response field, with a simple Back action.
+
+The situation library, search interface, six-area card grid, long four-step explainer and extended Discover/Apply explainer have been removed from the shopkeeper-facing preview. The complete curriculum remains in the internal JSON catalogue.
+
+The current selector only claims shop-category matching where an explicit matching category exists in the draft catalogue. For currently uncovered shop types (including medical, tea stall and restaurant), the preview uses a broad cross-category fallback rather than pretending it has dedicated category-specific lessons.
+
+This is still an English-only UI and content preview. Hindi/Hinglish, voice response and actual response-aware feedback remain future implementation/review work.
