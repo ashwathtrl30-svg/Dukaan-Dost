@@ -140,7 +140,7 @@ function buildPeakTimeInsight(
       'positive',
       language === 'hi'
         ? (isServiceShop ? 'ग्राहकों का व्यस्त समय' : 'बिक्री का व्यस्त समय')
-        : (isServiceShop ? 'Peak customer hours' : 'Peak sales hours'),
+        : (isServiceShop ? 'Your peak customer hours' : 'Your peak sales hours'),
       language === 'hi'
         ? windowName + ' (' + timeRange + '): ' + best[1].count + ' बिक्री, ' + money(best[1].amount) + '। ज़रूरी सामान तैयार रखें।'
         : windowName + ' (' + timeRange + '): ' + best[1].count + ' sales worth ' + money(best[1].amount) + '. Keep popular items ready.',
@@ -180,7 +180,7 @@ function buildTodayPerformance(
   return createInsight(
     'day',
     tone,
-    language === 'hi' ? 'आज की बिक्री और खर्च' : "Today's sales and expenses",
+    language === 'hi' ? 'आज की बिक्री और खर्च' : "Today's sales and expense performance",
     language === 'hi'
       ? 'बिक्री ' + money(metrics.sales) + ' (' + saleEntries.length + ')। खर्च ' + money(metrics.expenses) + ' (' + expenseEntries.length + ')। दर्ज खर्च के बाद ' + money(balance) + ' बचे, दूसरे खर्च से पहले।'
       : 'Sales ' + money(metrics.sales) + ' (' + saleEntries.length + '); expenses ' + money(metrics.expenses) + ' (' + expenseEntries.length + '). Balance: ' + money(balance) + ', before other costs.',
@@ -223,7 +223,7 @@ function buildWeeklySalesPattern(
   return createInsight(
     'week',
     metrics.salesChange !== null && metrics.salesChange <= -15 ? 'warning' : 'info',
-    language === 'hi' ? 'इस हफ़्ते बिक्री का पैटर्न' : 'Weekly sales pattern',
+    language === 'hi' ? 'इस हफ़्ते बिक्री का पैटर्न' : 'This week’s sales pattern',
     description,
   );
 }
@@ -281,7 +281,7 @@ function buildWeeklyExpenseChanges(
   return createInsight(
     'week',
     change !== null && change >= 25 ? 'warning' : 'info',
-    language === 'hi' ? 'इस हफ़्ते के खर्च' : 'Weekly expenses',
+    language === 'hi' ? 'इस हफ़्ते खर्च में बदलाव' : 'This week’s expense changes',
     language === 'hi'
       ? 'कुल ' + money(currentTotal) + '। सबसे बड़ा खर्च: ' + (largest ? shortLabel(largest[0]) + ', ' + money(largest[1]) : '—') + '।'
       : 'Total: ' + money(currentTotal) + '. Biggest cost: ' + (largest ? shortLabel(largest[0]) + ', ' + money(largest[1]) : '—') + '.',
@@ -306,7 +306,7 @@ function buildWeeklyProductPerformance(
     return createInsight(
       'week',
       'info',
-      language === 'hi' ? 'बेस्टसेलर अभी तय नहीं' : 'Best sellers not clear yet',
+      language === 'hi' ? 'सबसे ज़्यादा बिकने वाले का पता नहीं चला' : 'Best-selling ' + subject + ' cannot be identified yet',
       language === 'hi'
         ? (hasNames
             ? 'नाम दर्ज हैं, पर संख्या नहीं। बेची गई मात्रा जोड़ें।'
@@ -327,7 +327,7 @@ function buildWeeklyProductPerformance(
     'positive',
     language === 'hi'
       ? (isServiceShop ? 'सबसे ज़्यादा की गई सेवाएँ' : 'सबसे ज़्यादा बिके उत्पाद')
-      : (isServiceShop ? 'Top services by count' : 'Top products by units'),
+      : (isServiceShop ? 'Most frequently completed services' : 'Best-selling products by units sold'),
     language === 'hi'
       ? 'सबसे ज़्यादा यूनिट: ' + list + '।'
       : 'Top by units: ' + list + '.',
@@ -345,7 +345,7 @@ function buildMonthlyOverallPerformance(
   return createInsight(
     'month',
     tone,
-    language === 'hi' ? 'इस महीने का कारोबार' : 'Monthly business summary',
+    language === 'hi' ? 'इस महीने दुकान का कुल प्रदर्शन' : 'Overall business performance this month',
     language === 'hi'
       ? 'बिक्री ' + money(metrics.sales) + '। खर्च ' + money(metrics.expenses) + '। बाकी ' + money(balance) + (margin === null ? '।' : ' (' + margin + '%)।') + ' दूसरे खर्च शामिल नहीं हैं।'
       : 'Sales ' + money(metrics.sales) + '; expenses ' + money(metrics.expenses) + '. Balance ' + money(balance) + (margin === null ? '.' : ' (' + margin + '%).') + ' Other costs may apply.',
@@ -366,7 +366,7 @@ function buildMonthlyBusinessTrend(
     return createInsight(
       'month',
       'info',
-      language === 'hi' ? 'महीने का ट्रेंड उपलब्ध नहीं' : 'Monthly trend not available yet',
+      language === 'hi' ? 'महीने का बिक्री ट्रेंड उपलब्ध नहीं' : 'Monthly sales trend is not available yet',
       language === 'hi'
         ? 'अलग-अलग दिनों की बिक्री दर्ज करें।'
         : 'Record sales on different days to reveal a pattern.',
@@ -377,7 +377,7 @@ function buildMonthlyBusinessTrend(
     return createInsight(
       'month',
       'info',
-      language === 'hi' ? 'ट्रेंड के लिए और दिन चाहिए' : 'More days needed for a trend',
+      language === 'hi' ? 'बिक्री ट्रेंड के लिए और दिन चाहिए' : 'More trading days are needed for a monthly trend',
       language === 'hi'
         ? days.length + ' दिनों में बिक्री दर्ज है। पैटर्न के लिए और रिकॉर्ड जोड़ें।'
         : 'Sales are recorded on ' + days.length + ' day(s). Add more to reveal a trend.',
@@ -393,7 +393,7 @@ function buildMonthlyBusinessTrend(
   return createInsight(
     'month',
     high[1] >= low[1] * 3 ? 'warning' : 'info',
-    language === 'hi' ? 'महीने के बिक्री वाले दिन' : 'Sales across the month',
+    language === 'hi' ? 'महीने के दिनों में बिक्री का ट्रेंड' : 'Business trend across recorded days',
     language === 'hi'
       ? 'सबसे अच्छा: ' + dateLabel(high[0]) + ', ' + money(high[1]) + '। सबसे धीमा: ' + dateLabel(low[0]) + ', ' + money(low[1]) + '।'
       : 'Best day: ' + dateLabel(high[0]) + ', ' + money(high[1]) + '. Quietest: ' + dateLabel(low[0]) + ', ' + money(low[1]) + '.',
@@ -409,7 +409,7 @@ function buildMonthlyExpenseHealth(
     return createInsight(
       'month',
       'info',
-      language === 'hi' ? 'खर्च का रिकॉर्ड नहीं' : 'No expenses recorded',
+      language === 'hi' ? 'खर्च की स्थिति मापने के लिए रिकॉर्ड चाहिए' : 'Expense health needs more complete records',
       language === 'hi'
         ? 'स्टॉक, किराया और बिल जैसे खर्च जोड़ें।'
         : 'Add stock, rent and bill costs to complete this view.',
@@ -420,7 +420,7 @@ function buildMonthlyExpenseHealth(
     return createInsight(
       'month',
       'warning',
-      language === 'hi' ? 'खर्च हैं, बिक्री नहीं' : 'Expenses recorded, no sales',
+      language === 'hi' ? 'खर्च दर्ज हैं, लेकिन बिक्री का रिकॉर्ड नहीं' : 'Expenses are recorded without sales entries',
       language === 'hi'
         ? money(metrics.expenses) + ' खर्च दर्ज हैं। छूटी बिक्री की एंट्री जाँचें।'
         : money(metrics.expenses) + ' in expenses. Check for missing sales entries.',
@@ -445,7 +445,7 @@ function buildMonthlyExpenseHealth(
   return createInsight(
     'month',
     tone,
-    language === 'hi' ? 'इस महीने खर्च की स्थिति' : 'Monthly expense health',
+    language === 'hi' ? 'इस महीने खर्च की सेहत' : 'Expense health this month',
     language === 'hi'
       ? 'खर्च, बिक्री का ' + share + '% हैं।' + largestText
       : 'Expenses are ' + share + '% of sales.' + largestText,
@@ -472,7 +472,7 @@ function buildMonthlyRisk(
   if (metrics.sales > 0 && balance < 0) {
     risks.push({
       severity: 100,
-      title: language === 'hi' ? 'खर्च बिक्री से ज़्यादा हैं' : 'Expenses exceed sales',
+      title: language === 'hi' ? 'दर्ज खर्च, बिक्री से ज़्यादा हैं' : 'Recorded expenses are higher than sales',
       description: language === 'hi'
         ? 'कमी ' + money(Math.abs(balance)) + ' है। छूटी बिक्री और बड़े बिल जाँचें।'
         : 'Shortfall: ' + money(Math.abs(balance)) + '. Check missing sales and major bills.',
@@ -482,7 +482,7 @@ function buildMonthlyRisk(
   if (metrics.sales > 0 && metrics.expenses > 0 && metrics.expenses / metrics.sales >= 0.9) {
     risks.push({
       severity: 90,
-      title: language === 'hi' ? 'खर्च बिक्री के करीब हैं' : 'Expenses are close to sales',
+      title: language === 'hi' ? 'खर्च बिक्री के बहुत करीब पहुँच रहे हैं' : 'Expenses are close to recorded sales',
       description: language === 'hi'
         ? 'खर्च, बिक्री का ' + Math.round((metrics.expenses / metrics.sales) * 100) + '% हैं। बड़ी खरीद जाँचें।'
         : 'Expenses are ' + Math.round((metrics.expenses / metrics.sales) * 100) + '% of sales. Review large purchases.',
@@ -492,7 +492,7 @@ function buildMonthlyRisk(
   if (metrics.salesChange !== null && metrics.salesChange <= -20) {
     risks.push({
       severity: 80,
-      title: language === 'hi' ? 'बिक्री में तेज़ गिरावट' : 'Sales have fallen sharply',
+      title: language === 'hi' ? 'बिक्री में तेज़ गिरावट' : 'A sharp sales decline needs attention',
       description: language === 'hi'
         ? 'बिक्री ' + Math.abs(metrics.salesChange) + '% घटी। दुकान के खुले दिन और एंट्री जाँचें।'
         : 'Sales fell ' + Math.abs(metrics.salesChange) + '%. Check trading days and missing entries.',
@@ -505,7 +505,7 @@ function buildMonthlyRisk(
   if (expenseGrowthGap !== null && expenseGrowthGap >= 20 && metrics.expensesChange !== null && metrics.expensesChange >= 20) {
     risks.push({
       severity: 75,
-      title: language === 'hi' ? 'खर्च बिक्री से तेज़ बढ़े' : 'Expenses are rising faster',
+      title: language === 'hi' ? 'खर्च बिक्री से तेज़ बढ़ रहे हैं' : 'Expenses are growing faster than sales',
       description: language === 'hi'
         ? 'खर्च ' + metrics.expensesChange + '% बढ़े; बिक्री ' + metrics.salesChange + '% बदली। वजह जाँचें।'
         : 'Expenses rose ' + metrics.expensesChange + '%; sales changed ' + metrics.salesChange + '%. Check why.',
@@ -519,7 +519,7 @@ function buildMonthlyRisk(
     if (overdue.length > 0) {
       risks.push({
         severity: 85,
-        title: language === 'hi' ? 'कुछ उधार की तारीख़ निकल गई' : 'Some udhaar is overdue',
+        title: language === 'hi' ? 'कुछ उधार की तय तारीख़ निकल चुकी है' : 'Some recorded udhaar is overdue',
         description: language === 'hi'
           ? overdue.length + ' बकाया, ' + money(overdueTotal) + '। रिकॉर्ड मिलाएँ और विनम्रता से फ़ॉलो-अप करें।'
           : overdue.length + ' unpaid balances worth ' + money(overdueTotal) + '. Verify records and follow up politely.',
@@ -535,7 +535,7 @@ function buildMonthlyRisk(
   return createInsight(
     'month',
     'info',
-    language === 'hi' ? 'कोई बड़ी चेतावनी नहीं दिखी' : 'No major warning found',
+    language === 'hi' ? 'अभी कोई बड़ी समस्या दर्ज डेटा से नहीं दिखी' : 'No major risk is visible in the recorded data',
     language === 'hi'
       ? 'दर्ज रिकॉर्ड में बड़ी चेतावनी नहीं दिखी। स्टॉक और बिल जाँचते रहें।'
       : 'No major warning in recorded entries. Keep records complete and check stock and bills.',
@@ -583,7 +583,7 @@ function buildMonthlyProductMix(
   return createInsight(
     'month',
     products.length > 0 || byRevenue.length > 0 ? 'positive' : 'info',
-    language === 'hi' ? 'उत्पाद और श्रेणी की बिक्री' : 'Top products and categories',
+    language === 'hi' ? 'उत्पाद और श्रेणी की बिक्री का बँटवारा' : 'Product and category sales mix',
     productText + ' ' + categoryText,
   );
 }
