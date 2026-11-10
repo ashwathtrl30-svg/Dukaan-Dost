@@ -80,13 +80,6 @@ function comparisonSales(metrics: PeriodMetrics, sales: SaleEntry[], now: Date):
   return entries.filter(entry => Number.isFinite(entry.createdAt) && entry.createdAt > 0 && minutesOfDay(entry.createdAt) <= cutoff);
 }
 
-function comparisonExpenses(metrics: PeriodMetrics, expenses: ExpenseEntry[], now: Date): ExpenseEntry[] {
-  const entries = expenseEntriesInRange(expenses, metrics.previousRange);
-  if (metrics.period !== 'day') return entries;
-  const cutoff = now.getHours() * 60 + now.getMinutes();
-  return entries.filter(entry => Number.isFinite(entry.createdAt) && entry.createdAt > 0 && minutesOfDay(entry.createdAt) <= cutoff);
-}
-
 function itemSummariesFromEntries(entries: SaleEntry[]): ItemSummary[] {
   const revenueByKey = new Map<string, number>();
   entries.forEach(entry => {
@@ -435,7 +428,14 @@ function buildMonthlyExpenseHealth(
   }
 
   const share = Math.round((metrics.expenses / metrics.sales) * 100);
-  const tone: InsightTone = share >= 85 ? 'warning' : share <= 60 ? 'positive' : 'info';
+  const salesChange = metrics.salesChange;
+  const expensesChange = metrics.expensesChange;
+  const growthGap = salesChange !== null && expensesChange !== null ? expensesChange - salesChange : null;
+  const tone: InsightTone = share >= 85 || (growthGap !== null && growthGap >= 15)
+    ? 'warning'
+    : share <= 60
+      ? 'positive'
+      : 'info';
   const largestText = largest
     ? (language === 'hi'
         ? ' सबसे बड़ा खर्च: ' + shortLabel(largest.category) + ', ' + money(largest.amount) + '।'
