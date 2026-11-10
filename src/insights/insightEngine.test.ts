@@ -172,7 +172,7 @@ test('monthly product mix reports category revenue and unit-based product leader
     { ...sale('c', today, 200, 'Rice', 'cash', 11, 5), category: 'Grocery' },
   ];
   const cards = build(sales);
-  const mix = cards.find(card => card.period === 'month' && card.title === 'Top products and categories');
+  const mix = cards.find(card => card.period === 'month' && card.title === 'Product and category sales mix');
   assert.ok(mix);
   assert.match(mix.description, /Soap \(10\)/);
   assert.match(mix.description, /Top sales category: Personal Care/);
