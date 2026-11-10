@@ -1,11 +1,8 @@
 import React, { useMemo } from 'react';
 import {
   AlertTriangle,
-  ArrowDownRight,
-  ArrowUpRight,
   Calendar,
   Lightbulb,
-  Minus,
   Sparkles,
   TrendingUp,
   Wallet,
@@ -22,20 +19,6 @@ function periodName(period: InsightsPeriod, lang: Language): string {
     return period === 'day' ? 'आज' : period === 'week' ? 'इस हफ़्ते' : 'इस महीने';
   }
   return period === 'day' ? 'Today' : period === 'week' ? 'This week' : 'This month';
-}
-
-function changePhrase(change: number, lang: Language, subject: 'sales' | 'expenses'): string {
-  const amount = Math.abs(change);
-  if (lang === 'hi') {
-    if (subject === 'sales') {
-      return change > 0 ? `बिक्री ${amount}% बढ़ी है` : change < 0 ? `बिक्री ${amount}% घटी है` : 'बिक्री में बदलाव नहीं है';
-    }
-    return change > 0 ? `खर्च ${amount}% बढ़ा है` : change < 0 ? `खर्च ${amount}% घटा है` : 'खर्च में बदलाव नहीं है';
-  }
-  if (subject === 'sales') {
-    return change > 0 ? `sales are up ${amount}%` : change < 0 ? `sales are down ${amount}%` : 'sales are unchanged';
-  }
-  return change > 0 ? `expenses are up ${amount}%` : change < 0 ? `expenses are down ${amount}%` : 'expenses are unchanged';
 }
 
 function MyAdviceSection({ items, lang }: { items: MyAdviceItem[]; lang: Language }) {
@@ -78,39 +61,9 @@ function MyAdviceSection({ items, lang }: { items: MyAdviceItem[]; lang: Languag
   );
 }
 
-function ChangeIndicator({
-  change,
-  lang,
-  kind,
-}: {
-  change: number | null;
-  lang: Language;
-  kind: 'sales' | 'expenses';
-}) {
-  // A missing comparison baseline is shown as a neutral dash.
-  if (change === null) {
-    return <span className="text-[11px] text-text-secondary">—</span>;
-  }
-
-  const positiveDirection = kind === 'sales' ? change > 0 : change < 0;
-  const negativeDirection = kind === 'sales' ? change < 0 : change > 0;
-  const tone = positiveDirection ? 'text-positive' : negativeDirection ? 'text-problem' : 'text-text-secondary';
-  const Icon = change > 0 ? ArrowUpRight : change < 0 ? ArrowDownRight : Minus;
-  const value = `${change > 0 ? '+' : ''}${change}%`;
-
-  return (
-    <span className={`inline-flex items-center gap-0.5 text-[11px] font-semibold ${tone}`} title={lang === 'hi' ? 'पिछली समान अवधि से तुलना' : 'Compared with the previous equivalent period'}>
-      <Icon size={13} />
-      {value}
-    </span>
-  );
-}
-
 function PeriodSummary({ metrics, lang }: { metrics: PeriodMetrics; lang: Language }) {
   const label = periodName(metrics.period, lang);
   const profitTone = metrics.profit >= 0 ? 'text-positive' : 'text-problem';
-  const salesChange = metrics.salesChange;
-  const expensesChange = metrics.expensesChange;
 
   return (
     <section className="card p-4 min-w-0">
@@ -130,7 +83,6 @@ function PeriodSummary({ metrics, lang }: { metrics: PeriodMetrics; lang: Langua
             <p className="text-small text-text-secondary">{lang === 'hi' ? 'बिक्री' : 'Sales'}</p>
             <p className="text-lg font-bold text-positive leading-tight">{formatRupee(metrics.sales)}</p>
           </div>
-          <ChangeIndicator change={salesChange} lang={lang} kind="sales" />
         </div>
 
         <div className="flex items-center justify-between gap-3">
@@ -138,7 +90,6 @@ function PeriodSummary({ metrics, lang }: { metrics: PeriodMetrics; lang: Langua
             <p className="text-small text-text-secondary">{lang === 'hi' ? 'खर्च' : 'Expenses'}</p>
             <p className="text-lg font-bold text-problem leading-tight">{formatRupee(metrics.expenses)}</p>
           </div>
-          <ChangeIndicator change={expensesChange} lang={lang} kind="expenses" />
         </div>
 
         <div className="border-t border-border pt-3 flex items-end justify-between gap-3">
