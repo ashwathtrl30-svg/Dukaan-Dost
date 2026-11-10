@@ -52,6 +52,8 @@ jobs:
         run: npx --yes tsx --test src/insights/productSales.test.ts
       - name: Test dynamic business insights and udhaar alternatives
         run: npx --yes tsx --test src/insights/insightEngine.test.ts
+      - name: Test Insights dashboard date ranges
+        run: npx --yes tsx --test src/insights/analytics.test.ts
       - name: Test voice parser examples
         run: npx --yes tsx --test src/voice/voiceCommands.test.ts
       - name: Test product-aware voice quantity separation
