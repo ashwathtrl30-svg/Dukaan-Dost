@@ -109,7 +109,7 @@ test('a shop that uses udhaar sees an overdue-credit risk when a due date has pa
   assert.ok(risk);
 });
 
-test('Today comparisons use yesterday sales and expenses only up to the current local time', () => {
+test('Today performance insight reports concise recorded totals', () => {
   const sales = [
     sale('today', today, 150, 'Rice', 'cash', 10),
     sale('yesterday-morning', '2026-10-30', 100, 'Rice', 'cash', 9),
@@ -175,7 +175,7 @@ test('monthly product mix reports category revenue and unit-based product leader
   const mix = cards.find(card => card.period === 'month' && card.title === 'Product and category sales mix');
   assert.ok(mix);
   assert.match(mix.description, /Soap \(10\)/);
-  assert.match(mix.description, /Add sale categories/);
+  assert.match(mix.description, /Top sales category: Personal Care/);
   assert.match(mix.description, /Top by units/);
 });
 
