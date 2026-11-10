@@ -109,7 +109,7 @@ test('a shop that uses udhaar sees an overdue-credit risk when a due date has pa
   assert.ok(risk);
 });
 
-test('Today comparisons use yesterday sales and expenses only up to the current local time', () => {
+test('Today performance insight reports concise recorded totals', () => {
   const sales = [
     sale('today', today, 150, 'Rice', 'cash', 10),
     sale('yesterday-morning', '2026-10-30', 100, 'Rice', 'cash', 9),
@@ -123,7 +123,8 @@ test('Today comparisons use yesterday sales and expenses only up to the current 
   const cards = build(sales, expenses);
   const performance = cards.find(card => card.period === 'day' && card.title === "Today's sales and expense performance");
   assert.ok(performance);
-  assert.match(performance.description, /50% higher/);
+  assert.match(performance.description, /Sales ₹150/);
+  assert.match(performance.description, /Balance: ₹110/);
   assert.doesNotMatch(performance.description, /500/);
 });
 
@@ -138,8 +139,8 @@ test('bestseller ranking is based on units sold, not revenue', () => {
   const productInsight = cards.find(card => card.period === 'week' && card.title === 'Best-selling products by units sold');
   assert.ok(productInsight);
   assert.ok(productInsight.description.indexOf('Value Item') < productInsight.description.indexOf('Premium Item'));
-  assert.match(productInsight.description, /Value Item — 5 items\/packs/);
-  assert.match(productInsight.description, /Ranking is based on quantity sold, never revenue/);
+  assert.match(productInsight.description, /Value Item \(5\)/);
+  assert.match(productInsight.description, /Top by units/);
 });
 
 test('products without recorded quantities are not falsely ranked by revenue', () => {
@@ -150,7 +151,7 @@ test('products without recorded quantities are not falsely ranked by revenue', (
   const cards = build(sales);
   const productInsight = cards.find(card => card.period === 'week' && card.title === 'Best-selling products cannot be identified yet');
   assert.ok(productInsight);
-  assert.match(productInsight.description, /higher sale amount alone does not determine a bestseller/i);
+  assert.match(productInsight.description, /quantities are missing/i);
 });
 
 test('service businesses receive service-specific peak-hour and weekly performance wording', () => {
@@ -173,7 +174,50 @@ test('monthly product mix reports category revenue and unit-based product leader
   const cards = build(sales);
   const mix = cards.find(card => card.period === 'month' && card.title === 'Product and category sales mix');
   assert.ok(mix);
-  assert.match(mix.description, /Soap \(10 items\/packs\)/);
-  assert.match(mix.description, /largest recorded category is Personal Care/);
-  assert.match(mix.description, /highest number of units sold, not the highest revenue/);
+  assert.match(mix.description, /Soap \(10\)/);
+  assert.match(mix.description, /Top sales category: Personal Care/);
+  assert.match(mix.description, /Top by units/);
+});
+
+
+test('all ten insights stay within a quick 20-word reading limit in English and Hindi', () => {
+  for (const language of ['en', 'hi'] as const) {
+    const dashboard = getInsightsDashboard(sampleSales, [expense('e1', today, 50)], now);
+    const cards = buildBusinessInsights({
+      ...dashboard,
+      sales: sampleSales,
+      expenses: [expense('e1', today, 50)],
+      udhaar: [],
+      shopType: 'kirana',
+      udhaarLevel: 'never',
+      language,
+      now,
+    });
+
+    assert.equal(cards.length, 10);
+    cards.forEach(card => {
+      const words = card.description.trim().split(/\s+/u).length;
+      assert.ok(words <= 20, language + ' insight "' + card.title + '" has ' + words + ' words');
+    });
+  }
+});
+
+test('empty-data insights also stay within a quick 20-word reading limit', () => {
+  const dashboard = getInsightsDashboard([], [], now);
+  const cards = buildBusinessInsights({
+    ...dashboard,
+    sales: [],
+    expenses: [],
+    udhaar: [],
+    shopType: 'kirana',
+    udhaarLevel: 'never',
+    language: 'en',
+    now,
+  });
+
+  assert.equal(cards.length, 10);
+  cards.forEach(card => {
+    const words = card.description.trim().split(/\s+/u).length;
+    assert.ok(words <= 20, 'Insight "' + card.title + '" has ' + words + ' words');
+  });
 });
