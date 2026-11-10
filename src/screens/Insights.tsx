@@ -14,6 +14,13 @@ import { buildBusinessInsights, type BusinessInsight } from '../insights/insight
 import { getMyAdvice, type MyAdviceItem } from '../insights/myAdvice';
 
 type Language = 'en' | 'hi';
+function periodSummaryName(period: InsightsPeriod, lang: Language): string {
+  if (lang === 'hi') {
+    return period === 'day' ? 'आज' : period === 'week' ? 'इस हफ़्ते अब तक' : 'इस महीने अब तक';
+  }
+  return period === 'day' ? 'Today' : period === 'week' ? 'This week so far' : 'This month so far';
+}
+
 function periodName(period: InsightsPeriod, lang: Language): string {
   if (lang === 'hi') {
     return period === 'day' ? 'आज' : period === 'week' ? 'इस हफ़्ते' : 'इस महीने';
@@ -62,7 +69,7 @@ function MyAdviceSection({ items, lang }: { items: MyAdviceItem[]; lang: Languag
 }
 
 function PeriodSummary({ metrics, lang }: { metrics: PeriodMetrics; lang: Language }) {
-  const label = periodName(metrics.period, lang);
+  const label = periodSummaryName(metrics.period, lang);
   const profitTone = metrics.profit >= 0 ? 'text-positive' : 'text-problem';
 
   return (
@@ -221,8 +228,8 @@ export function InsightsScreen() {
           </div>
           <p className="text-[11px] text-text-secondary mt-3 leading-relaxed">
             {lang === 'hi'
-              ? 'सभी आँकड़े दर्ज एंट्री पर आधारित हैं। मुनाफ़ा = दर्ज बिक्री − दर्ज खर्च। तुलना पिछली समान अवधि से है।'
-              : 'Based on recorded entries only. Profit = recorded sales − recorded expenses. Changes compare equivalent elapsed periods.'}
+              ? 'सभी आँकड़े दर्ज एंट्री पर आधारित हैं। मुनाफ़ा = दर्ज बिक्री − दर्ज खर्च।'
+              : 'Based on recorded entries only. Profit = recorded sales − recorded expenses.'}
           </p>
         </section>
       </div>
