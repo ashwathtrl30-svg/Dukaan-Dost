@@ -196,7 +196,7 @@ test('all ten insights stay within a quick 20-word reading limit in English and 
 
     assert.equal(cards.length, 10);
     cards.forEach(card => {
-      const words = card.description.trim().split(/\\s+/u).length;
+      const words = card.description.trim().split(/\s+/u).length;
       assert.ok(words <= 20, language + ' insight "' + card.title + '" has ' + words + ' words');
     });
   }
@@ -217,7 +217,7 @@ test('empty-data insights also stay within a quick 20-word reading limit', () =>
 
   assert.equal(cards.length, 10);
   cards.forEach(card => {
-    const words = card.description.trim().split(/\\s+/u).length;
+    const words = card.description.trim().split(/\s+/u).length;
     assert.ok(words <= 20, 'Insight "' + card.title + '" has ' + words + ' words');
   });
 });
