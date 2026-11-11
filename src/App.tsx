@@ -413,18 +413,11 @@ function AppContent() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Top bar with profile icon and home voice entry */}
+      {/* Top bar with home voice entry beside the profile action */}
       <div className="flex items-start justify-end px-5 pt-3 pb-0 bg-bg">
         <div className="flex flex-col items-end gap-2">
-          <button
-            onClick={() => setShowProfile(true)}
-            className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center"
-            aria-label={lang === 'hi' ? 'प्रोफ़ाइल' : 'Profile'}
-          >
-            <User size={24} className="text-primary" />
-          </button>
-          {activeTab === 'home' && (
-            <>
+          <div className="flex items-center gap-2">
+            {activeTab === 'home' && (
               <VoiceMicButton
                 language={lang}
                 shape="circle"
@@ -436,21 +429,28 @@ function AppContent() {
                 onRecordingChange={setHomeVoiceListening}
                 onStatus={setHomeVoiceStatus}
               />
-              {homeVoiceStatus && (
-                <div className="max-w-[220px] text-right" role="status" aria-live="polite">
-                  <p className="text-xs leading-snug text-text-secondary break-words">{homeVoiceStatus}</p>
-                  {voiceUndoEntries.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={undoVoiceEntries}
-                      className="mt-1 text-xs font-semibold text-primary underline"
-                    >
-                      {lang === 'hi' ? 'वापस करें' : 'Undo'}
-                    </button>
-                  )}
-                </div>
+            )}
+            <button
+              onClick={() => setShowProfile(true)}
+              className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center"
+              aria-label={lang === 'hi' ? 'प्रोफ़ाइल' : 'Profile'}
+            >
+              <User size={24} className="text-primary" />
+            </button>
+          </div>
+          {activeTab === 'home' && homeVoiceStatus && (
+            <div className="max-w-[220px] text-right" role="status" aria-live="polite">
+              <p className="text-xs leading-snug text-text-secondary break-words">{homeVoiceStatus}</p>
+              {voiceUndoEntries.length > 0 && (
+                <button
+                  type="button"
+                  onClick={undoVoiceEntries}
+                  className="mt-1 text-xs font-semibold text-primary underline"
+                >
+                  {lang === 'hi' ? 'वापस करें' : 'Undo'}
+                </button>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
