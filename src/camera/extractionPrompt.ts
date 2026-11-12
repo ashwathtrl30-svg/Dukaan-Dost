@@ -42,6 +42,9 @@ FINAL AMOUNT RULES
    explain the ambiguity in reviewReasons.
 10. Amounts must be numeric INR values with no more than two decimal places.
     Example: ₹136.50 is 136.5.
+11. If you calculated a final amount from a per-unit rate rather than reading
+    a printed line total, set needsReview to true and explain that the shopkeeper
+    must verify the quantity, unit and calculation.
 
 QUANTITY RULES
 - Return the actual quantity and unit when clearly visible.
@@ -69,8 +72,8 @@ Return only JSON matching this shape. Do not add commentary or Markdown:
       "finalAmount": 170,
       "amountSource": "explicit_unit_rate_calculation",
       "confidence": "high",
-      "needsReview": false,
-      "reviewReasons": []
+      "needsReview": true,
+      "reviewReasons": ["Calculated from an explicit unit rate; verify the final amount."]
     }
   ]
 }
