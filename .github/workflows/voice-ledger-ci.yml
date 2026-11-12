@@ -6,6 +6,7 @@ on:
       - main
       - feat/voice-ledger-review-and-hindi-numbers
       - feat/shop-notebook-stage-2
+      - feat/camera-v1-extraction-readiness
   pull_request:
     branches:
       - main
