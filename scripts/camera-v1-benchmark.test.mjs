@@ -107,3 +107,31 @@ test('rejects malformed human ground-truth row indexes', () => {
   invalid.documents[0].items[1].rowIndex = 1;
   assert.throws(() => scoreRun(invalid, result(perfectItems)), /ascending reading order/);
 });
+
+test('reports document-type metrics separately and catches a weak category', () => {
+  const truth = structuredClone(groundTruth);
+  truth.documents.push({
+    documentId: 'H01',
+    documentType: 'handwritten_list',
+    language: 'en',
+    items: [
+      { rowIndex: 1, productName: 'Biscuit', quantity: 3, quantityUnit: 'piece', finalAmountPaise: 2000, needsReview: false },
+    ],
+  });
+  const run = result(perfectItems);
+  run.documents.push({
+    documentId: 'H01',
+    latencyMs: 900,
+    items: [
+      { productName: 'Biscut', quantity: 3, quantityUnit: 'piece', finalAmount: 20, needsReview: false },
+    ],
+  });
+  const scored = scoreRun(truth, run);
+  assert.equal(scored.byDocumentType.printed_invoice.summary.productNameAccuracy, 1);
+  assert.equal(scored.byDocumentType.handwritten_list.summary.productNameAccuracy, 0);
+  const gates = evaluateReleaseGates(scored);
+  assert.equal(
+    gates.checks.some(check => check.name === 'handwritten_list: product-name accuracy at least 90%' && !check.pass),
+    true,
+  );
+});
