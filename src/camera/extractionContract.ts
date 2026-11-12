@@ -109,7 +109,7 @@ function confidenceOf(value: unknown): CameraConfidence {
 }
 
 function comparableUnit(value: string): string {
-  const token = value.trim().toLowerCase().replace(/[\\s._-]+/g, '');
+  const token = value.trim().toLowerCase().replace(/[\s._-]+/g, '');
   const aliases: Record<string, string> = {
     kg: 'kg', kilogram: 'kg', kilograms: 'kg',
     g: 'g', gram: 'g', grams: 'g',
