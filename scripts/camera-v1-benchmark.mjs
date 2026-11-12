@@ -99,7 +99,7 @@ export function rupeesToPaise(value) {
 }
 
 function compareItem(expected, actual) {
-  if (!actual) return { name: false, quantity: false, unit: false, quantityUnit: false, amount: false, review: false, core: false, fully: false };
+  if (!actual) return { name: false, quantity: false, unit: false, quantityUnit: false, amount: false, review: false, core: false, fully: false, identityMatch: false };
   const name = normalizeText(expected.productName) === normalizeText(actual.productName);
   const quantity = numericEqual(expected.quantity ?? null, actual.quantity ?? null);
   const unit = normalizeUnit(expected.quantityUnit ?? null) === normalizeUnit(actual.quantityUnit ?? null);
@@ -108,7 +108,15 @@ function compareItem(expected, actual) {
   const amount = actualPaise !== '__invalid__' && actualPaise === (expected.finalAmountPaise ?? null);
   const review = typeof actual.needsReview === 'boolean' && actual.needsReview === expected.needsReview;
   const core = name && quantity && unit && amount;
-  return { name, quantity, unit, quantityUnit, amount, review, core, fully: core && review };
+  // A row is aligned only when there is at least one useful identity signal:
+  // exact product name, a non-null exact amount, or exact quantity plus unit.
+  // Otherwise a hallucinated row replacing a missing row is counted as both.
+  const amountIdentity = expected.finalAmountPaise !== null &&
+    expected.finalAmountPaise !== undefined && actualPaise === expected.finalAmountPaise;
+  const quantityUnitIdentity = expected.quantity !== null && expected.quantity !== undefined &&
+    expected.quantityUnit && quantity && unit;
+  const identityMatch = name || amountIdentity || quantityUnitIdentity;
+  return { name, quantity, unit, quantityUnit, amount, review, core, fully: core && review, identityMatch };
 }
 
 function makeCounters() {
@@ -129,37 +137,47 @@ function accumulateDocument(counter, expectedDoc, resultDoc) {
   const actualItems = resultDoc?.items ?? [];
   counter.expectedRows += expectedItems.length;
   counter.returnedRows += actualItems.length;
-  counter.alignedRows += Math.min(expectedItems.length, actualItems.length);
-  counter.omittedRows += Math.max(0, expectedItems.length - actualItems.length);
-  counter.extraRows += Math.max(0, actualItems.length - expectedItems.length);
 
   for (let i = 0; i < expectedItems.length; i += 1) {
     const expected = expectedItems[i];
     const actual = actualItems[i];
     const result = compareItem(expected, actual);
-    if (result.name) counter.nameCorrect += 1;
-    if (result.quantity) counter.quantityCorrect += 1;
-    if (result.unit) counter.unitCorrect += 1;
-    if (result.quantityUnit) counter.quantityUnitCorrect += 1;
-    if (result.amount) counter.amountCorrect += 1;
-    if (result.review) counter.reviewCorrect += 1;
-    if (result.fully) counter.fullyCorrectRows += 1;
+    const aligned = Boolean(actual && result.identityMatch);
+
+    if (aligned) {
+      counter.alignedRows += 1;
+      if (result.name) counter.nameCorrect += 1;
+      if (result.quantity) counter.quantityCorrect += 1;
+      if (result.unit) counter.unitCorrect += 1;
+      if (result.quantityUnit) counter.quantityUnitCorrect += 1;
+      if (result.amount) counter.amountCorrect += 1;
+      if (result.review) counter.reviewCorrect += 1;
+      if (result.fully) counter.fullyCorrectRows += 1;
+    } else {
+      counter.omittedRows += 1;
+      if (actual) counter.extraRows += 1;
+    }
 
     if (expected.needsReview) {
       counter.expectedReviewRows += 1;
-      if (actual?.needsReview === true) {
+      if (aligned && actual?.needsReview === true) {
         counter.expectedReviewFlagged += 1;
         counter.truePositiveReviewFlags += 1;
       }
-    } else if (actual?.needsReview === true) {
-      counter.falsePositiveReviewFlags += 1;
     }
-    if (actual?.needsReview === true) counter.predictedReviewFlags += 1;
-    if (actual?.needsReview === false && (expected.needsReview || !result.core)) counter.unsafeAcceptedRows += 1;
+
+    if (actual?.needsReview === true) {
+      counter.predictedReviewFlags += 1;
+      if (!aligned || !expected.needsReview) counter.falsePositiveReviewFlags += 1;
+    }
+    if (actual?.needsReview === false && (!aligned || expected.needsReview || !result.core)) {
+      counter.unsafeAcceptedRows += 1;
+    }
   }
 
   for (let i = expectedItems.length; i < actualItems.length; i += 1) {
     const actual = actualItems[i];
+    counter.extraRows += 1;
     if (actual?.needsReview === true) {
       counter.predictedReviewFlags += 1;
       counter.falsePositiveReviewFlags += 1;
