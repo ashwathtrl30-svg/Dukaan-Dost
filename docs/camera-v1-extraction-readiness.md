@@ -31,7 +31,7 @@ The saved amount is the final amount for one item row, not a unit rate.
 
 Rules:
 - Prefer a clearly printed final line total.
-- If only an explicit unit rate is present, calculate quantity × rate only when the rate unit and quantity unit match.
+- If only an explicit unit rate is present, calculate quantity × rate only when the rate unit and quantity unit match. The model returns this rate as internal verification evidence; it is not displayed as a separate price or saved in Sales.
 - Do not mistake the unit rate, taxable value, subtotal or invoice grand total for an item line amount.
 - Do not allocate invoice-level discounts or round-off across rows.
 - Preserve paise (two decimal places). Use integer paise for validation and arithmetic.
@@ -57,6 +57,7 @@ The implementation baseline lives in src/camera/extractionContract.ts. The model
 | quantityUnit | Unit string or null |
 | finalAmount | Final INR amount for the row, or null |
 | amountSource | printed_line_total, explicit_unit_rate_calculation or uncertain |
+| amountCalculation | Internal unit-rate evidence for arithmetic validation; null for printed totals |
 | confidence | high, medium or low |
 | needsReview | Model's review signal; application rules can override it |
 | reviewReasons | Human-readable reasons to inspect or correct the row |
