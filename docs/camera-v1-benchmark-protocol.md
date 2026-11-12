@@ -99,7 +99,8 @@ The scorer aligns output rows by source reading order. That is intentional: V1 s
 
 The current proposed gates are:
 - All expected documents returned; no duplicate or unexpected documents.
-- Row recall >= 98%.
+- Overall row recall >= 98%.
+- Within each document category, row recall, product-name accuracy, quantity+unit accuracy and final-amount accuracy must each be >= 90%.
 - Product-name accuracy >= 95%.
 - Quantity+unit accuracy >= 95%.
 - Final amount accuracy >= 98%.
