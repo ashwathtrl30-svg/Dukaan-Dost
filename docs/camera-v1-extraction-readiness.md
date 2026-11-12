@@ -35,6 +35,7 @@ Rules:
 - Do not mistake the unit rate, taxable value, subtotal or invoice grand total for an item line amount.
 - Do not allocate invoice-level discounts or round-off across rows.
 - Preserve paise (two decimal places). Use integer paise for validation and arithmetic.
+- Any amount calculated from a per-unit rate must be highlighted for human confirmation, even at high model confidence.
 - If the price basis is ambiguous or illegible, do not guess.
 
 ## 3. Quantity interpretation
@@ -122,6 +123,7 @@ Proposed pilot release gates:
 1. Every row accepted without review must have the correct product, quantity/unit where present, and exact final amount.
 2. Any uncertain, illegible, incomplete or low/medium-confidence row must be flagged.
 3. No subtotal, grand total, unit rate or invoice-level adjustment may be silently saved as an item amount.
+4. Every amount calculated from a per-unit rate must be highlighted for human confirmation.
 4. The 60+ row stress test must preserve all rows through validation and review.
 5. The chosen model's privacy terms, data-retention behaviour, rate limits and cost must be checked before real shopkeeper invoices are sent.
 
@@ -145,7 +147,7 @@ Before real customer images are processed:
 - [x] Add canonical response contract.
 - [x] Add model-independent extraction instructions.
 - [x] Add deterministic row validation and paise conversion.
-- [x] Add Node tests, including 65-row support and uncertainty handling.
+- [x] Add Node tests, including 65-row support, uncertainty handling and mandatory review of calculated amounts.
 - [ ] Prepare the 40-image permissioned/synthetic benchmark corpus.
 - [ ] Verify current Gemini API project/tier and data handling.
 - [ ] Benchmark at least two vision-model configurations.
