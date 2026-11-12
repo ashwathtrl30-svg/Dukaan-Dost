@@ -14,6 +14,7 @@ function item(overrides: Partial<CameraExtractedItem> = {}): CameraExtractedItem
     quantityUnit: 'kg',
     finalAmount: 170,
     amountSource: 'printed_line_total',
+    amountCalculation: null,
     confidence: 'high',
     needsReview: false,
     reviewReasons: [],
@@ -66,6 +67,7 @@ test('requires manual confirmation when the final amount was calculated from a u
       quantityUnit: 'kg',
       finalAmount: 170,
       amountSource: 'explicit_unit_rate_calculation',
+      amountCalculation: { unitRate: 85, rateUnit: 'kg' },
       confidence: 'high',
       needsReview: false,
     }),
@@ -76,6 +78,75 @@ test('requires manual confirmation when the final amount was calculated from a u
   assert.equal(result.items[0].finalAmount, 170);
   assert.equal(result.items[0].needsReview, true);
   assert.ok(result.items[0].reviewReasons.some(reason => reason.includes('calculated from a unit rate')));
+});
+
+test('independently validates a calculated amount against quantity and matching rate units', () => {
+  const matching = validateCameraExtraction(response([
+    item({
+      quantity: 2,
+      quantityUnit: 'kilograms',
+      finalAmount: 170,
+      amountSource: 'explicit_unit_rate_calculation',
+      amountCalculation: { unitRate: 85, rateUnit: 'kg' },
+    }),
+  ]));
+  assert.equal(matching.ok, true);
+  if (!matching.ok) return;
+
+  assert.equal(matching.items[0].needsReview, true);
+  assert.ok(!matching.items[0].reviewReasons.some(reason => reason.includes('does not match quantity multiplied')));
+});
+
+test('flags arithmetic disagreement instead of silently correcting the model amount', () => {
+  const result = validateCameraExtraction(response([
+    item({
+      quantity: 2,
+      quantityUnit: 'kg',
+      finalAmount: 170,
+      amountSource: 'explicit_unit_rate_calculation',
+      amountCalculation: { unitRate: 80, rateUnit: 'kg' },
+    }),
+  ]));
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+
+  assert.equal(result.items[0].finalAmount, 170);
+  assert.ok(result.items[0].needsReview);
+  assert.ok(result.items[0].reviewReasons.some(reason => reason.includes('does not match quantity multiplied')));
+});
+
+test('flags a calculated amount when its rate unit does not match the quantity unit', () => {
+  const result = validateCameraExtraction(response([
+    item({
+      quantity: 2,
+      quantityUnit: 'kg',
+      finalAmount: 170,
+      amountSource: 'explicit_unit_rate_calculation',
+      amountCalculation: { unitRate: 85, rateUnit: 'packet' },
+    }),
+  ]));
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+
+  assert.ok(result.items[0].needsReview);
+  assert.ok(result.items[0].reviewReasons.some(reason => reason.includes('basis does not match')));
+});
+
+test('flags calculated amounts when independent rate evidence is missing', () => {
+  const result = validateCameraExtraction(response([
+    item({
+      quantity: 2,
+      quantityUnit: 'kg',
+      finalAmount: 170,
+      amountSource: 'explicit_unit_rate_calculation',
+      amountCalculation: null,
+    }),
+  ]));
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+
+  assert.ok(result.items[0].needsReview);
+  assert.ok(result.items[0].reviewReasons.some(reason => reason.includes('cannot be independently checked')));
 });
 
 test('flags a unit rate or line total ambiguity instead of accepting the amount', () => {
