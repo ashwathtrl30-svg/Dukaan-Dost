@@ -134,6 +134,8 @@ These gates intentionally prioritise trust over auto-acceptance. Review may be r
 
 Before real customer images are processed:
 - Verify the exact API project/tier and applicable data-use terms; do not infer the tier from the key's existence.
+
+Provider-specific finding checked on 12 November 2026: Google's Gemini Developer API pricing page marks Free-tier submitted content as used to improve Google products, while Paid-tier submitted content is marked as not used for product improvement. This does not reveal which tier Dukaan Dost's existing key belongs to. Until the exact project's tier and current terms are verified, use only synthetic or appropriately anonymised/permissioned samples; do not send real shopkeeper invoices containing customer information through an unverified free-tier project. Reference: https://ai.google.dev/gemini-api/docs/pricing
 - Do not send unredacted customer data to a provider tier whose terms allow submitted content to be used for product improvement.
 - Show a clear disclosure before image upload, naming the external provider and purpose.
 - Authenticate the shop session on the server-side extraction endpoint.
