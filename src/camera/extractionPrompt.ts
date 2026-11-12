@@ -27,10 +27,14 @@ FINAL AMOUNT RULES
 2. If the row clearly prints a final line total, use that amount. When a final
    line total includes line-level tax, use the tax-inclusive line total.
 3. If a row shows an explicit per-unit rate and a clear matching quantity,
-   calculate quantity multiplied by that rate only when the units match and
-   there is no conflicting printed line total.
-4. Example: "2 kg Rice @ ₹85/kg" means finalAmount 170.
-5. Example: "5 soap packets @ ₹20 each" means finalAmount 100.
+   calculate quantity multiplied by that rate only when the rate denominator
+   and quantity unit match and there is no conflicting printed line total.
+   Return rateUnit in the same unit as quantityUnit. Do not invent a unit
+   conversion when those bases differ; set the amount to null and require review.
+4. Example: "2 kg Rice @ ₹85/kg" means finalAmount 170, with
+   amountCalculation { unitRate: 85, rateUnit: "kg" }.
+5. Example: "5 soap packets @ ₹20 each" means finalAmount 100, with
+   quantityUnit "packet" and amountCalculation { unitRate: 20, rateUnit: "packet" }.
 6. Example: "Aashirvaad Atta 5 kg, 1 packet, taxable ₹240, GST ₹12, total ₹252"
    means finalAmount 252.
 7. Do not treat a unit rate, taxable value, subtotal or invoice grand total as
