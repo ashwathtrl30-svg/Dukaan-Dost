@@ -240,6 +240,7 @@ export function scoreRun(groundTruth, run) {
   }
 
   const counter = makeCounters();
+  const categoryCounters = new Map();
   counter.documentsExpected = groundTruth.documents.length;
   counter.documentsReturned = resultsById.size;
   counter.documentsMissing = [...expectedById.keys()].filter(id => !resultsById.has(id)).length;
@@ -249,7 +250,16 @@ export function scoreRun(groundTruth, run) {
   const detail = [];
   for (const expectedDoc of groundTruth.documents) {
     const resultDoc = resultsById.get(expectedDoc.documentId) ?? null;
+    const category = expectedDoc.documentType ?? 'unspecified';
+    if (!categoryCounters.has(category)) categoryCounters.set(category, makeCounters());
+    const categoryCounter = categoryCounters.get(category);
+    categoryCounter.documentsExpected += 1;
+    if (resultDoc) categoryCounter.documentsReturned += 1;
+    else categoryCounter.documentsMissing += 1;
+    if (duplicateIds.has(expectedDoc.documentId)) categoryCounter.duplicateResultDocuments += 1;
+
     accumulateDocument(counter, expectedDoc, resultDoc);
+    accumulateDocument(categoryCounter, expectedDoc, resultDoc);
     if (resultDoc && Number.isFinite(resultDoc.latencyMs) && resultDoc.latencyMs >= 0) {
       counter.latencyTotalMs += resultDoc.latencyMs;
       counter.latencyCount += 1;
@@ -260,12 +270,16 @@ export function scoreRun(groundTruth, run) {
     }
     detail.push({
       documentId: expectedDoc.documentId,
-      documentType: expectedDoc.documentType ?? 'unspecified',
+      documentType: category,
       expectedRows: expectedDoc.items.length,
       returnedRows: resultDoc?.items.length ?? 0,
       missingDocument: !resultDoc,
     });
   }
+
+  const byDocumentType = Object.fromEntries(
+    [...categoryCounters.entries()].map(([type, counts]) => [type, { summary: summarise(counts) }]),
+  );
 
   return {
     provider: run.provider,
@@ -273,6 +287,7 @@ export function scoreRun(groundTruth, run) {
     configuration: run.configuration ?? null,
     runId: run.runId ?? null,
     summary: summarise(counter),
+    byDocumentType,
     documents: detail,
     duplicateDocumentIds: [...duplicateIds],
   };
@@ -292,6 +307,19 @@ export function evaluateReleaseGates(score) {
     { name: 'no unsafe accepted rows', pass: s.unsafeAcceptedRows === 0 },
     { name: 'all expected uncertain rows flagged', pass: s.reviewFlagRecall === 1 },
   ];
+
+  for (const [type, category] of Object.entries(score.byDocumentType ?? {})) {
+    const group = category.summary;
+    if (group.rowsExpected === 0) continue;
+    checks.push(
+      { name: type + ': row recall at least 90%', pass: group.rowRecall !== null && group.rowRecall >= 0.9 },
+      { name: type + ': quantity-and-unit accuracy at least 90%', pass: group.quantityUnitAccuracy !== null && group.quantityUnitAccuracy >= 0.9 },
+      { name: type + ': final-amount accuracy at least 90%', pass: group.finalAmountAccuracy !== null && group.finalAmountAccuracy >= 0.9 },
+      { name: type + ': no unsafe accepted rows', pass: group.unsafeAcceptedRows === 0 },
+      { name: type + ': all expected uncertain rows flagged', pass: group.reviewFlagRecall === 1 },
+    );
+  }
+
   return { passed: checks.every(check => check.pass), checks };
 }
 
