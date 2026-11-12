@@ -313,6 +313,7 @@ export function evaluateReleaseGates(score) {
     if (group.rowsExpected === 0) continue;
     checks.push(
       { name: type + ': row recall at least 90%', pass: group.rowRecall !== null && group.rowRecall >= 0.9 },
+      { name: type + ': product-name accuracy at least 90%', pass: group.productNameAccuracy !== null && group.productNameAccuracy >= 0.9 },
       { name: type + ': quantity-and-unit accuracy at least 90%', pass: group.quantityUnitAccuracy !== null && group.quantityUnitAccuracy >= 0.9 },
       { name: type + ': final-amount accuracy at least 90%', pass: group.finalAmountAccuracy !== null && group.finalAmountAccuracy >= 0.9 },
       { name: type + ': no unsafe accepted rows', pass: group.unsafeAcceptedRows === 0 },
