@@ -13,7 +13,7 @@ function item(overrides: Partial<CameraExtractedItem> = {}): CameraExtractedItem
     quantity: 2,
     quantityUnit: 'kg',
     finalAmount: 170,
-    amountSource: 'explicit_unit_rate_calculation',
+    amountSource: 'printed_line_total',
     confidence: 'high',
     needsReview: false,
     reviewReasons: [],
@@ -57,6 +57,25 @@ test('rejects non-positive, unsafe and over-precision monetary values', () => {
   assert.equal(rupeesToPaise(Number.NaN), null);
   assert.equal(rupeesToPaise(10.001), null);
   assert.equal(rupeesToPaise(Number.MAX_VALUE), null);
+});
+
+test('requires manual confirmation when the final amount was calculated from a unit rate', () => {
+  const result = validateCameraExtraction(response([
+    item({
+      quantity: 2,
+      quantityUnit: 'kg',
+      finalAmount: 170,
+      amountSource: 'explicit_unit_rate_calculation',
+      confidence: 'high',
+      needsReview: false,
+    }),
+  ]));
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+
+  assert.equal(result.items[0].finalAmount, 170);
+  assert.equal(result.items[0].needsReview, true);
+  assert.ok(result.items[0].reviewReasons.some(reason => reason.includes('calculated from a unit rate')));
 });
 
 test('flags a unit rate or line total ambiguity instead of accepting the amount', () => {
