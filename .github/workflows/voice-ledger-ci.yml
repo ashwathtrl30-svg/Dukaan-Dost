@@ -50,6 +50,8 @@ jobs:
         run: npx --yes tsx --test src/insights/myAdvice.test.ts
       - name: Test product identity and pack-size aggregation
         run: npx --yes tsx --test src/insights/productSales.test.ts
+      - name: Test Camera V1 extraction contract and row validation
+        run: npx --yes tsx --test src/camera/extractionContract.test.ts
       - name: Test dynamic business insights and udhaar alternatives
         run: npx --yes tsx --test src/insights/insightEngine.test.ts
       - name: Test Insights dashboard date ranges
