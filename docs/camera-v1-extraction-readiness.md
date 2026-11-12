@@ -61,7 +61,7 @@ The implementation baseline lives in src/camera/extractionContract.ts. The model
 | needsReview | Model's review signal; application rules can override it |
 | reviewReasons | Human-readable reasons to inspect or correct the row |
 
-The application adds sourceIndex and finalAmountPaise during validation. Those are not model-generated fields and are not persisted sale fields.
+The model also returns amountCalculation as ephemeral evidence only when a final amount is calculated from an explicit unit rate. The application independently recomputes quantity × rate in paise, checks that the rate unit matches the quantity unit, and flags any mismatch. This evidence is not shown as a separate price field and is not persisted in SaleEntry. The application adds sourceIndex and finalAmountPaise during validation; those are also not model-generated fields and are not persisted sale fields.
 
 Every uncertain or incomplete row must stay visible in the review list. A malformed individual row is converted into an editable placeholder with mandatory review rather than being silently dropped. An invalid top-level response blocks review and saving.
 
@@ -147,7 +147,7 @@ Before real customer images are processed:
 - [x] Add canonical response contract.
 - [x] Add model-independent extraction instructions.
 - [x] Add deterministic row validation and paise conversion.
-- [x] Add Node tests, including 65-row support, uncertainty handling and mandatory review of calculated amounts.
+- [x] Add Node tests, including 65-row support, uncertainty handling, calculated-amount arithmetic validation and mandatory review of calculated amounts.
 - [ ] Prepare the 40-image permissioned/synthetic benchmark corpus.
 - [ ] Verify current Gemini API project/tier and data handling.
 - [ ] Benchmark at least two vision-model configurations.
