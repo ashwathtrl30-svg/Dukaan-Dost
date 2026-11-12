@@ -12,6 +12,15 @@ export type CameraAmountSource =
 
 export type CameraConfidence = 'high' | 'medium' | 'low';
 
+/**
+ * Ephemeral evidence used only to independently verify a calculated line amount.
+ * It is not shown as a separate price field and is never mapped to SaleEntry.
+ */
+export interface CameraAmountCalculation {
+  unitRate: number;
+  rateUnit: string;
+}
+
 /** Canonical V1 response requested from the vision model. */
 export interface CameraExtractedItem {
   productName: string;
@@ -20,6 +29,8 @@ export interface CameraExtractedItem {
   /** Final amount for this line in INR, never a unit price. */
   finalAmount: number | null;
   amountSource: CameraAmountSource;
+  /** Required as null or evidence metadata; not a user-facing Sales field. */
+  amountCalculation: CameraAmountCalculation | null;
   confidence: CameraConfidence;
   needsReview: boolean;
   reviewReasons: string[];
@@ -95,6 +106,21 @@ function confidenceOf(value: unknown): CameraConfidence {
   return value === 'high' || value === 'medium' || value === 'low'
     ? value
     : 'low';
+}
+
+function comparableUnit(value: string): string {
+  const token = value.trim().toLowerCase().replace(/[\\s._-]+/g, '');
+  const aliases: Record<string, string> = {
+    kg: 'kg', kilogram: 'kg', kilograms: 'kg',
+    g: 'g', gram: 'g', grams: 'g',
+    l: 'l', litre: 'l', litres: 'l', liter: 'l', liters: 'l',
+    ml: 'ml', millilitre: 'ml', millilitres: 'ml',
+    milliliter: 'ml', milliliters: 'ml',
+    piece: 'piece', pieces: 'piece', pc: 'piece', pcs: 'piece',
+    unit: 'piece', units: 'piece', each: 'piece',
+    packet: 'packet', packets: 'packet', pack: 'packet', packs: 'packet',
+  };
+  return aliases[token] ?? token;
 }
 
 function amountSourceOf(value: unknown): CameraAmountSource {
@@ -228,13 +254,42 @@ export function validateCameraExtraction(
     }
 
     const amountSource = amountSourceOf(row.amountSource);
+    let amountCalculation: CameraAmountCalculation | null = null;
+    let amountCalculationRatePaise: number | null = null;
+    if (isRecord(row.amountCalculation)) {
+      const rateUnit = boundedText(row.amountCalculation.rateUnit, MAX_UNIT_LENGTH);
+      const ratePaise = typeof row.amountCalculation.unitRate === 'number'
+        ? rupeesToPaise(row.amountCalculation.unitRate)
+        : null;
+      if (rateUnit && ratePaise !== null) {
+        amountCalculation = {
+          unitRate: ratePaise / 100,
+          rateUnit,
+        };
+        amountCalculationRatePaise = ratePaise;
+      } else {
+        reasons.push('The unit-rate evidence is invalid; verify the calculated amount.');
+      }
+    }
+
     if (amountSource === 'uncertain') {
       reasons.push('It is unclear whether the visible price is a line total or a unit rate.');
-    } else if (
-      amountSource === 'explicit_unit_rate_calculation' &&
-      finalAmount !== null
-    ) {
+    } else if (amountSource === 'explicit_unit_rate_calculation') {
       reasons.push('The final amount was calculated from a unit rate; verify the quantity, unit and result.');
+      if (!amountCalculation || amountCalculationRatePaise === null) {
+        reasons.push('The unit rate and its unit were not provided, so the calculation cannot be independently checked.');
+      } else if (quantity === null || !quantityUnit) {
+        reasons.push('The quantity or quantity unit is missing, so the calculation cannot be independently checked.');
+      } else if (comparableUnit(quantityUnit) !== comparableUnit(amountCalculation.rateUnit)) {
+        reasons.push('The unit-rate basis does not match the sale quantity unit; verify the amount.');
+      } else if (finalAmountPaise !== null) {
+        const calculatedPaise = Math.round(quantity * amountCalculationRatePaise);
+        if (!Number.isSafeInteger(calculatedPaise) || calculatedPaise <= 0) {
+          reasons.push('The unit-rate calculation is outside the supported amount range.');
+        } else if (calculatedPaise !== finalAmountPaise) {
+          reasons.push('The extracted final amount does not match quantity multiplied by the stated unit rate.');
+        }
+      }
     }
 
     if (row.needsReview === true && reasons.length === 0) {
@@ -258,6 +313,7 @@ export function validateCameraExtraction(
       finalAmount,
       finalAmountPaise,
       amountSource,
+      amountCalculation,
       confidence,
       needsReview,
       reviewReasons,
