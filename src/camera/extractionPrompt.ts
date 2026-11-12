@@ -45,6 +45,10 @@ FINAL AMOUNT RULES
 11. If you calculated a final amount from a per-unit rate rather than reading
     a printed line total, set needsReview to true and explain that the shopkeeper
     must verify the quantity, unit and calculation.
+12. For any calculated amount, also return amountCalculation with the explicit
+    unitRate in INR and rateUnit used for the multiplication. This is hidden
+    validation evidence, not a user-facing field. Use null for a printed line
+    total or when the rate evidence is not explicit.
 
 QUANTITY RULES
 - Return the actual quantity and unit when clearly visible.
@@ -71,6 +75,7 @@ Return only JSON matching this shape. Do not add commentary or Markdown:
       "quantityUnit": "kg",
       "finalAmount": 170,
       "amountSource": "explicit_unit_rate_calculation",
+      "amountCalculation": { "unitRate": 85, "rateUnit": "kg" },
       "confidence": "high",
       "needsReview": true,
       "reviewReasons": ["Calculated from an explicit unit rate; verify the final amount."]
