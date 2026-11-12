@@ -230,6 +230,11 @@ export function validateCameraExtraction(
     const amountSource = amountSourceOf(row.amountSource);
     if (amountSource === 'uncertain') {
       reasons.push('It is unclear whether the visible price is a line total or a unit rate.');
+    } else if (
+      amountSource === 'explicit_unit_rate_calculation' &&
+      finalAmount !== null
+    ) {
+      reasons.push('The final amount was calculated from a unit rate; verify the quantity, unit and result.');
     }
 
     if (row.needsReview === true && reasons.length === 0) {
