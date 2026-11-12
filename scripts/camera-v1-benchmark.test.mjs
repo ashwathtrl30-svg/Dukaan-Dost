@@ -49,7 +49,7 @@ test('does not round a prediction with more than two meaningful decimals', () =>
   const items = perfectItems.map(item => ({ ...item }));
   items[0].finalAmount = 170.001;
   const scored = scoreRun(groundTruth, result(items));
-  assert.equal(scored.summary.finalAmountAccuracy, 2 / 3);
+  assert.equal(scored.summary.finalAmountAccuracy, 0.666667);
   assert.equal(scored.summary.unsafeAcceptedRows, 1);
 });
 
@@ -60,7 +60,7 @@ test('counts omitted and extra rows without hiding them in field accuracy', () =
   ]));
   assert.equal(scored.summary.omittedRows, 1);
   assert.equal(scored.summary.extraRows, 1);
-  assert.equal(scored.summary.rowRecall, 2 / 3);
+  assert.equal(scored.summary.rowRecall, 0.666667);
   assert.equal(scored.summary.unsafeAcceptedRows, 0);
 });
 
