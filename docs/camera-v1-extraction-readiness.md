@@ -124,8 +124,8 @@ Proposed pilot release gates:
 2. Any uncertain, illegible, incomplete or low/medium-confidence row must be flagged.
 3. No subtotal, grand total, unit rate or invoice-level adjustment may be silently saved as an item amount.
 4. Every amount calculated from a per-unit rate must be highlighted for human confirmation.
-4. The 60+ row stress test must preserve all rows through validation and review.
-5. The chosen model's privacy terms, data-retention behaviour, rate limits and cost must be checked before real shopkeeper invoices are sent.
+5. The 60+ row stress test must preserve all rows through validation and review.
+6. The chosen model's privacy terms, data-retention behaviour, rate limits and cost must be checked before real shopkeeper invoices are sent.
 
 These gates intentionally prioritise trust over auto-acceptance. Review may be required for many rows in the first release.
 
