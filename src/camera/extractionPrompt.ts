@@ -53,6 +53,10 @@ FINAL AMOUNT RULES
     unitRate in INR and rateUnit used for the multiplication. This is hidden
     validation evidence, not a user-facing field. Use null for a printed line
     total or when the rate evidence is not explicit.
+13. unitRate must be numeric INR with no more than two decimal places. If the
+    printed rate has more precision or cannot be matched reliably to the
+    quantity unit, do not invent a rounded rate; return finalAmount null and
+    require review.
 
 QUANTITY RULES
 - Return the actual quantity and unit when clearly visible.
