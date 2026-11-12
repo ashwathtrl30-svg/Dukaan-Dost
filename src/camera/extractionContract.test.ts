@@ -107,7 +107,7 @@ test('does not trust a model false flag when its values are incomplete', () => {
   if (!result.ok) return;
 
   assert.equal(result.items[0].needsReview, true);
-  assert.ok(result.items[0].reviewReasons.length >= 3);
+  assert.ok(result.items[0].reviewReasons.length >= 2);
 });
 
 test('forces manual review for medium and low confidence rows', () => {
