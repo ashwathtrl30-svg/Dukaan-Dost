@@ -6,10 +6,12 @@ on:
       - main
       - feat/voice-ledger-review-and-hindi-numbers
       - feat/shop-notebook-stage-2
+      - feat/camera-v1-benchmark-readiness
   pull_request:
     branches:
       - main
       - feat/voice-ledger-review-and-hindi-numbers
+      - feat/camera-v1-extraction-readiness
 
 jobs:
   build-and-parser-tests:
@@ -25,6 +27,8 @@ jobs:
         run: npm ci
       - name: Build production bundle
         run: npm run build
+      - name: Test offline Camera V1 benchmark scorer
+        run: npm run test:camera-benchmark
       - name: Validate protected availability endpoint
         run: |
           node --check api/supabase-keepalive.js
