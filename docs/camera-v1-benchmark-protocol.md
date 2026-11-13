@@ -1,111 +1,53 @@
 # Camera V1 — Offline benchmark protocol
 
-## Purpose
+## Synthetic corpus
 
-Compare eligible image-understanding configurations on the same permissioned/synthetic Indian shop-document corpus. The benchmark is a screening exercise, not proof of production reliability.
+The repository includes scripts/generate-camera-v1-corpus.py. Install Pillow, then run:
 
-## Privacy and handling rules
+    python -m pip install -r requirements-camera-benchmark.txt
+    python scripts/generate-camera-v1-corpus.py
+    python scripts/generate-camera-v1-corpus.py --verify
+    npm run test:camera-corpus
 
-- Store image files outside the Git repository and outside public links.
-- Use synthetic documents wherever possible. Otherwise obtain explicit permission and anonymise/crop unrelated personal data before any permitted provider submission.
-- Never commit real customer invoices, names, phone numbers, addresses, GSTINs, account numbers or other personal data.
-- Do not use any external model until provider eligibility, account ownership, tier, data-use terms and retention settings have been confirmed by an authorised adult project operator.
-- The scoring script never reads images or makes network requests. It only reads JSON ground truth and JSON model-result exports.
+Default output is private-benchmark/camera-v1-synthetic-corpus/. It contains 40 PNG documents, manifest.csv and ground-truth.json. The generated data is ignored by Git and is not uploaded to an external service by the generator.
 
-## Corpus composition
-
-Use 40 documents:
+Composition:
 - P01–P10: printed invoices.
-- H01–H10: handwritten sales lists.
-- L01–L10: Hindi/Hinglish/mixed language and Devanagari numerals.
-- D01–D10: difficult, dense or ambiguous documents.
+- H01–H10: handwriting-style italic typeface examples. These are simulated and are not genuine handwriting.
+- L01–L10: typeset Hindi/Devanagari and mixed-language examples.
+- D01–D10: difficult examples, including price-basis ambiguity, missing quantity, overwritten amount, discount/totals, decimal paise, explicit rate calculation and D10 with 65 rows.
 
-docs/camera-v1-test-corpus-template.csv is a document-level manifest. The actual image paths and hashes remain local. Do not put the images in this repository.
+There are 263 labelled item rows. Synthetic results are not production evidence. Add permissioned real handwriting from consenting shopkeepers before drawing conclusions about real-world handwriting performance.
 
-## Human ground truth
+## Ground truth and image integrity
 
-Use docs/camera-v1-benchmark-ground-truth.template.json as the starting point. For each document:
-- documentId must match the manifest.
-- imageSha256 identifies the exact local image used by every model run.
-- items must contain every genuine sale row in the document, in visual reading order.
-- rowIndex values must be positive and strictly increasing.
-- finalAmountPaise is an integer in paise, or null where the final row amount is genuinely unknown/ambiguous.
-- needsReview must be true whenever a reasonable shopkeeper should verify an unreadable, incomplete or ambiguous value.
+Each generated document has documentId, documentType, language, imageSha256 and its complete row-level items. Each item has rowIndex, productName, quantity, quantityUnit, finalAmountPaise, needsReview and a note for the expected interpretation.
 
-Two people should independently label difficult/ambiguous rows where practical, then reconcile disagreements before the dataset is used.
+The manifest maps each ID to its PNG and matching SHA-256. The generator's --verify option checks all image hashes, document counts and manifest mappings.
+
+## Provider and privacy gates
+
+Do not use an external model until provider eligibility, account ownership, project tier, current data-use terms and retention settings have been confirmed by an authorised project operator. The synthetic corpus is safe for local development but does not override any provider's access terms. Do not use real shopkeeper invoices in an unverified provider project.
 
 ## Model result export
 
 Use docs/camera-v1-benchmark-results.template.json. Export one result file per exact model/configuration. Required top-level fields:
 - schemaVersion: 1
 - provider: provider name
-- model: exact model ID, not a marketing family name
-- configuration: prompt/version, image detail/resolution and generation settings
+- model: exact model ID
+- configuration: prompt version, image detail/resolution and generation settings
 - documents: one object for each submitted document
 
-Each result document contains:
-- documentId
-- items, in the same reading order as the source
-- latencyMs, if measured
-- estimatedCostUsd, if measurable from the provider's usage response and current published price
+Each result document contains documentId, items in source reading order, latencyMs if measured, and estimatedCostUsd if measurable from the provider usage response and current published pricing. Each item includes productName, quantity, quantityUnit, finalAmount in INR and needsReview.
 
-Each item uses the Camera V1 canonical fields relevant to scoring:
-- productName
-- quantity (number or null)
-- quantityUnit (string or null)
-- finalAmount (INR number or null)
-- needsReview (boolean)
+Do not invent token usage or cost values. Leave optional measurements absent when unavailable.
 
-Do not invent token usage or cost figures. Leave optional values absent when unavailable. Model confidence is not treated as proof of correctness.
+## Scoring
 
-## Run the scorer
+Run the offline scorer against the generated ground truth:
 
-With Node.js 22 or later:
+    npm run camera:benchmark -- --ground-truth ./private-benchmark/camera-v1-synthetic-corpus/ground-truth.json --results ./private-benchmark/model-a.json --results ./private-benchmark/model-b.json --strict
 
-    npm run test:camera-benchmark
+The scorer reports product names, quantities, units, exact paise amounts, row recall/precision, omissions, extra predictions, review flags, unsafe accepted rows, latency and supplied costs. It reports each document category separately so strong printed performance cannot hide weak simulated-handwriting or Devanagari performance.
 
-Score one run:
-
-    npm run camera:benchmark -- --ground-truth ./private-benchmark/ground-truth.json --results ./private-benchmark/gemini-run.json --out ./private-benchmark/gemini-report.json
-
-Compare two eligible model runs in one report:
-
-    npm run camera:benchmark -- --ground-truth ./private-benchmark/ground-truth.json --results ./private-benchmark/model-a.json --results ./private-benchmark/model-b.json --out ./private-benchmark/comparison.json
-
-Apply the screening gates and return a failing process code when a gate is missed:
-
-    npm run camera:benchmark -- --ground-truth ./private-benchmark/ground-truth.json --results ./private-benchmark/model-a.json --results ./private-benchmark/model-b.json --strict
-
-Keep ground-truth and result files in a private local directory. Do not commit them when they contain private image paths, private notes or business data.
-
-## Metrics
-
-- rowRecall: returned rows aligned to expected source rows / expected rows.
-- rowPrecision: aligned rows / all returned rows.
-- productNameAccuracy: exact normalized product-name matches / expected rows.
-- quantityAccuracy: exact quantity matches / expected rows.
-- unitAccuracy: normalized unit matches / expected rows.
-- quantityUnitAccuracy: quantity and unit both match / expected rows.
-- finalAmountAccuracy: exact integer-paise match / expected rows. Null must match null.
-- reviewFlagRecall: proportion of expected-review rows correctly flagged by the model.
-- fullyCorrectRowAccuracy: product, quantity, unit, amount and review decision all exact / expected rows.
-- unsafeAcceptedRows: rows marked as not needing review despite an expected review requirement or an incorrect core field. Extra unreviewed rows also count as unsafe.
-- omittedRows and extraRows: row-count mismatches.
-- averageLatencyMs, totalEstimatedCostUsd, averageEstimatedCostUsd: reported only from supplied measurements.
-
-The scorer aligns output rows by source reading order. That is intentional: V1 should preserve row order so omissions and row shifts are visible. If a provider reorders rows, the benchmark should not silently hide that defect by matching on amounts or names.
-
-## Screening gates
-
-The current proposed gates are:
-- All expected documents returned; no duplicate or unexpected documents.
-- Overall row recall >= 98%.
-- Within each document category, row recall, product-name accuracy, quantity+unit accuracy and final-amount accuracy must each be >= 90%.
-- Product-name accuracy >= 95%.
-- Quantity+unit accuracy >= 95%.
-- Final amount accuracy >= 98%.
-- Fully correct row accuracy >= 95%.
-- No unsafe accepted rows.
-- All expected ambiguous/uncertain rows flagged for review.
-
-These are screening targets, not measured results or guarantees. Report each document type separately during human review; a high aggregate score must not hide poor handwriting or Hindi/Hinglish performance. Any dangerous error pattern blocks release regardless of the aggregate score.
+Proposed screening gates include at least 98% overall row recall and final-amount accuracy, at least 95% overall name, quantity/unit and fully-correct-row accuracy, at least 90% performance for each key metric in each category, no unsafe accepted rows and all expected uncertain rows flagged. These are screening targets, not measured results or production guarantees. A synthetic-only pass does not approve production release.
