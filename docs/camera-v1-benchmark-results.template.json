@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "provider": "provider-name",
+  "model": "exact-model-id",
+  "configuration": "prompt-version; image-detail; output-settings",
+  "runId": "local-run-identifier",
+  "documents": []
+}
