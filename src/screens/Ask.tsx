@@ -6,6 +6,7 @@ import { aggregateProductSales } from '../insights/productSales';
 import { Send, MoreVertical, Plus, ArrowLeft, Trash2, MessageCircle, Clock, Volume2, Square } from 'lucide-react';
 import { findKnowledgeEntry } from '../knowledgeBase';
 import { VoiceMicButton } from '../components/VoiceMicButton';
+import { buildVoiceVocabulary } from '../voice/voiceVocabulary';
 import { detectVoiceLanguage, speakText } from '../voice/speech';
 import { getFestivalDateLabel, getFestivalName, getFestivalShopAdvice, getUpcomingFestivals } from '../festivals';
 
@@ -1223,6 +1224,10 @@ export function AskScreen() {
           />
           <VoiceMicButton
             language={lang}
+            customVocabulary={buildVoiceVocabulary(
+              state.shopProfile.shopType,
+              state.sales.map(sale => sale.itemName || ''),
+            )}
             shape="rounded"
             disabled={isSending}
             label={voiceListening
