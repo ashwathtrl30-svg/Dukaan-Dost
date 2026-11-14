@@ -365,7 +365,7 @@ export function VoiceMicButton({
             : 'Recording limit reached. Preparing the transcript…');
           stopRecording(true);
         }
-      }, 90_000);
+      }, 60_000);
     } catch {
       stream.getTracks().forEach(track => track.stop());
       mediaRecorderRef.current = null;
