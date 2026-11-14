@@ -314,7 +314,7 @@ export function HomeScreen() {
                             : (entry.customerName || (lang === 'hi' ? 'ग्राहक' : 'Customer'))}
                       </p>
                       <p className="text-small text-text-secondary">
-                        {entry.entryType === 'sale' ? formatSaleDetails(entry, lang, state.shopProfile.shopType) + (formatSaleDetails(entry, lang) ? ' · ' : '') : ''}
+                        {entry.entryType === 'sale' ? formatSaleDetails(entry, lang, state.shopProfile.shopType) + (formatSaleDetails(entry, lang, state.shopProfile.shopType) ? ' · ' : '') : ''}
                         {entry.entryType === 'expense'
                           ? `${t(`ec_${entry.category || 'other'}` as any, lang)} · `
                           : ''}
@@ -469,7 +469,7 @@ function AllEntriesModal({ onClose }: { onClose: () => void }) {
       return entry.customerName || (lang === 'hi' ? 'ग्राहक का नाम नहीं' : 'Customer name not provided');
     }
     if (entry.entryType === 'sale') {
-      return formatSaleDetails(entry, lang) || (lang === 'hi' ? 'बिक्री' : 'Sale entry');
+      return formatSaleDetails(entry, lang, state.shopProfile.shopType) || (lang === 'hi' ? 'बिक्री' : 'Sale entry');
     }
     if (entry.note?.trim()) return entry.note.trim();
     return lang === 'hi' ? 'खर्च' : 'Expense entry';
