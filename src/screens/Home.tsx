@@ -2,9 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { useStore, formatRupee, getTodaySales, getTodayExpenses, getLast7DaysData, getWeekSales, getTotalUdhaar, generateId, getToday } from '../store';
 import { t } from '../i18n';
 import { NotebookScreen } from './NotebookScreen';
+import { CameraImportModal, type CameraSaleDraft } from '../camera/CameraImportModal';
 import { SaleEntry, ExpenseEntry, UdhaarEntry, PaymentType } from '../types';
 import { parseSaleQuantityInput, isValidSaleQuantity, formatSaleQuantityInput, getSaleItemCountFromQuantity, getSaleCountCopy, getSaleNameLabel, INVALID_SALE_QUANTITY_MESSAGE } from '../quantity';
-import { Plus, ArrowLeft, X, Check, TrendingUp, TrendingDown, Edit2, MoreVertical, ClipboardList, CalendarDays, Trash2 } from 'lucide-react';
+import { Plus, ArrowLeft, X, Check, TrendingUp, TrendingDown, Edit2, MoreVertical, ClipboardList, CalendarDays, Trash2, Camera } from 'lucide-react';
 
 // ============ HOME SCREEN ============
 type DisplayEntry =
@@ -750,6 +751,7 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
   const [customerName, setCustomerName] = useState('');
   const [undoVisible, setUndoVisible] = useState(false);
   const [lastEntryId, setLastEntryId] = useState('');
+  const [showCameraImport, setShowCameraImport] = useState(false);
   
   const isSale = type === 'sale';
   const isExpense = type === 'expense';
@@ -833,6 +835,29 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
     setCustomerName('');
   };
   
+  const handleAddCameraSales = (drafts: CameraSaleDraft[]) => {
+    const today = getToday();
+    const createdAt = Date.now();
+    const sales: SaleEntry[] = drafts.map((draft, index) => ({
+      id: generateId(),
+      date: today,
+      ...draft,
+      createdAt: createdAt + index,
+    }));
+
+    sales.forEach(entry => dispatch({ type: 'ADD_SALE', payload: entry }));
+
+    if (state.lastEntryDate !== today) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      const newStreak = state.lastEntryDate === yesterdayStr ? state.streak + 1 : 1;
+      dispatch({ type: 'UPDATE_STREAK', payload: { streak: newStreak, lastDate: today } });
+    }
+
+    onClose();
+  };
+
   const handleUndo = () => {
     if (lastEntryId) {
       const entryType = isSale ? 'sale' : isExpense ? 'expense' : 'udhaar';
@@ -865,6 +890,19 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
         </div>
         
         <div className="flex-1 scroll-area px-5 py-4">
+          {isSale && (
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={() => setShowCameraImport(true)}
+                className="btn-secondary"
+              >
+                <Camera size={18} />
+                {lang === 'hi' ? 'फ़ोटो से बिक्री जोड़ें' : 'Add sales from photo'}
+              </button>
+            </div>
+          )}
+
           {isSale && (
             <div className="mb-4">
               <label className="text-small font-medium text-text-secondary block mb-2">
@@ -1051,6 +1089,13 @@ function EntryModal({ type, onClose }: { type: string; onClose: () => void }) {
           </div>
         )}
       </div>
+      {showCameraImport && (
+        <CameraImportModal
+          language={lang === 'hi' ? 'hi' : 'en'}
+          onClose={() => setShowCameraImport(false)}
+          onAddSales={handleAddCameraSales}
+        />
+      )}
     </div>
   );
 }
