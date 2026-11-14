@@ -124,7 +124,7 @@ export function VoiceMicButton({
   disabledRef.current = disabled;
 
   // Keep current callbacks without tying microphone lifetime to callback identity.
-
+  const onTranscriptRef = useRef(onTranscript);
   const onInterimTranscriptRef = useRef(onInterimTranscript);
   const onStatusRef = useRef(onStatus);
   const onRecordingChangeRef = useRef(onRecordingChange);
@@ -169,12 +169,18 @@ export function VoiceMicButton({
     clearRestartTimer();
     const parts = buildSpeechTranscriptParts('', sessionSegmentsRef.current);
     const transcript = joinSpeechTranscript(committedTranscriptRef.current, parts.finalTranscript);
+    const finalSegments = [
+      ...committedSpeechSegmentsRef.current,
+      ...sessionSegmentsRef.current.filter(segment => segment?.isFinal),
+    ];
+    const candidates = buildSpeechTranscriptCandidates(finalSegments);
 
     // Set the guard before calling application code so re-entrant events cannot publish twice.
     publishedSessionIdRef.current = sessionId;
     committedTranscriptRef.current = transcript;
     sessionSegmentsRef.current = [];
-    if (transcript) onTranscriptRef.current(transcript);
+    committedSpeechSegmentsRef.current = [];
+    if (transcript) onTranscriptRef.current(transcript, candidates);
     notifyRecording(false);
 
     releaseVoiceRecording(ownerRef.current);
@@ -232,7 +238,7 @@ export function VoiceMicButton({
     );
     recognition.continuous = speechMode.continuous;
     recognition.interimResults = speechMode.interimResults;
-    recognition.maxAlternatives = 3;
+    recognition.maxAlternatives = 5;
     sessionSegmentsRef.current = [];
     recognitionRef.current = recognition;
 
@@ -294,6 +300,10 @@ export function VoiceMicButton({
       ) return;
       recognitionRef.current = null;
 
+      committedSpeechSegmentsRef.current = [
+        ...committedSpeechSegmentsRef.current,
+        ...sessionSegmentsRef.current.filter(segment => segment?.isFinal),
+      ];
       committedTranscriptRef.current = appendFinalSpeechRecognitionSession(
         committedTranscriptRef.current,
         sessionSegmentsRef.current,
@@ -373,6 +383,7 @@ export function VoiceMicButton({
     recordingSessionIdRef.current = recordingSessionId;
     publishedSessionIdRef.current = null;
     committedTranscriptRef.current = '';
+    committedSpeechSegmentsRef.current = [];
     sessionSegmentsRef.current = [];
     lastInterimTranscriptRef.current = '';
     fatalErrorRef.current = null;
