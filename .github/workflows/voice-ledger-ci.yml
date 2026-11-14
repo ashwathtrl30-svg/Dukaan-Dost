@@ -64,6 +64,7 @@ jobs:
           src/voice/speechRecognition.test.ts
           src/voice/voiceVocabulary.test.ts
           src/voice/audioTranscription.test.ts
+          supabase/functions/parse-voice-entry/interactionsApi.test.ts
           tests/api/parse-voice.test.ts
       - name: Audit dependencies (block high and critical vulnerabilities)
         run: npm audit --audit-level=high
