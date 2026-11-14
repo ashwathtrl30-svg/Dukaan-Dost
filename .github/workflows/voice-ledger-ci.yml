@@ -6,6 +6,7 @@ on:
       - main
       - feat/voice-ledger-review-and-hindi-numbers
       - feat/shop-notebook-stage-2
+      - feat/camera-v1-extraction-readiness
   pull_request:
     branches:
       - main
@@ -40,6 +41,8 @@ jobs:
           src/auth/authValidation.ts src/screens/Profile.tsx src/screens/Onboarding.tsx
           src/backup/encryptedBackup.ts src/backup/BackupRestorePanel.tsx src/snapshotSync.ts
           src/backup/encryptedBackup.ts src/backup/BackupRestorePanel.tsx
+          src/camera/extractionContract.ts src/camera/imagePayload.ts
+          src/camera/CameraImportModal.tsx src/screens/Home.tsx api/extract-camera.ts
       - name: Test cloud shop-data snapshot reconciliation
         run: npx --yes tsx --test src/shopDataSnapshot.test.ts
       - name: Test encrypted backup and guarded restore
@@ -52,6 +55,8 @@ jobs:
         run: npx --yes tsx --test src/insights/productSales.test.ts
       - name: Test Camera V1 extraction contract and row validation
         run: npx --yes tsx --test src/camera/extractionContract.test.ts
+      - name: Test Camera V1 image validation and disabled endpoint guard
+        run: npx --yes tsx --test src/camera/imagePayload.test.ts tests/api/extract-camera.test.ts
       - name: Test dynamic business insights and udhaar alternatives
         run: npx --yes tsx --test src/insights/insightEngine.test.ts
       - name: Test Insights dashboard date ranges
