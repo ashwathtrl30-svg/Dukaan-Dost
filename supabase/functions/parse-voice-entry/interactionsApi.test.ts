@@ -19,9 +19,10 @@ test("builds the dedicated Transcribe request with Indian language hints and cus
     data: "UklGRg==",
     mime_type: "audio/wav",
   }]);
-  assert.deepEqual(request.transcription_config, {
+  assert.deepEqual(request.generation_config.transcription_config, {
     custom_vocabulary: ["Chocolate Bomboloni", "San Sebastian Cheesecake"],
     language_codes: ["hi-IN", "en-IN"],
+    mode: { type: "verbatim" },
   });
 });
 
@@ -29,7 +30,7 @@ test("caps custom vocabulary at 150 phrases", () => {
   const vocabulary = Array.from({ length: 180 }, (_, index) => `Product ${index}`);
   const request = buildTranscriptionRequest("YQ==", "audio/wav", vocabulary);
 
-  assert.equal(request.transcription_config.custom_vocabulary.length, 150);
+  assert.equal(request.generation_config.transcription_config.custom_vocabulary.length, 150);
   assert.equal(request.transcription_config.custom_vocabulary[0], "Product 0");
   assert.equal(request.transcription_config.custom_vocabulary[149], "Product 149");
 });
