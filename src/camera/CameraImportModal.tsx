@@ -231,7 +231,7 @@ export function CameraImportModal({
   const copy = lang === 'hi' ? {
     title: 'फ़ोटो से बिक्री जोड़ें',
     subtitle: 'बिल या हाथ से लिखी बिक्री सूची स्कैन करें',
-    privacy: 'स्कैन करने से पहले ग्राहक का नाम, फ़ोन नंबर और पता हटा दें। फ़ोटो पढ़ने के लिए चुने गए AI प्रदाता को भेजी जाएगी; Dukaan Dost इसे सेव नहीं करता।',
+    privacy: 'स्कैन से पहले ग्राहक के नाम, फ़ोन नंबर, पते, भुगतान विवरण और गोपनीय कारोबारी जानकारी हटा दें। Gemini Free tier पर भेजी गई सामग्री Google के उत्पाद बेहतर बनाने के लिए इस्तेमाल हो सकती है और मानव समीक्षक उसे देख सकते हैं। Dukaan Dost फ़ोटो सेव नहीं करता।',
     chooseTitle: 'साफ़ फ़ोटो चुनें',
     chooseDesc: 'सामान का नाम, मात्रा और अंतिम रकम साफ़ दिखनी चाहिए।',
     takePhoto: 'फ़ोटो लें',
@@ -261,7 +261,7 @@ export function CameraImportModal({
   } : {
     title: 'Add sales from a photo',
     subtitle: 'Scan a bill or handwritten sales list',
-    privacy: 'Remove customer names, phone numbers and addresses before scanning. {copy.privacy}',
+    privacy: 'Remove customer names, phone numbers, addresses, payment details and confidential business information before scanning. Free-tier Gemini submissions may be used to improve Google products and may be reviewed by humans. Dukaan Dost does not save the photo.',
     chooseTitle: 'Choose a clear photo',
     chooseDesc: 'Keep the item names, quantities and final line amounts readable.',
     takePhoto: 'Take a photo',
@@ -417,13 +417,13 @@ export function CameraImportModal({
 
                   {!rowState.valid && (
                     <p className="text-small text-problem">
-                      Enter a name (up to 80 characters), a supported quantity/unit, and a valid amount with up to two decimal places.
+                      {lang === 'hi' ? 'नाम (अधिकतम 80 अक्षर), मान्य मात्रा/इकाई और दो दशमलव तक सही रकम दर्ज करें।' : 'Enter a name (up to 80 characters), a supported quantity/unit, and a valid amount with up to two decimal places.'}
                     </p>
                   )}
 
                   <label className="flex items-center gap-2 min-h-11 text-small text-text">
                     <input type="checkbox" checked={row.checked} disabled={!rowState.valid} onChange={event => setRows(current => current.map(item => item.id === row.id ? { ...item, checked: event.target.checked } : item))} />
-                    I checked this row and its amount
+                    {copy.reviewed}
                   </label>
                 </div>
               );
