@@ -6,7 +6,7 @@ const ALLOWED_ORIGINS = new Set([
   "https://dukaan-dost-tau.vercel.app",
   "http://localhost:5173",
 ]);
-const TRANSCRIPTION_MODEL = "gemini-3.5-transcribe";
+const TRANSCRIPTION_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash-lite"];
 const MAX_AUDIO_BASE64_LENGTH = 3_500_000;
 const MAX_CUSTOM_VOCABULARY_TERMS = 150;
 const ALLOWED_AUDIO_MIME_TYPES = new Set([
@@ -46,12 +46,24 @@ async function transcribeAudio(
   audioBase64: string,
   mimeType: string,
   customVocabulary: string[],
-): Promise<{ transcript: string } | { error: string; status: number }> {
-  let upstream: Response;
-  try {
-    upstream = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/" + TRANSCRIPTION_MODEL + ":generateContent",
-      {
+): Promise<{ transcript: string; model: string } | { error: string; status: number }> {
+  const vocabulary = customVocabulary.slice(0, MAX_CUSTOM_VOCABULARY_TERMS);
+  const prompt = [
+    "You are a verbatim speech transcription engine for an Indian small-shop ledger app.",
+    "Transcribe only what the speaker actually says. Return only the spoken words, with no explanation, labels, quotation marks, or added transaction fields.",
+    "The speaker may use Hindi, Roman Hindi, Hinglish, English, or mix them in one sentence. Preserve the language and script the speaker used; do not translate.",
+    "Listen carefully to proper nouns, brand names, bakery items, foreign food names, product names, and local pronunciations.",
+    "The following are real products that this shop may sell. Use them as spelling hints only when the sound in the recording supports the match. Never insert a product name merely because it appears in this list, and never replace unrelated speech with a list entry.",
+    "SHOP PRODUCT VOCABULARY:",
+    JSON.stringify(vocabulary),
+    "Preserve amounts and number words as spoken. Do not infer missing words or rewrite grammar.",
+  ].join("\n");
+
+  let lastStatus = 503;
+  for (const model of TRANSCRIPTION_MODELS) {
+    let upstream: Response;
+    try {
+      upstream = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
         method: "POST",
         signal: AbortSignal.timeout(25_000),
         headers: {
@@ -59,56 +71,54 @@ async function transcribeAudio(
           "x-goog-api-key": apiKey,
         },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              inlineData: {
-                mimeType,
-                data: audioBase64,
-              },
-            }],
-          }],
-          generationConfig: {
-            audioTranscriptionConfig: {
-              mode: "VERBATIM",
-              customVocabulary: customVocabulary.slice(0, MAX_CUSTOM_VOCABULARY_TERMS),
-            },
-          },
+          model,
+          input: [
+            { type: "text", text: prompt },
+            { type: "audio", data: audioBase64, mime_type: mimeType },
+          ],
         }),
-      },
-    );
-  } catch {
-    console.error("Gemini audio transcription request timed out or failed.");
-    return { error: "Audio transcription is temporarily unavailable. Please try again.", status: 502 };
+      });
+    } catch {
+      console.error("Gemini audio transcription request failed:", { model });
+      continue;
+    }
+
+    const data = await upstream.json().catch(() => null);
+    if (!upstream.ok) {
+      lastStatus = upstream.status;
+      console.error("Gemini audio transcription rejected the request:", {
+        model,
+        status: upstream.status,
+        message: data?.error?.message,
+      });
+      if (upstream.status === 401 || upstream.status === 403) break;
+      continue;
+    }
+
+    const outputText = typeof data?.output_text === "string"
+      ? data.output_text.trim()
+      : Array.isArray(data?.output)
+        ? data.output
+          .flatMap((step: any) => Array.isArray(step?.content) ? step.content : [])
+          .filter((part: any) => part?.type === "text" && typeof part?.text === "string")
+          .map((part: any) => part.text)
+          .join("\n")
+          .trim()
+        : "";
+
+    if (outputText && outputText.length <= 1600) {
+      return { transcript: outputText, model };
+    }
+    console.error("Gemini audio transcription returned no usable text:", { model });
+    lastStatus = 502;
   }
 
-  const data = await upstream.json().catch(() => null);
-  if (!upstream.ok) {
-    console.error("Gemini audio transcription rejected the request:", {
-      status: upstream.status,
-      message: data?.error?.message,
-    });
-    return {
-      error: upstream.status === 413
-        ? "This recording is too large. Please split it into shorter recordings."
-        : "Audio transcription is temporarily unavailable. Please try again.",
-      status: upstream.status === 400 ? 422 : 502,
-    };
-  }
-
-  const transcript = (data?.candidates?.[0]?.content?.parts || [])
-    .map((part: { text?: string }) => typeof part.text === "string" ? part.text : "")
-    .join("")
-    .trim();
-
-  if (!transcript) {
-    console.error("Gemini audio transcription returned no text.");
-    return { error: "No speech could be recognised. Please try again.", status: 422 };
-  }
-  if (transcript.length > 1600) {
-    return { error: "This recording is too long. Please split it into shorter recordings.", status: 413 };
-  }
-
-  return { transcript };
+  return {
+    error: lastStatus === 413
+      ? "This recording is too large. Please split it into shorter recordings."
+      : "Audio transcription is temporarily unavailable. Please try again.",
+    status: lastStatus === 400 ? 422 : 502,
+  };
 }
 
 function isRateLimited(req: Request): boolean {
@@ -528,7 +538,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, {
       transcript: result.transcript,
       candidates: [result.transcript],
-      transcriptionModel: TRANSCRIPTION_MODEL,
+      transcriptionModel: result.model,
     });
   }
 
