@@ -3,6 +3,7 @@ import { StoreProvider, useStore, generateId, getToday, formatRupee } from './st
 import { AccountAccessGate } from './auth/AuthGate';
 import { VoiceMicButton } from './components/VoiceMicButton';
 import type { VoiceInterpretation } from './voice/voiceInterpreter';
+import { buildVoiceVocabulary } from './voice/voiceVocabulary';
 import { getSaleCountCopy, getSaleItemCountFromQuantity, parseSaleQuantityInput } from './quantity';
 import { t } from './i18n';
 import { HomeScreen } from './screens/Home';
@@ -425,6 +426,10 @@ function AppContent() {
             {activeTab === 'home' && (
               <VoiceMicButton
                 language={lang}
+                customVocabulary={buildVoiceVocabulary(
+                  state.shopProfile.shopType,
+                  state.sales.map(sale => sale.itemName || ''),
+                )}
                 shape="circle"
                 label={homeVoiceListening
                   ? (lang === 'hi' ? 'रिकॉर्डिंग रोकें' : 'Stop recording')
