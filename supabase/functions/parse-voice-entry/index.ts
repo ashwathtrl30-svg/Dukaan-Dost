@@ -1,4 +1,9 @@
 import { resolveVoiceSaleQuantity } from "./quantityRules.ts";
+import {
+  buildTranscriptionRequest,
+  extractInteractionTranscript,
+  GEMINI_TRANSCRIPTION_MODEL,
+} from "./interactionsApi.ts";
 
 const APP_ORIGIN = "https://dukaandost.vercel.app";
 const ALLOWED_ORIGINS = new Set([
@@ -6,7 +11,7 @@ const ALLOWED_ORIGINS = new Set([
   "https://dukaan-dost-tau.vercel.app",
   "http://localhost:5173",
 ]);
-const TRANSCRIPTION_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash-lite"];
+const TRANSCRIPTION_MODELS = [GEMINI_TRANSCRIPTION_MODEL, "gemini-3.6-flash", "gemini-3.5-flash-lite"];
 const MAX_AUDIO_BASE64_LENGTH = 3_500_000;
 const MAX_CUSTOM_VOCABULARY_TERMS = 150;
 const ALLOWED_AUDIO_MIME_TYPES = new Set([
@@ -48,7 +53,7 @@ async function transcribeAudio(
   customVocabulary: string[],
 ): Promise<{ transcript: string; model: string } | { error: string; status: number }> {
   const vocabulary = customVocabulary.slice(0, MAX_CUSTOM_VOCABULARY_TERMS);
-  const prompt = [
+  const fallbackPrompt = [
     "You are a verbatim speech transcription engine for an Indian small-shop ledger app.",
     "Transcribe only what the speaker actually says. Return only the spoken words, with no explanation, labels, quotation marks, or added transaction fields.",
     "The speaker may use Hindi, Roman Hindi, Hinglish, English, or mix them in one sentence. Preserve the language and script the speaker used; do not translate.",
@@ -61,6 +66,16 @@ async function transcribeAudio(
 
   let lastStatus = 503;
   for (const model of TRANSCRIPTION_MODELS) {
+    const requestBody = model === GEMINI_TRANSCRIPTION_MODEL
+      ? buildTranscriptionRequest(audioBase64, mimeType, vocabulary)
+      : {
+        model,
+        input: [
+          { type: "text", text: fallbackPrompt },
+          { type: "audio", data: audioBase64, mime_type: mimeType },
+        ],
+      };
+
     let upstream: Response;
     try {
       upstream = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
@@ -70,13 +85,7 @@ async function transcribeAudio(
           "Content-Type": "application/json",
           "x-goog-api-key": apiKey,
         },
-        body: JSON.stringify({
-          model,
-          input: [
-            { type: "text", text: prompt },
-            { type: "audio", data: audioBase64, mime_type: mimeType },
-          ],
-        }),
+        body: JSON.stringify(requestBody),
       });
     } catch {
       console.error("Gemini audio transcription request failed:", { model });
@@ -95,21 +104,18 @@ async function transcribeAudio(
       continue;
     }
 
-    const outputText = typeof data?.output_text === "string"
-      ? data.output_text.trim()
-      : Array.isArray(data?.output)
-        ? data.output
-          .flatMap((step: any) => Array.isArray(step?.content) ? step.content : [])
-          .filter((part: any) => part?.type === "text" && typeof part?.text === "string")
-          .map((part: any) => part.text)
-          .join("\n")
-          .trim()
-        : "";
-
-    if (outputText && outputText.length <= 1600) {
-      return { transcript: outputText, model };
+    const transcript = extractInteractionTranscript(data);
+    if (transcript && transcript.length <= 1600) {
+      return { transcript, model };
     }
-    console.error("Gemini audio transcription returned no usable text:", { model });
+
+    console.error("Gemini audio transcription returned no usable text:", {
+      model,
+      responseStatus: data?.status,
+      responseStepTypes: Array.isArray(data?.steps)
+        ? data.steps.map((step: any) => step?.type).filter(Boolean)
+        : [],
+    });
     lastStatus = 502;
   }
 
