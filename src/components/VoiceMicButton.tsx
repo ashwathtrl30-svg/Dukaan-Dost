@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic } from 'lucide-react';
 import {
+  buildSpeechTranscriptCandidates,
   buildSpeechTranscriptParts,
   joinSpeechTranscript,
   updateSpeechRecognitionSegments,
@@ -12,7 +13,7 @@ import {
   type SpeechRecognitionSegment,
 } from '../voice/speechRecognition';
 
-type RecognitionAlternative = { transcript?: string };
+type RecognitionAlternative = { transcript?: string; confidence?: number };
 type RecognitionResult = {
   isFinal: boolean;
   length: number;
@@ -45,7 +46,7 @@ type SpeechWindow = Window & {
 type VoiceMicButtonProps = {
   language: 'en' | 'hi';
   /** Called once, with the final transcript, when a logical recording finishes. */
-  onTranscript: (transcript: string) => void;
+  onTranscript: (transcript: string, candidates?: string[]) => void;
   /** Called with replaceable live snapshots while speech is still being recognised. */
   onInterimTranscript?: (transcript: string) => void;
   onStatus?: (status: string) => void;
@@ -114,6 +115,7 @@ export function VoiceMicButton({
   const publishedSessionIdRef = useRef<number | null>(null);
   const fatalErrorRef = useRef<string | null>(null);
   const committedTranscriptRef = useRef('');
+  const committedSpeechSegmentsRef = useRef<SpeechRecognitionSegment[]>([]);
   const sessionSegmentsRef = useRef<SpeechRecognitionSegment[]>([]);
   const lastInterimTranscriptRef = useRef('');
   const restartTimerRef = useRef<number | null>(null);
@@ -122,7 +124,7 @@ export function VoiceMicButton({
   disabledRef.current = disabled;
 
   // Keep current callbacks without tying microphone lifetime to callback identity.
-  const onTranscriptRef = useRef(onTranscript);
+
   const onInterimTranscriptRef = useRef(onInterimTranscript);
   const onStatusRef = useRef(onStatus);
   const onRecordingChangeRef = useRef(onRecordingChange);
