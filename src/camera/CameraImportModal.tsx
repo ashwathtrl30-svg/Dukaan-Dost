@@ -177,7 +177,7 @@ export function CameraImportModal({
       }
 
       const validation = validateCameraExtraction(payload?.extraction);
-      if (!validation.ok) throw new Error(validation.message);
+      if ('message' in validation) throw new Error(validation.message);
 
       setRows(validation.items.map(item => ({
         id: item.sourceIndex,
