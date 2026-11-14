@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic } from 'lucide-react';
-import { transcribeVoiceAudio, MAX_VOICE_AUDIO_BYTES } from '../voice/audioTranscription';
 import {
   buildSpeechTranscriptCandidates,
   buildSpeechTranscriptParts,
@@ -52,8 +51,6 @@ type VoiceMicButtonProps = {
   onInterimTranscript?: (transcript: string) => void;
   onStatus?: (status: string) => void;
   onRecordingChange?: (recording: boolean) => void;
-  /** Shop-specific terms used by the server-side speech recognizer. */
-  customVocabulary?: string[];
   disabled?: boolean;
   shape?: 'circle' | 'rounded';
   label?: string;
@@ -106,7 +103,6 @@ export function VoiceMicButton({
   onInterimTranscript,
   onStatus,
   onRecordingChange,
-  customVocabulary = [],
   disabled = false,
   shape = 'rounded',
   label,
@@ -123,12 +119,6 @@ export function VoiceMicButton({
   const sessionSegmentsRef = useRef<SpeechRecognitionSegment[]>([]);
   const lastInterimTranscriptRef = useRef('');
   const restartTimerRef = useRef<number | null>(null);
-  const audioLimitTimerRef = useRef<number | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const transcribingRef = useRef(false);
-  const transcriptionAbortRef = useRef<AbortController | null>(null);
   const ownerRef = useRef(Symbol('voice-mic'));
   const disabledRef = useRef(disabled);
   disabledRef.current = disabled;
@@ -160,220 +150,6 @@ export function VoiceMicButton({
     if (restartTimerRef.current !== null) {
       window.clearTimeout(restartTimerRef.current);
       restartTimerRef.current = null;
-    }
-  };
-
-  const clearAudioLimitTimer = () => {
-    if (audioLimitTimerRef.current !== null) {
-      window.clearTimeout(audioLimitTimerRef.current);
-      audioLimitTimerRef.current = null;
-    }
-  };
-
-  const releaseMediaStream = () => {
-    const stream = mediaStreamRef.current;
-    mediaStreamRef.current = null;
-    stream?.getTracks().forEach(track => track.stop());
-  };
-
-  const finishAudioFailure = (sessionId: number, message: string) => {
-    if (
-      sessionId !== recordingSessionIdRef.current ||
-      publishedSessionIdRef.current === sessionId
-    ) return;
-
-    publishedSessionIdRef.current = sessionId;
-    transcribingRef.current = false;
-    transcriptionAbortRef.current = null;
-    releaseMediaStream();
-    audioChunksRef.current = [];
-    notifyRecording(false);
-    releaseVoiceRecording(ownerRef.current);
-    setStatus(message);
-  };
-
-  const transcribeCapturedAudio = async (sessionId: number, audio: Blob) => {
-    if (
-      sessionId !== recordingSessionIdRef.current ||
-      publishedSessionIdRef.current === sessionId
-    ) return;
-
-    if (audio.size > MAX_VOICE_AUDIO_BYTES) {
-      finishAudioFailure(
-        sessionId,
-        languageRef.current === 'hi'
-          ? 'रिकॉर्डिंग बहुत लंबी है। कृपया इसे छोटे हिस्सों में बोलें।'
-          : 'This recording is too large. Please split it into shorter recordings.',
-      );
-      return;
-    }
-
-    transcribingRef.current = true;
-    setStatus(languageRef.current === 'hi'
-      ? 'आपकी आवाज़ और सामान के नाम पहचान रहा हूँ…'
-      : 'Recognising your speech and shop product names…');
-
-    const controller = new AbortController();
-    transcriptionAbortRef.current = controller;
-    try {
-      const transcript = await transcribeVoiceAudio(audio, {
-        language: languageRef.current,
-        customVocabulary,
-        signal: controller.signal,
-      });
-
-      if (
-        sessionId !== recordingSessionIdRef.current ||
-        publishedSessionIdRef.current === sessionId
-      ) return;
-
-      publishedSessionIdRef.current = sessionId;
-      transcribingRef.current = false;
-      transcriptionAbortRef.current = null;
-      onTranscriptRef.current(transcript, [transcript]);
-      notifyRecording(false);
-      releaseVoiceRecording(ownerRef.current);
-      setStatus(languageRef.current === 'hi'
-        ? 'आवाज़ दर्ज हुई। टेक्स्ट जाँचें, फिर टिक या भेजने का तीर दबाएँ।'
-        : 'Speech captured. Review the text, then confirm or send it.');
-    } catch (error) {
-      if (
-        sessionId !== recordingSessionIdRef.current ||
-        publishedSessionIdRef.current === sessionId
-      ) return;
-
-      const message = error instanceof Error ? error.message : '';
-      finishAudioFailure(
-        sessionId,
-        languageRef.current === 'hi'
-          ? 'आवाज़ का टेक्स्ट नहीं बन पाया। इंटरनेट जाँचकर फिर बोलें।'
-          : (message || 'We could not transcribe this recording. Check your connection and try again.'),
-      );
-    }
-  };
-
-  const beginMediaRecordingSession = async (sessionId: number) => {
-    let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
-    } catch (error) {
-      if (
-        sessionId !== recordingSessionIdRef.current ||
-        !shouldListenRef.current
-      ) return;
-      shouldListenRef.current = false;
-      const name = error instanceof DOMException ? error.name : '';
-      finishRecording(
-        sessionId,
-        name === 'NotAllowedError' || name === 'SecurityError'
-          ? speechStatus('not-allowed', languageRef.current)
-          : name === 'NotFoundError'
-            ? speechStatus('audio-capture', languageRef.current)
-            : speechStatus(undefined, languageRef.current),
-      );
-      return;
-    }
-
-    if (
-      sessionId !== recordingSessionIdRef.current ||
-      !shouldListenRef.current ||
-      !recordingRef.current
-    ) {
-      stream.getTracks().forEach(track => track.stop());
-      return;
-    }
-
-    try {
-      const preferredType = [
-        'audio/webm;codecs=opus',
-        'audio/ogg;codecs=opus',
-        'audio/mp4',
-      ].find(type => MediaRecorder.isTypeSupported(type));
-      const recorder = new MediaRecorder(
-        stream,
-        preferredType ? { mimeType: preferredType } : undefined,
-      );
-
-      mediaStreamRef.current = stream;
-      mediaRecorderRef.current = recorder;
-      audioChunksRef.current = [];
-
-      recorder.ondataavailable = event => {
-        if (
-          sessionId === recordingSessionIdRef.current &&
-          event.data &&
-          event.data.size > 0
-        ) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onerror = () => {
-        if (sessionId !== recordingSessionIdRef.current) return;
-        setStatus(languageRef.current === 'hi'
-          ? 'माइक्रोफ़ोन रिकॉर्डिंग में समस्या हुई। फिर कोशिश करें।'
-          : 'Microphone recording failed. Please try again.');
-      };
-
-      recorder.onstop = () => {
-        clearAudioLimitTimer();
-        if (sessionId !== recordingSessionIdRef.current) {
-          releaseMediaStream();
-          audioChunksRef.current = [];
-          return;
-        }
-
-        mediaRecorderRef.current = null;
-        const chunks = audioChunksRef.current;
-        audioChunksRef.current = [];
-        const audioType = recorder.mimeType || chunks[0]?.type || 'audio/webm';
-        const blob = new Blob(chunks, { type: audioType });
-        releaseMediaStream();
-
-        if (blob.size === 0) {
-          finishAudioFailure(
-            sessionId,
-            languageRef.current === 'hi'
-              ? 'कोई आवाज़ रिकॉर्ड नहीं हुई। कृपया फिर बोलें।'
-              : 'No audio was captured. Please try speaking again.',
-          );
-          return;
-        }
-
-        void transcribeCapturedAudio(sessionId, blob);
-      };
-
-      recorder.start(1000);
-      setStatus(languageRef.current === 'hi'
-        ? 'सुन रहा हूँ… आराम से बोलें। पूरा होने पर माइक्रोफ़ोन फिर दबाएँ।'
-        : 'Listening… speak naturally. Tap the microphone again when finished.');
-
-      audioLimitTimerRef.current = window.setTimeout(() => {
-        if (
-          sessionId === recordingSessionIdRef.current &&
-          recordingRef.current &&
-          shouldListenRef.current
-        ) {
-          setStatus(languageRef.current === 'hi'
-            ? 'रिकॉर्डिंग की समय-सीमा पूरी हुई। टेक्स्ट तैयार कर रहा हूँ…'
-            : 'Recording limit reached. Preparing the transcript…');
-          stopRecording(true);
-        }
-      }, 60_000);
-    } catch {
-      stream.getTracks().forEach(track => track.stop());
-      mediaRecorderRef.current = null;
-      mediaStreamRef.current = null;
-      audioChunksRef.current = [];
-      // Older browsers may expose getUserMedia but not a usable MediaRecorder.
-      // Retain the existing recognition fallback for those devices.
-      createRecognitionSession(sessionId);
     }
   };
 
@@ -576,25 +352,6 @@ export function VoiceMicButton({
       setStatus(languageRef.current === 'hi' ? 'रिकॉर्डिंग पूरी हो रही है…' : 'Finishing recording…');
     }
     clearRestartTimer();
-    clearAudioLimitTimer();
-
-    const recorder = mediaRecorderRef.current;
-    if (recorder) {
-      try {
-        if (recorder.state !== 'inactive') recorder.stop();
-      } catch {
-        mediaRecorderRef.current = null;
-        releaseMediaStream();
-        finishAudioFailure(
-          recordingSessionIdRef.current,
-          languageRef.current === 'hi'
-            ? 'रिकॉर्डिंग पूरी नहीं हो सकी। कृपया फिर कोशिश करें।'
-            : 'The recording could not be completed. Please try again.',
-        );
-      }
-      return;
-    }
-
     const recognition = recognitionRef.current;
     if (recognition) {
       try {
@@ -632,29 +389,14 @@ export function VoiceMicButton({
     fatalErrorRef.current = null;
     shouldListenRef.current = true;
     notifyRecording(true);
-
-    if (
-      navigator.mediaDevices?.getUserMedia &&
-      typeof MediaRecorder !== 'undefined'
-    ) {
-      void beginMediaRecordingSession(recordingSessionId);
-    } else {
-      // Browser speech recognition remains a compatibility fallback.
-      createRecognitionSession(recordingSessionId);
-    }
+    createRecognitionSession(recordingSessionId);
   };
 
   const startListening = () => {
     if (disabledRef.current) return;
 
     if (recordingRef.current) {
-      // Do not launch a second capture while the recorded audio is being transcribed.
-      if (transcribingRef.current) {
-        setStatus(languageRef.current === 'hi'
-          ? 'आवाज़ का टेक्स्ट तैयार हो रहा है…'
-          : 'Your audio is still being transcribed…');
-        return;
-      }
+      // A second tap while stop is pending must not create another recognizer.
       stopRecording(true);
       return;
     }
@@ -685,20 +427,6 @@ export function VoiceMicButton({
       recordingSessionIdRef.current += 1;
       recordingRef.current = false;
       clearRestartTimer();
-      clearAudioLimitTimer();
-      transcriptionAbortRef.current?.abort();
-      transcriptionAbortRef.current = null;
-      transcribingRef.current = false;
-      const recorder = mediaRecorderRef.current;
-      mediaRecorderRef.current = null;
-      if (recorder && recorder.state !== 'inactive') {
-        recorder.ondataavailable = null;
-        recorder.onstop = null;
-        recorder.onerror = null;
-        try { recorder.stop(); } catch { /* The stream may already have stopped. */ }
-      }
-      releaseMediaStream();
-      audioChunksRef.current = [];
       const recognition = recognitionRef.current;
       recognitionRef.current = null;
       if (recognition) detachRecognition(recognition, true);
