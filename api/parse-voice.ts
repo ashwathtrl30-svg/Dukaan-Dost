@@ -9,6 +9,11 @@ const requestWindows = new Map<string, { count: number; start: number }>();
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_MINUTE = 20;
 const MAX_TRANSCRIPT_LENGTH = 1600;
+const MAX_AUDIO_BASE64_LENGTH = 3_500_000;
+const ALLOWED_AUDIO_MIME_TYPES = new Set([
+  'audio/webm', 'audio/ogg', 'audio/mp4', 'audio/m4a',
+  'audio/wav', 'audio/mpeg', 'audio/mp3', 'audio/aac',
+]);
 
 const ALLOWED_SHOP_TYPES = new Set([
   'kirana', 'medical', 'bakery', 'sweet', 'tailor', 'salon',
@@ -55,10 +60,8 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: 'Invalid JSON request.' });
   }
 
+  const mode = body.mode === 'transcribe' ? 'transcribe' : 'parse';
   const transcript = typeof body.transcript === 'string' ? body.transcript.trim() : '';
-  if (!transcript || transcript.length > MAX_TRANSCRIPT_LENGTH) {
-    return res.status(400).json({ error: 'Enter a voice transcript of up to 1,600 characters.' });
-  }
 
   const requestedShopType = typeof body.shopType === 'string' && body.shopType.trim()
     ? body.shopType.trim()
@@ -67,13 +70,56 @@ export default async function handler(req: any, res: any) {
     return res.status(400).json({ error: 'Unknown shop type.' });
   }
 
-  const candidates = Array.isArray(body.candidates)
-    ? body.candidates
-      .filter((value: unknown) => typeof value === 'string' && value.trim())
-      .slice(0, 5)
-      .map((value: string) => value.trim().slice(0, MAX_TRANSCRIPT_LENGTH))
-    : [];
   const language = body.language === 'hi' ? 'hi' : 'en';
+  let upstreamPayload: Record<string, unknown>;
+
+  if (mode === 'transcribe') {
+    const audioBase64 = typeof body.audioBase64 === 'string' ? body.audioBase64.trim() : '';
+    const mimeType = typeof body.mimeType === 'string'
+      ? body.mimeType.toLowerCase().split(';', 1)[0].trim()
+      : '';
+    const customVocabulary = Array.isArray(body.customVocabulary)
+      ? [...new Set(body.customVocabulary
+        .filter((value: unknown) => typeof value === 'string' && value.trim())
+        .map((value: string) => value.trim().slice(0, 80)))]
+        .slice(0, 150)
+      : [];
+
+    if (!audioBase64 || audioBase64.length > MAX_AUDIO_BASE64_LENGTH ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(audioBase64)) {
+      return res.status(400).json({ error: 'Invalid or oversized audio recording.' });
+    }
+    if (!ALLOWED_AUDIO_MIME_TYPES.has(mimeType)) {
+      return res.status(415).json({ error: 'Unsupported audio format. Please try another browser.' });
+    }
+
+    upstreamPayload = {
+      mode: 'transcribe',
+      audioBase64,
+      mimeType,
+      customVocabulary,
+      language,
+      shopType: requestedShopType,
+    };
+  } else {
+    if (!transcript || transcript.length > MAX_TRANSCRIPT_LENGTH) {
+      return res.status(400).json({ error: 'Enter a voice transcript of up to 1,600 characters.' });
+    }
+
+    const candidates = Array.isArray(body.candidates)
+      ? body.candidates
+        .filter((value: unknown) => typeof value === 'string' && value.trim())
+        .slice(0, 5)
+        .map((value: string) => value.trim().slice(0, MAX_TRANSCRIPT_LENGTH))
+      : [];
+
+    upstreamPayload = {
+      transcript,
+      candidates,
+      shopType: requestedShopType,
+      language,
+    };
+  }
 
   const supabaseUrl = getEnv('SUPABASE_URL');
   const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY');
@@ -91,12 +137,7 @@ export default async function handler(req: any, res: any) {
         'Authorization': 'Bearer ' + supabaseAnonKey,
         'apikey': supabaseAnonKey,
       },
-      body: JSON.stringify({
-        transcript,
-        candidates,
-        shopType: requestedShopType,
-        language,
-      }),
+      body: JSON.stringify(upstreamPayload),
     });
 
     const data = await upstream.json().catch(() => null);

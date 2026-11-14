@@ -3,6 +3,7 @@ import { ArrowLeft, Edit2, Plus, Save, Trash2, X } from 'lucide-react';
 import { VoiceMicButton } from '../components/VoiceMicButton';
 import { generateId, useStore } from '../store';
 import { NotebookNote } from '../types';
+import { buildVoiceVocabulary } from '../voice/voiceVocabulary';
 
 type NotebookScreenProps = {
   onClose: () => void;
@@ -162,6 +163,10 @@ export function NotebookScreen({ onClose }: NotebookScreenProps) {
           <div className="flex items-center gap-3">
             <VoiceMicButton
               language={lang}
+              customVocabulary={buildVoiceVocabulary(
+                state.shopProfile.shopType,
+                state.sales.map(sale => sale.itemName || ''),
+              )}
               shape="rounded"
               label={isListening ? (hindi ? 'रिकॉर्डिंग रोकें' : 'Stop recording') : (hindi ? 'बोलकर लिखें' : 'Dictate a note')}
               onRecordingChange={recording => {
