@@ -54,10 +54,11 @@ export async function transcribeVoiceAudio(
 
   const audioBase64 = arrayBufferToBase64(await audio.arrayBuffer());
   const customVocabulary = Array.isArray(options.customVocabulary)
-    ? [...new Set(options.customVocabulary
-      .filter(value => typeof value === 'string' && value.trim())
-      .map(value => value.trim().slice(0, 80))]
-    )].slice(0, 150)
+    ? Array.from(new Set(
+      options.customVocabulary
+        .filter(value => typeof value === 'string' && value.trim())
+        .map(value => value.trim().slice(0, 80)),
+    )).slice(0, 150)
     : [];
 
   const response = await fetch('/api/parse-voice', {
