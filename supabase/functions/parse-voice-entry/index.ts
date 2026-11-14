@@ -1,7 +1,18 @@
 import { resolveVoiceSaleQuantity } from "./quantityRules.ts";
 
-const APP_ORIGIN = "https://dukaan-dost-tau.vercel.app";
-const ALLOWED_ORIGINS = new Set([APP_ORIGIN, "http://localhost:5173"]);
+const APP_ORIGIN = "https://dukaandost.vercel.app";
+const ALLOWED_ORIGINS = new Set([
+  APP_ORIGIN,
+  "https://dukaan-dost-tau.vercel.app",
+  "http://localhost:5173",
+]);
+const TRANSCRIPTION_MODEL = "gemini-3.5-transcribe";
+const MAX_AUDIO_BASE64_LENGTH = 3_500_000;
+const MAX_CUSTOM_VOCABULARY_TERMS = 150;
+const ALLOWED_AUDIO_MIME_TYPES = new Set([
+  "audio/webm", "audio/ogg", "audio/mp4", "audio/m4a",
+  "audio/wav", "audio/mpeg", "audio/mp3", "audio/aac",
+]);
 const MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
 const MAX_AMOUNT = 10_000_000;
 const WINDOW_MS = 60_000;
@@ -23,6 +34,81 @@ function jsonResponse(req: Request, data: unknown, status = 200) {
     status,
     headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
+}
+
+/**
+ * Dedicated ASR path. Unlike browser SpeechRecognition, this sends the actual
+ * microphone recording to a transcription model and biases recognition toward
+ * names the shop already sells plus the shop-type vocabulary.
+ */
+async function transcribeAudio(
+  apiKey: string,
+  audioBase64: string,
+  mimeType: string,
+  customVocabulary: string[],
+): Promise<{ transcript: string } | { error: string; status: number }> {
+  let upstream: Response;
+  try {
+    upstream = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/" + TRANSCRIPTION_MODEL + ":generateContent",
+      {
+        method: "POST",
+        signal: AbortSignal.timeout(25_000),
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              inlineData: {
+                mimeType,
+                data: audioBase64,
+              },
+            }],
+          }],
+          generationConfig: {
+            audioTranscriptionConfig: {
+              mode: "VERBATIM",
+              customVocabulary: customVocabulary.slice(0, MAX_CUSTOM_VOCABULARY_TERMS),
+            },
+          },
+        }),
+      },
+    );
+  } catch {
+    console.error("Gemini audio transcription request timed out or failed.");
+    return { error: "Audio transcription is temporarily unavailable. Please try again.", status: 502 };
+  }
+
+  const data = await upstream.json().catch(() => null);
+  if (!upstream.ok) {
+    console.error("Gemini audio transcription rejected the request:", {
+      status: upstream.status,
+      message: data?.error?.message,
+    });
+    return {
+      error: upstream.status === 413
+        ? "This recording is too large. Please split it into shorter recordings."
+        : "Audio transcription is temporarily unavailable. Please try again.",
+      status: upstream.status === 400 ? 422 : 502,
+    };
+  }
+
+  const transcript = (data?.candidates?.[0]?.content?.parts || [])
+    .map((part: { text?: string }) => typeof part.text === "string" ? part.text : "")
+    .join("")
+    .trim();
+
+  if (!transcript) {
+    console.error("Gemini audio transcription returned no text.");
+    return { error: "No speech could be recognised. Please try again.", status: 422 };
+  }
+  if (transcript.length > 1600) {
+    return { error: "This recording is too long. Please split it into shorter recordings.", status: 413 };
+  }
+
+  return { transcript };
 }
 
 function isRateLimited(req: Request): boolean {
@@ -403,22 +489,52 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, { error: "Invalid JSON request." }, 400);
   }
 
+  const mode = body?.mode === "transcribe" ? "transcribe" : "parse";
   const transcript = typeof body?.transcript === "string" ? body.transcript.trim() : "";
   const candidates = Array.isArray(body?.candidates)
     ? body.candidates.filter((value: unknown) => typeof value === "string" && value.trim())
       .slice(0, 5).map((value: string) => value.trim().slice(0, 1600))
     : [];
   const shopType = typeof body?.shopType === "string" ? body.shopType : "other";
-  const language = body?.language === "hi" ? "Hindi" : "English";
   const allowedShopTypes = new Set([
     "kirana", "medical", "bakery", "sweet", "tailor", "salon",
     "hardware", "mobile", "vegetable", "tea", "restaurant", "other",
   ]);
 
+  if (!allowedShopTypes.has(shopType)) return jsonResponse(req, { error: "Unknown shop type." }, 400);
+
+  if (mode === "transcribe") {
+    const audioBase64 = typeof body?.audioBase64 === "string" ? body.audioBase64.trim() : "";
+    const mimeType = typeof body?.mimeType === "string"
+      ? body.mimeType.toLowerCase().split(";", 1)[0].trim()
+      : "";
+    const customVocabulary = Array.isArray(body?.customVocabulary)
+      ? [...new Set(body.customVocabulary
+        .filter((value: unknown) => typeof value === "string" && value.trim())
+        .map((value: string) => value.trim().slice(0, 80)))]
+        .slice(0, MAX_CUSTOM_VOCABULARY_TERMS)
+      : [];
+
+    if (!audioBase64 || audioBase64.length > MAX_AUDIO_BASE64_LENGTH ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(audioBase64)) {
+      return jsonResponse(req, { error: "Invalid or oversized audio recording." }, 400);
+    }
+    if (!ALLOWED_AUDIO_MIME_TYPES.has(mimeType)) {
+      return jsonResponse(req, { error: "Unsupported audio format. Please try another browser." }, 415);
+    }
+
+    const result = await transcribeAudio(apiKey, audioBase64, mimeType, customVocabulary);
+    if ("error" in result) return jsonResponse(req, { error: result.error }, result.status);
+    return jsonResponse(req, {
+      transcript: result.transcript,
+      candidates: [result.transcript],
+      transcriptionModel: TRANSCRIPTION_MODEL,
+    });
+  }
+
   if (!transcript || transcript.length > 1600) {
     return jsonResponse(req, { error: "Enter a voice transcript of up to 1,600 characters." }, 400);
   }
-  if (!allowedShopTypes.has(shopType)) return jsonResponse(req, { error: "Unknown shop type." }, 400);
 
   const transcriptCandidates = [...new Set([transcript, ...candidates])].slice(0, 5);
   try {
