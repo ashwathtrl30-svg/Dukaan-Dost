@@ -125,7 +125,7 @@ export default async function handler(req: any, res: any) {
   }
 
   const image = decodeCameraImagePayload(body.imageBase64, body.mimeType);
-  if (!image.ok) return send(res, 400, { error: image.error });
+  if ('error' in image) return send(res, 400, { error: image.error });
 
   try {
     const authClient = createClient(supabaseUrl, anonKey, {
