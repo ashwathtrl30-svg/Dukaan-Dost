@@ -99,7 +99,7 @@ export default async function handler(req: any, res: any) {
   // and the app's image-data handling policy. Missing config remains disabled.
   if (getEnv('CAMERA_V1_ENABLED') !== 'true') {
     return send(res, 503, {
-      error: 'Photo extraction is not enabled yet. Your image has not been sent.',
+      error: 'Photo extraction is not enabled yet. Your photo has not been forwarded to Gemini.',
     });
   }
 
