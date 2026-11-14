@@ -1,6 +1,6 @@
-import { validateCameraExtraction } from '../src/camera/extractionContract';
-import { CAMERA_V1_EXTRACTION_INSTRUCTIONS } from '../src/camera/extractionPrompt';
-import { decodeCameraImagePayload } from '../src/camera/imagePayload';
+import { validateCameraExtraction } from '../src/camera/extractionContract.js';
+import { CAMERA_V1_EXTRACTION_INSTRUCTIONS } from '../src/camera/extractionPrompt.js';
+import { decodeCameraImagePayload } from '../src/camera/imagePayload.js';
 
 function getEnv(name: string): string | undefined {
   const runtime = globalThis as typeof globalThis & {
