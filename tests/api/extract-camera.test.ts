@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import handler from '../../api/extract-camera.ts';
 
-async function invoke(method = 'POST') {
+async function invoke(method = 'POST', headers: Record<string, string> = {}) {
   const snapshot: { status?: number; body?: unknown; headers: Record<string, string> } = { headers: {} };
-  const req = { method, headers: {}, body: {} };
+  const req = { method, headers, body: {} };
   const res = {
     setHeader(name: string, value: string) { snapshot.headers[name] = value; },
     status(code: number) {
@@ -34,5 +34,37 @@ test('camera extraction remains disabled unless explicitly enabled', async () =>
   } finally {
     if (previous === undefined) delete process.env.CAMERA_V1_ENABLED;
     else process.env.CAMERA_V1_ENABLED = previous;
+  }
+});
+
+test('rejects an invalid shop session before parsing or forwarding an image', async () => {
+  const keys = ['CAMERA_V1_ENABLED', 'SUPABASE_URL', 'SUPABASE_ANON_KEY', 'GEMINI_API_KEY'] as const;
+  const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]));
+  const originalFetch = globalThis.fetch;
+  let requestedUrl = '';
+
+  try {
+    process.env.CAMERA_V1_ENABLED = 'true';
+    process.env.SUPABASE_URL = 'https://staging.example.supabase.co';
+    process.env.SUPABASE_ANON_KEY = 'test-public-key';
+    process.env.GEMINI_API_KEY = 'test-provider-key';
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      requestedUrl = String(input);
+      return new Response(JSON.stringify({ message: 'Invalid JWT' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }) as typeof fetch;
+
+    const result = await invoke('POST', { authorization: 'Bearer invalid-token' });
+    assert.equal(result.status, 401);
+    assert.equal(requestedUrl, 'https://staging.example.supabase.co/auth/v1/user');
+  } finally {
+    for (const key of keys) {
+      const value = previous[key];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    globalThis.fetch = originalFetch;
   }
 });
