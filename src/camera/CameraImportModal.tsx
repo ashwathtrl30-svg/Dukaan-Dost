@@ -307,7 +307,7 @@ export function CameraImportModal({
         <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
 
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-small text-text">
-          Remove customer names, phone numbers and addresses before scanning. The photo is sent to the configured AI provider for reading; Dukaan Dost does not save the image.
+          {copy.privacy}
         </div>
 
         {!selectedImage ? (
@@ -330,7 +330,7 @@ export function CameraImportModal({
           <div className="card space-y-3">
             <img src={selectedImage.previewUrl} alt="Selected sales document preview" className="w-full max-h-[34vh] object-contain rounded-xl bg-white" />
             <p className="text-small text-text-secondary">
-              Photo ready · {(selectedImage.originalSize / 1024 / 1024).toFixed(1)} MB original
+              {copy.photoReady} · {(selectedImage.originalSize / 1024 / 1024).toFixed(1)} MB {lang === 'hi' ? 'मूल फ़ोटो' : 'original'}
             </p>
             <div className="grid grid-cols-2 gap-3">
               <button type="button" className="btn-secondary" disabled={working} onClick={resetImage}>
