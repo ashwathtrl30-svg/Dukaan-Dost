@@ -1,12 +1,14 @@
 export interface SpeechRecognitionSegment {
   transcript: string;
   isFinal: boolean;
+  /** Browser-ranked alternatives for this exact result segment. */
+  alternatives?: string[];
 }
 
 export interface SpeechRecognitionResultLike {
   isFinal: boolean;
   length: number;
-  [index: number]: { transcript?: string } | undefined;
+  [index: number]: { transcript?: string; confidence?: number } | undefined;
 }
 
 export interface SpeechRecognitionEventLike {
@@ -45,10 +47,17 @@ export function updateSpeechRecognitionSegments(
 
   for (let index = startIndex; index < resultCount; index += 1) {
     const result = event.results[index];
-    const transcript = result?.[0]?.transcript?.trim() || '';
+    const alternativeCount = Math.min(5, Math.max(0, result?.length ?? 0));
+    const alternatives: string[] = [];
+    for (let alternativeIndex = 0; alternativeIndex < alternativeCount; alternativeIndex += 1) {
+      const candidate = result?.[alternativeIndex]?.transcript?.trim() || '';
+      if (candidate && !alternatives.includes(candidate)) alternatives.push(candidate);
+    }
+    const transcript = alternatives[0] || '';
     next[index] = {
       transcript,
       isFinal: result?.isFinal === true,
+      alternatives: alternatives.length ? alternatives : [transcript],
     };
   }
 
@@ -159,4 +168,39 @@ export function appendFinalSpeechRecognitionSession(
 ): string {
   const finalTranscript = buildSpeechTranscriptParts('', sessionSegments).finalTranscript;
   return joinSpeechTranscript(committedTranscript, finalTranscript);
+}
+
+/**
+ * Builds a small, ranked set of complete transcript hypotheses from the browser's
+ * per-segment alternatives. The first candidate always matches the primary transcript.
+ * A bounded beam prevents alternative combinations from growing exponentially.
+ */
+export function buildSpeechTranscriptCandidates(
+  segments: SpeechRecognitionSegment[],
+  maxCandidates = 5,
+): string[] {
+  const limit = Math.max(1, Math.min(5, Math.trunc(maxCandidates) || 5));
+  let candidates = [''];
+
+  for (const segment of segments.filter(item => item?.isFinal && item.transcript?.trim())) {
+    const choices = [...new Set(
+      (segment.alternatives?.length ? segment.alternatives : [segment.transcript])
+        .map(value => value.trim())
+        .filter(Boolean),
+    )].slice(0, 5);
+    if (!choices.length) continue;
+
+    const next: string[] = [];
+    for (const prefix of candidates) {
+      for (const choice of choices) {
+        const candidate = joinSpeechTranscript(prefix, choice);
+        if (candidate && !next.includes(candidate)) next.push(candidate);
+        if (next.length >= limit) break;
+      }
+      if (next.length >= limit) break;
+    }
+    candidates = next;
+  }
+
+  return candidates.slice(0, limit);
 }
