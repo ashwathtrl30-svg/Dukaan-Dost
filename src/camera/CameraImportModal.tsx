@@ -353,7 +353,7 @@ export function CameraImportModal({
               <button type="button" className="btn-secondary" disabled={working} onClick={resetImage}>
                 <RefreshCw size={17} /> Retake / change
               </button>
-              <button type="button" className="btn-primary" disabled={working} onClick={() => void extract()} disabled={working || !privacyConsent}>
+              <button type="button" className="btn-primary" disabled={working || !privacyConsent} onClick={() => void extract()}>
                 {working ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
                 {working ? 'Reading…' : 'Read sales'}
               </button>
