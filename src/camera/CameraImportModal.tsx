@@ -98,6 +98,7 @@ export function CameraImportModal({
   const [paymentType, setPaymentType] = useState<Extract<PaymentType, 'cash' | 'upi'>>('cash');
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
+  const [privacyConsent, setPrivacyConsent] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -125,6 +126,7 @@ export function CameraImportModal({
     setWorking(true);
     setError('');
     setRows([]);
+    setPrivacyConsent(false);
     try {
       const compressed = await compressImage(file);
       const previewUrl = URL.createObjectURL(compressed.blob);
@@ -148,7 +150,7 @@ export function CameraImportModal({
   };
 
   const extract = async () => {
-    if (!selectedImage || !supabase || working) return;
+    if (!selectedImage || !supabase || working || !privacyConsent) return;
     setWorking(true);
     setError('');
     setRows([]);
@@ -225,13 +227,15 @@ export function CameraImportModal({
     setSelectedImage(null);
     setRows([]);
     setError('');
+    setPrivacyConsent(false);
   };
 
   const lang = language;
   const copy = lang === 'hi' ? {
     title: 'फ़ोटो से बिक्री जोड़ें',
     subtitle: 'बिल या हाथ से लिखी बिक्री सूची स्कैन करें',
-    privacy: 'स्कैन से पहले ग्राहक के नाम, फ़ोन नंबर, पते, भुगतान विवरण और गोपनीय कारोबारी जानकारी हटा दें। Gemini Free tier पर भेजी गई सामग्री Google के उत्पाद बेहतर बनाने के लिए इस्तेमाल हो सकती है और मानव समीक्षक उसे देख सकते हैं। Dukaan Dost फ़ोटो सेव नहीं करता।',
+    privacy: 'स्कैन से पहले ग्राहक के नाम, फ़ोन नंबर, पते, भुगतान विवरण और गोपनीय कारोबारी जानकारी हटा दें। Gemini Free tier पर भेजी गई सामग्री Google के उत्पाद बेहतर बनाने के लिए इस्तेमाल हो सकती है और मानव समीक्षक उसे देख सकते हैं। Dukaan Dost इस फ़ोटो को अपने डेटाबेस या स्टोरेज में सेव नहीं करता।',
+    consent: 'मैं पुष्टि करता/करती हूँ कि मुझे यह फ़ोटो साझा करने की अनुमति है, इसमें निजी ग्राहक जानकारी नहीं है, और मैं इसे Google Gemini से पढ़वाने के लिए भेजने पर सहमत हूँ।',
     chooseTitle: 'साफ़ फ़ोटो चुनें',
     chooseDesc: 'सामान का नाम, मात्रा और अंतिम रकम साफ़ दिखनी चाहिए।',
     takePhoto: 'फ़ोटो लें',
@@ -261,7 +265,8 @@ export function CameraImportModal({
   } : {
     title: 'Add sales from a photo',
     subtitle: 'Scan a bill or handwritten sales list',
-    privacy: 'Remove customer names, phone numbers, addresses, payment details and confidential business information before scanning. Free-tier Gemini submissions may be used to improve Google products and may be reviewed by humans. Dukaan Dost does not save the photo.',
+    privacy: 'Remove customer names, phone numbers, addresses, payment details and confidential business information before scanning. Free-tier Gemini submissions may be used to improve Google products and may be reviewed by humans. Dukaan Dost does not store a copy in its own database or storage.',
+    consent: 'I confirm I have permission to share this photo, it contains no private customer details, and I agree to send it to Google Gemini for reading.',
     chooseTitle: 'Choose a clear photo',
     chooseDesc: 'Keep the item names, quantities and final line amounts readable.',
     takePhoto: 'Take a photo',
@@ -310,6 +315,18 @@ export function CameraImportModal({
           {copy.privacy}
         </div>
 
+        {selectedImage && (
+          <label className="flex items-start gap-3 rounded-xl border border-border bg-card p-3 text-small text-text">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={privacyConsent}
+              onChange={event => setPrivacyConsent(event.target.checked)}
+            />
+            <span>{copy.consent}</span>
+          </label>
+        )}
+
         {!selectedImage ? (
           <div className="card text-center py-8">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
@@ -319,10 +336,10 @@ export function CameraImportModal({
             <p className="text-small text-text-secondary mb-5">{copy.chooseDesc}</p>
             <div className="space-y-3">
               <button type="button" className="btn-primary" disabled={working} onClick={() => cameraInputRef.current?.click()}>
-                <Camera size={19} /> Take a photo
+                <Camera size={19} /> {copy.takePhoto}
               </button>
               <button type="button" className="btn-secondary" disabled={working} onClick={() => galleryInputRef.current?.click()}>
-                <ImagePlus size={19} /> Choose from gallery
+                <ImagePlus size={19} /> {copy.gallery}
               </button>
             </div>
           </div>
@@ -336,7 +353,7 @@ export function CameraImportModal({
               <button type="button" className="btn-secondary" disabled={working} onClick={resetImage}>
                 <RefreshCw size={17} /> Retake / change
               </button>
-              <button type="button" className="btn-primary" disabled={working} onClick={() => void extract()}>
+              <button type="button" className="btn-primary" disabled={working} onClick={() => void extract()} disabled={working || !privacyConsent}>
                 {working ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
                 {working ? 'Reading…' : 'Read sales'}
               </button>
