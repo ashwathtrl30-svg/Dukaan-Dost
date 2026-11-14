@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Mic } from 'lucide-react';
 import {
+  buildSpeechTranscriptCandidates,
   buildSpeechTranscriptParts,
   joinSpeechTranscript,
   updateSpeechRecognitionSegments,
@@ -12,7 +13,7 @@ import {
   type SpeechRecognitionSegment,
 } from '../voice/speechRecognition';
 
-type RecognitionAlternative = { transcript?: string };
+type RecognitionAlternative = { transcript?: string; confidence?: number };
 type RecognitionResult = {
   isFinal: boolean;
   length: number;
@@ -45,7 +46,7 @@ type SpeechWindow = Window & {
 type VoiceMicButtonProps = {
   language: 'en' | 'hi';
   /** Called once, with the final transcript, when a logical recording finishes. */
-  onTranscript: (transcript: string) => void;
+  onTranscript: (transcript: string, candidates?: string[]) => void;
   /** Called with replaceable live snapshots while speech is still being recognised. */
   onInterimTranscript?: (transcript: string) => void;
   onStatus?: (status: string) => void;
@@ -114,6 +115,7 @@ export function VoiceMicButton({
   const publishedSessionIdRef = useRef<number | null>(null);
   const fatalErrorRef = useRef<string | null>(null);
   const committedTranscriptRef = useRef('');
+  const committedSpeechSegmentsRef = useRef<SpeechRecognitionSegment[]>([]);
   const sessionSegmentsRef = useRef<SpeechRecognitionSegment[]>([]);
   const lastInterimTranscriptRef = useRef('');
   const restartTimerRef = useRef<number | null>(null);
@@ -167,12 +169,18 @@ export function VoiceMicButton({
     clearRestartTimer();
     const parts = buildSpeechTranscriptParts('', sessionSegmentsRef.current);
     const transcript = joinSpeechTranscript(committedTranscriptRef.current, parts.finalTranscript);
+    const finalSegments = [
+      ...committedSpeechSegmentsRef.current,
+      ...sessionSegmentsRef.current.filter(segment => segment?.isFinal),
+    ];
+    const candidates = buildSpeechTranscriptCandidates(finalSegments);
 
     // Set the guard before calling application code so re-entrant events cannot publish twice.
     publishedSessionIdRef.current = sessionId;
     committedTranscriptRef.current = transcript;
     sessionSegmentsRef.current = [];
-    if (transcript) onTranscriptRef.current(transcript);
+    committedSpeechSegmentsRef.current = [];
+    if (transcript) onTranscriptRef.current(transcript, candidates);
     notifyRecording(false);
 
     releaseVoiceRecording(ownerRef.current);
@@ -230,7 +238,7 @@ export function VoiceMicButton({
     );
     recognition.continuous = speechMode.continuous;
     recognition.interimResults = speechMode.interimResults;
-    recognition.maxAlternatives = 3;
+    recognition.maxAlternatives = 5;
     sessionSegmentsRef.current = [];
     recognitionRef.current = recognition;
 
@@ -292,6 +300,10 @@ export function VoiceMicButton({
       ) return;
       recognitionRef.current = null;
 
+      committedSpeechSegmentsRef.current = [
+        ...committedSpeechSegmentsRef.current,
+        ...sessionSegmentsRef.current.filter(segment => segment?.isFinal),
+      ];
       committedTranscriptRef.current = appendFinalSpeechRecognitionSession(
         committedTranscriptRef.current,
         sessionSegmentsRef.current,
@@ -371,6 +383,7 @@ export function VoiceMicButton({
     recordingSessionIdRef.current = recordingSessionId;
     publishedSessionIdRef.current = null;
     committedTranscriptRef.current = '';
+    committedSpeechSegmentsRef.current = [];
     sessionSegmentsRef.current = [];
     lastInterimTranscriptRef.current = '';
     fatalErrorRef.current = null;

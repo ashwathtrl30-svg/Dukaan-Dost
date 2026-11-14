@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   appendFinalSpeechRecognitionSession,
+  buildSpeechTranscriptCandidates,
   buildSpeechTranscriptParts,
   updateSpeechRecognitionSegments,
   type SpeechRecognitionEventLike,
@@ -32,8 +33,8 @@ test('updates only changed result indexes and preserves earlier final segments',
   ]));
 
   assert.deepEqual(second, [
-    { transcript: 'do kilo', isFinal: true },
-    { transcript: 'rice 200 rupaye', isFinal: true },
+    { transcript: 'do kilo', isFinal: true, alternatives: ['do kilo'] },
+    { transcript: 'rice 200 rupaye', isFinal: true, alternatives: ['rice 200 rupaye'] },
   ]);
 });
 
@@ -75,8 +76,8 @@ test('truncates stale result slots when the browser result list shrinks', () => 
   ]));
 
   assert.deepEqual(second, [
-    { transcript: 'one', isFinal: true },
-    { transcript: 'updated two', isFinal: true },
+    { transcript: 'one', isFinal: true, alternatives: ['one'] },
+    { transcript: 'updated two', isFinal: true, alternatives: ['updated two'] },
   ]);
 });
 
@@ -144,6 +145,38 @@ test('cancels a queued microphone when its component unmounts', async () => {
   assert.deepEqual(events, ['start-ask', 'stop-ask']);
 });
 
+
+test('retains browser alternatives and builds ranked full-transcript candidates', () => {
+  const segments = updateSpeechRecognitionSegments([], {
+    resultIndex: 0,
+    results: [
+      {
+        isFinal: true,
+        length: 2,
+        0: { transcript: 'do kilo rice', confidence: 0.9 },
+        1: { transcript: 'two kilos rice', confidence: 0.7 },
+      },
+      {
+        isFinal: true,
+        length: 2,
+        0: { transcript: 'two hundred rupees', confidence: 0.8 },
+        1: { transcript: '200 rupees', confidence: 0.6 },
+      },
+    ],
+  });
+
+  assert.deepEqual(segments[0].alternatives, ['do kilo rice', 'two kilos rice']);
+  assert.deepEqual(buildSpeechTranscriptCandidates(segments), [
+    'do kilo rice two hundred rupees',
+    'do kilo rice 200 rupees',
+    'two kilos rice two hundred rupees',
+    'two kilos rice 200 rupees',
+  ]);
+  assert.deepEqual(buildSpeechTranscriptCandidates(segments, 2), [
+    'do kilo rice two hundred rupees',
+    'do kilo rice 200 rupees',
+  ]);
+});
 
 test('uses one final-only recognition session on Android phones', async () => {
   const { getSpeechRecognitionMode } = await import('./speechRecognition');
