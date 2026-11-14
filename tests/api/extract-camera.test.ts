@@ -29,7 +29,7 @@ test('camera extraction remains disabled unless explicitly enabled', async () =>
     const result = await invoke();
     assert.equal(result.status, 503);
     assert.deepEqual(result.body, {
-      error: 'Photo extraction is not enabled yet. Your image has not been sent.',
+      error: 'Photo extraction is not enabled yet. Your photo has not been forwarded to Gemini.',
     });
   } finally {
     if (previous === undefined) delete process.env.CAMERA_V1_ENABLED;
