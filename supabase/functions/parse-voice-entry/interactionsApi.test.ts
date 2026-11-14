@@ -31,8 +31,8 @@ test("caps custom vocabulary at 150 phrases", () => {
   const request = buildTranscriptionRequest("YQ==", "audio/wav", vocabulary);
 
   assert.equal(request.generation_config.transcription_config.custom_vocabulary.length, 150);
-  assert.equal(request.transcription_config.custom_vocabulary[0], "Product 0");
-  assert.equal(request.transcription_config.custom_vocabulary[149], "Product 149");
+  assert.equal(request.generation_config.transcription_config.custom_vocabulary[0], "Product 0");
+  assert.equal(request.generation_config.transcription_config.custom_vocabulary[149], "Product 149");
 });
 
 test("extracts text from the raw Interactions REST steps response", () => {
