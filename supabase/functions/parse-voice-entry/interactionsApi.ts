@@ -8,9 +8,12 @@ export interface GeminiTranscriptionRequest {
     data: string;
     mime_type: string;
   }>;
-  transcription_config: {
-    custom_vocabulary: string[];
-    language_codes: string[];
+  generation_config: {
+    transcription_config: {
+      custom_vocabulary: string[];
+      language_codes: string[];
+      mode: { type: "verbatim" };
+    };
   };
 }
 
@@ -33,9 +36,12 @@ export function buildTranscriptionRequest(
   return {
     model: GEMINI_TRANSCRIPTION_MODEL,
     input: [{ type: "audio", data: audioBase64, mime_type: mimeType }],
-    transcription_config: {
-      custom_vocabulary: vocabulary,
-      language_codes: ["hi-IN", "en-IN"],
+    generation_config: {
+      transcription_config: {
+        custom_vocabulary: vocabulary,
+        language_codes: ["hi-IN", "en-IN"],
+        mode: { type: "verbatim" },
+      },
     },
   };
 }
