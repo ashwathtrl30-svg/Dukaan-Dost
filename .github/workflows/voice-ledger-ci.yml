@@ -58,7 +58,12 @@ jobs:
         run: npx --yes tsx --test src/voice/voiceCommands.test.ts
       - name: Test product-aware voice quantity separation
         run: npx --yes tsx --test supabase/functions/parse-voice-entry/quantityRules.test.ts
-      - name: Test AI interpreter and API proxy
-        run: npx --yes tsx --test src/voice/voiceInterpreter.test.ts tests/api/parse-voice.test.ts src/voice/speechRecognition.test.ts
+      - name: Test AI interpreter, speech capture and audio transcription
+        run: >-
+          npx --yes tsx --test src/voice/voiceInterpreter.test.ts
+          src/voice/speechRecognition.test.ts
+          src/voice/voiceVocabulary.test.ts
+          src/voice/audioTranscription.test.ts
+          tests/api/parse-voice.test.ts
       - name: Audit dependencies (block high and critical vulnerabilities)
         run: npm audit --audit-level=high
