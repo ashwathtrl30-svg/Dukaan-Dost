@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import { validateCameraExtraction } from '../src/camera/extractionContract';
 import { CAMERA_V1_EXTRACTION_INSTRUCTIONS } from '../src/camera/extractionPrompt';
 import { decodeCameraImagePayload } from '../src/camera/imagePayload';
@@ -124,21 +123,33 @@ export default async function handler(req: any, res: any) {
     return send(res, 400, { error: 'Invalid photo request.' });
   }
 
-  const image = decodeCameraImagePayload(body.imageBase64, body.mimeType);
-  if ('error' in image) return send(res, 400, { error: image.error });
-
   try {
-    const authClient = createClient(supabaseUrl, anonKey, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    // Validate the bearer token with Supabase Auth before processing or forwarding the image.
+    // This is a server-to-server request; the service never trusts a user ID supplied by the browser.
+    const authResponse = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      method: 'GET',
+      headers: {
+        apikey: anonKey,
+        Authorization: 'Bearer ' + token,
+      },
+      signal: AbortSignal.timeout(8_000),
     });
-    const { data: userData, error: userError } = await authClient.auth.getUser(token);
-    if (userError || !userData.user?.id) {
+
+    if (!authResponse.ok) {
       return send(res, 401, { error: 'Your shop session could not be verified. Please sign in again.' });
     }
 
-    if (isRateLimited(userData.user.id)) {
+    const userData = await authResponse.json().catch(() => null);
+    if (!userData || typeof userData.id !== 'string' || !userData.id) {
+      return send(res, 401, { error: 'Your shop session could not be verified. Please sign in again.' });
+    }
+
+    if (isRateLimited(userData.id)) {
       return send(res, 429, { error: 'Too many photo scans. Please wait a minute and try again.' });
     }
+
+    const image = decodeCameraImagePayload(body.imageBase64, body.mimeType);
+    if ('error' in image) return send(res, 400, { error: image.error });
 
     const response = await fetch(
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent',
