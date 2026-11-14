@@ -355,7 +355,7 @@ export function CameraImportModal({
               </button>
               <button type="button" className="btn-primary" disabled={working || !privacyConsent} onClick={() => void extract()}>
                 {working ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
-                {working ? 'Reading…' : 'Read sales'}
+                {working ? copy.reading : copy.readSales}
               </button>
             </div>
           </div>
