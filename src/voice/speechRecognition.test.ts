@@ -33,8 +33,8 @@ test('updates only changed result indexes and preserves earlier final segments',
   ]));
 
   assert.deepEqual(second, [
-    { transcript: 'do kilo', isFinal: true },
-    { transcript: 'rice 200 rupaye', isFinal: true },
+    { transcript: 'do kilo', isFinal: true, alternatives: ['do kilo'] },
+    { transcript: 'rice 200 rupaye', isFinal: true, alternatives: ['rice 200 rupaye'] },
   ]);
 });
 
@@ -76,8 +76,8 @@ test('truncates stale result slots when the browser result list shrinks', () => 
   ]));
 
   assert.deepEqual(second, [
-    { transcript: 'one', isFinal: true },
-    { transcript: 'updated two', isFinal: true },
+    { transcript: 'one', isFinal: true, alternatives: ['one'] },
+    { transcript: 'updated two', isFinal: true, alternatives: ['updated two'] },
   ]);
 });
 
