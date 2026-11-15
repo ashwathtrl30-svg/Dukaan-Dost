@@ -122,7 +122,7 @@ function validModelExtraction() {
 
 test('valid session and synthetic image complete the extraction path using a mocked provider', withCameraTestEnvironment(async () => {
   const requestedUrls: string[] = [];
-  let providerRequest: Record<string, any> | null = null;
+  const providerRequests: Record<string, any>[] = [];
 
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
@@ -139,7 +139,7 @@ test('valid session and synthetic image complete the extraction path using a moc
 
     assert.equal(url, 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent');
     assert.equal(new Headers(init?.headers).get('x-goog-api-key'), 'test-provider-key');
-    providerRequest = JSON.parse(String(init?.body)) as Record<string, any>;
+    providerRequests.push(JSON.parse(String(init?.body)) as Record<string, any>);
     return new Response(JSON.stringify({
       candidates: [{
         content: {
@@ -168,9 +168,10 @@ test('valid session and synthetic image complete the extraction path using a moc
     reviewCount: 0,
     itemCount: 1,
   });
-  assert.equal(providerRequest?.generationConfig?.responseMimeType, 'application/json');
-  assert.equal(providerRequest?.contents?.[0]?.parts?.[1]?.inlineData?.mimeType, 'image/jpeg');
-  assert.equal(providerRequest?.contents?.[0]?.parts?.[1]?.inlineData?.data, validSyntheticJpegBase64());
+  assert.equal(providerRequests.length, 1);
+  assert.equal(providerRequests[0].generationConfig?.responseMimeType, 'application/json');
+  assert.equal(providerRequests[0].contents?.[0]?.parts?.[1]?.inlineData?.mimeType, 'image/jpeg');
+  assert.equal(providerRequests[0].contents?.[0]?.parts?.[1]?.inlineData?.data, validSyntheticJpegBase64());
 }));
 
 test('rejects a malformed image after authentication and before calling the provider', withCameraTestEnvironment(async () => {
